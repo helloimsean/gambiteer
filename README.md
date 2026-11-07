@@ -293,6 +293,7 @@ Threads, hash sizes and depths are in `backend/app/config.py` (see `backend/READ
 
 ```
 start.bat               double-click to start (runs start.ps1)
+LICENSE                 GNU GPL v3
 start.ps1               build the interface if needed, start the backend on :8000, open the browser
 ARCHITECTURE.md         contracts: endpoints, JSON shapes, components, colours, file layout
 backend/                FastAPI + python-chess (app/, tests/)            -> backend/README.md
@@ -310,6 +311,16 @@ docs/screenshots/       pictures used in this README
 * **[@helloimsean](https://github.com/helloimsean)**: idea, direction, testing.
 * **[Claude](https://www.anthropic.com/claude)** (Anthropic, via Claude Code): code, opening
   research and notes, logo and documentation.
+
+## License
+
+Copyright (C) 2026 helloimsean
+
+Gambiteer is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE) as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version. It is distributed in the hope that it will
+be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
 
 ## Third-party software
 
