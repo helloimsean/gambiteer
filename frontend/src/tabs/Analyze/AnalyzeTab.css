@@ -1,0 +1,225 @@
+/* Analyze tab (all classes prefixed with .analyze-) */
+
+.analyze-toolbar .analyze-toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border-strong);
+  margin: 0 4px;
+}
+
+/* ---------- side column ---------- */
+.analyze-side {
+  gap: 10px;
+}
+
+.analyze-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(250, 65, 45, 0.45);
+  background: rgba(250, 65, 45, 0.12);
+  color: #ffb3a8;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+/* ---------- engine panel ---------- */
+/* The three side blocks may shrink (and scroll inside) when the window is short. */
+.analyze-engine {
+  flex: 0 1 auto;
+  min-height: 90px;
+}
+.analyze-engine .analyze-engine-header {
+  padding: 8px 12px;
+  gap: 8px;
+}
+.analyze-engine .analyze-engine-header .panel-title {
+  min-width: 0;
+}
+.analyze-engine .analyze-multipv {
+  flex: 0 0 auto;
+  font-weight: 500;
+}
+.analyze-engine .analyze-multipv select {
+  min-height: 28px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  width: 58px;
+}
+.analyze-engine .analyze-engine-toggle {
+  flex: 0 0 auto;
+  font-weight: 500;
+  font-size: 13px;
+  gap: 6px;
+}
+.analyze-engine .analyze-engine-lines {
+  /* room for 5 lines of two rows each without growing the panel forever */
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.analyze-engine .analyze-gameover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- opening card ---------- */
+.analyze-opening {
+  flex: 0 1 auto;
+  min-height: 64px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.analyze-opening.book {
+  border-color: rgba(168, 136, 101, 0.55);
+  box-shadow: inset 3px 0 0 var(--cls-book);
+}
+.analyze-opening-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cls-book);
+  min-height: 24px;
+}
+.analyze-opening-kicker {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex: 1 1 auto;
+}
+.analyze-opening-learn {
+  min-height: 24px;
+  padding: 0 8px;
+  gap: 4px;
+}
+.analyze-opening-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.analyze-opening-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.analyze-opening-why {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.analyze-opening-move {
+  font-weight: 700;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+.analyze-opening-lines,
+.analyze-opening-also {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.analyze-opening-note {
+  margin: 0;
+  font-size: 13px;
+}
+.analyze-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.analyze-link:hover {
+  color: var(--accent);
+}
+
+/* ---------- moves / import / setup panel ---------- */
+.analyze-main-panel {
+  flex: 1 1 160px;
+  min-height: 150px;
+}
+.analyze-main-panel .panel-tabs button {
+  padding: 8px 6px;
+  font-size: 13px;
+}
+.analyze-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.analyze-movelist {
+  flex: 1 1 auto;
+}
+.analyze-footer {
+  padding: 8px 12px;
+}
+.analyze-copied {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.analyze-copied.failed {
+  color: var(--danger);
+}
+
+.analyze-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.analyze-form textarea {
+  width: 100%;
+}
+.analyze-import-text {
+  min-height: 110px;
+}
+.analyze-setup-fen {
+  min-height: 62px;
+  word-break: break-all;
+}
+.analyze-form-hint {
+  margin: 0;
+}
+
+.analyze-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.analyze-notice .icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.analyze-notice.ok {
+  color: var(--accent);
+}
+.analyze-notice.error {
+  color: #ff8a7a;
+}

@@ -1,0 +1,100 @@
+/* Board: square, fills its container's width. Cap it from the parent (e.g. `.board-frame`,
+   which is min(100%, 85vh) wide) or with the --board-max-size variable. */
+.board-root {
+  position: relative;
+  width: 100%;
+  max-width: var(--board-max-size, none);
+  aspect-ratio: 1 / 1;
+  /* never let a stretching flex/grid parent distort the square */
+  align-self: flex-start;
+  min-width: 200px;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* the element chessground takes over (it adds .cg-wrap to it) */
+.board-root > .board-cg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* view-only boards: no hand cursor */
+.board-root.board-static .cg-wrap.manipulable cg-board,
+.board-root.board-static .cg-wrap cg-board piece {
+  cursor: default;
+}
+
+.board-root.board-shake {
+  animation: board-shake 0.42s ease-in-out;
+}
+
+@keyframes board-shake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(7px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+/* ---------- promotion chooser ---------- */
+.board-promo-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+.board-promo {
+  position: absolute;
+  width: 12.5%;
+  display: flex;
+  z-index: 21;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.board-promo.top { top: 0; flex-direction: column; }
+.board-promo.bottom { bottom: 0; flex-direction: column-reverse; }
+.board-promo button {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: #e8e6e3;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  transition: background 0.1s;
+}
+.board-promo button:hover { background: var(--accent); }
+.board-promo button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* the chooser is itself a .cg-wrap so the cburnett piece sprites apply to its <piece> elements */
+.board-promo.cg-wrap {
+  position: absolute;
+  display: flex;
+  box-sizing: border-box;
+}
+.board-promo .board-promo-piece {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.board-promo.cg-wrap piece {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  pointer-events: none;
+  transform: none;
+}

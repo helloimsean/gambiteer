@@ -1,0 +1,320 @@
+{
+  "id": "alien-gambit",
+  "name": "Alien Gambit (test fixture)",
+  "side": "white",
+  "eco": "B02",
+  "family": "1.e4 Nf6 Alekhine's Defence",
+  "summary": "A small test fixture for the backend: White meets Alekhine's Defence with 2.Nc3 and after 2...d5 3.e5 Nfd7 throws in the pawn sacrifice 4.e6!?, wrecking Black's kingside pawn structure in exchange for a pawn. The fixture covers the accepted main line, the declined 4...Nf6, a sideline and one trap.",
+  "keyIdeas": [
+    "4.e6 fxe6 gives up a pawn to shatter Black's pawn cover around the king.",
+    "Develop fast with d4, Nf3 and Bd3 aiming at g6 and the weak e6 pawn.",
+    "If the gambit is declined with 4...Nf6, take on f7 with check and enjoy a safe extra pawn."
+  ],
+  "typicalPlans": [
+    "Castle short, play Ng5 and Qg4 against the e6 and g6 weaknesses."
+  ],
+  "commonMistakes": [
+    "Delaying d4 lets Black consolidate with ...Nf6 and ...e5."
+  ],
+  "sources": [
+    "https://en.wikipedia.org/wiki/Alekhine%27s_Defence"
+  ],
+  "lines": [
+    {
+      "id": "main",
+      "name": "Main line: 4...fxe6 5.d4 Nf6",
+      "category": "main",
+      "description": "Black accepts the pawn. White develops quickly and aims pieces at the ruined kingside.",
+      "evaluation": "Roughly equal, White has long-term compensation",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "Takes space in the centre.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "Alekhine's Defence: Black invites the e-pawn forward to attack it later.",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "Defends e4 without committing the pawn yet; the gambit needs the knight on c3.",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "Black strikes at e4 in the main Alekhine style.",
+          "nag": ""
+        },
+        {
+          "san": "e5",
+          "why": "Kicks the knight; e5 is the launching pad for the gambit pawn.",
+          "nag": ""
+        },
+        {
+          "san": "Nfd7",
+          "why": "The natural retreat, keeping the knight near the king. This is where the gambit appears.",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "The Alien Gambit: the pawn sacrifices itself to tear open f7 and leave Black with doubled, isolated e-pawns.",
+          "nag": ""
+        },
+        {
+          "san": "fxe6",
+          "why": "Accepting is the most common reply; Black grabs the pawn but weakens the king.",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "Claims the centre and opens the c1 bishop; the knight on c3 is backed up.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "Black brings the knight back to defend the kingside and prepare ...e5 or ...g6.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops and eyes the g5 and e5 squares; Ng5 against e6 is a recurring theme.",
+          "nag": ""
+        },
+        {
+          "san": "g6",
+          "why": "Black prepares ...Bg7 and castling; the light squares around the king stay weak.",
+          "nag": ""
+        },
+        {
+          "san": "Bd3",
+          "why": "Points at g6 and h7; combined with Ng5 and Qe2 it creates real pressure.",
+          "nag": ""
+        },
+        {
+          "san": "Bg7",
+          "why": "Completes development; now castling is legal and Black must still untangle the e-pawns.",
+          "nag": ""
+        }
+      ]
+    },
+    {
+      "id": "declined-nf6",
+      "name": "Declined: 4...Nf6 5.exf7+",
+      "category": "declined",
+      "description": "Black refuses the pawn and returns the knight. White simply takes on f7 with check and keeps an extra pawn.",
+      "evaluation": "White is clearly better (+1.0)",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "Takes space in the centre and opens lines for the queen and the f1 bishop, which is the longer explanation.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e5",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nfd7",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "The gambit pawn goes in regardless of how Black answers.",
+          "nag": "!?"
+        },
+        {
+          "san": "Nf6",
+          "why": "Declining by returning the knight is a mistake: the f7 pawn now falls with check.",
+          "nag": "?!"
+        },
+        {
+          "san": "exf7+",
+          "why": "Wins a pawn with check and drags the king to f7, where it will never be safe.",
+          "nag": ""
+        },
+        {
+          "san": "Kxf7",
+          "why": "Forced; the king must recapture and loses castling rights.",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "Takes the centre with an extra pawn in hand; development follows naturally.",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "Black shores up d5 and frees the bishop, but the king stays exposed on f7.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops toward g5 and e5, targeting the exposed king.",
+          "nag": ""
+        }
+      ]
+    },
+    {
+      "id": "sideline-2-e5",
+      "name": "Sideline: 2...e5 (Vienna-style)",
+      "category": "sideline",
+      "description": "Black avoids ...d5 and transposes to Vienna Game territory. White develops classically.",
+      "evaluation": "Equal",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e5",
+          "why": "Black declines the whole Alekhine setup and we are in a Vienna Game by transposition.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops and prepares Bb5 or Bc4; the Vienna gambit f4 is also possible.",
+          "nag": ""
+        },
+        {
+          "san": "Nc6",
+          "why": "Natural development defending e5.",
+          "nag": ""
+        },
+        {
+          "san": "Bb5",
+          "why": "The Four Knights Spanish bishop puts pressure on c6 and e5.",
+          "nag": ""
+        },
+        {
+          "san": "Bb4",
+          "why": "Mirror development pinning the c3 knight.",
+          "nag": ""
+        },
+        {
+          "san": "O-O",
+          "why": "Castles early; the position is solid and symmetrical.",
+          "nag": ""
+        },
+        {
+          "san": "O-O",
+          "why": "Black mirrors; both sides have safe kings and will fight for the centre.",
+          "nag": ""
+        }
+      ]
+    },
+    {
+      "id": "trap-5-e5",
+      "name": "Trap: 5...e5?! 6.dxe5 Nxe5 7.Qh5+ g6??",
+      "category": "trap",
+      "description": "Black returns the pawn at once with 5...e5. After 6.dxe5 Nxe5 7.Qh5+ the natural block 7...g6 leaves the knight on e5 hanging; only 7...Nf7 holds.",
+      "evaluation": "White wins a piece after 7...g6 (about +9)",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e5",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "Nfd7",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "fxe6",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "",
+          "nag": ""
+        },
+        {
+          "san": "e5",
+          "why": "Black gives the pawn back at once to free the position, but the e5 square and the h5-e8 diagonal become sore spots.",
+          "nag": "?!"
+        },
+        {
+          "san": "dxe5",
+          "why": "Takes the pawn and opens the d-file; whatever recaptures on e5 will stand on an exposed square.",
+          "nag": ""
+        },
+        {
+          "san": "Nxe5",
+          "why": "The natural recapture, but now a queen check on h5 can also hit the knight on e5.",
+          "nag": "?!"
+        },
+        {
+          "san": "Qh5+",
+          "why": "The point: with the f-pawn gone the h5-e8 diagonal is open, and the check also eyes the loose knight on e5.",
+          "nag": "!"
+        },
+        {
+          "san": "g6",
+          "why": "The instinctive block loses: it shuts the diagonal but leaves the e5 knight undefended. 7...Nf7 was the only good defence.",
+          "nag": "??"
+        },
+        {
+          "san": "Qxe5",
+          "why": "Wins the knight with the queen centralised and hitting the h8 rook; White is a full piece up.",
+          "nag": ""
+        }
+      ]
+    }
+  ]
+}

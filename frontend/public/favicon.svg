@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Gambiteer logo">
+  <title>Gambiteer</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#95c95e"/>
+      <stop offset="1" stop-color="#5e8f35"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd257"/>
+      <stop offset="1" stop-color="#f2a71b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#tile)"/>
+  <g transform="translate(64 66) scale(3.75)">
+    <!-- knight (facing left), drop shadow then body -->
+    <g fill="#3f6624" opacity="0.55" transform="translate(2.4 2.4)">
+      <path d="M27 84C27 71 32 63 45 55C37 59 29 60 23 58C17 56 13.5 52 14 46.5C14.5 42 18 39 22 36L34 23L36 7L46 15C65 13 80 27 80 48C80 62 76 72 75 84Z"/>
+      <rect x="20" y="84" width="62" height="10" rx="3"/>
+    </g>
+    <path fill="#ffffff" d="M27 84C27 71 32 63 45 55C37 59 29 60 23 58C17 56 13.5 52 14 46.5C14.5 42 18 39 22 36L34 23L36 7L46 15C65 13 80 27 80 48C80 62 76 72 75 84Z"/>
+    <rect fill="#ffffff" x="20" y="84" width="62" height="10" rx="3"/>
+    <circle fill="#4b7a2b" cx="35" cy="31" r="3.2"/>
+    <path fill="none" stroke="#4b7a2b" stroke-width="2.4" stroke-linecap="round" d="M53 22C62 27 67 36 68 47"/>
+  </g>
+  <!-- "!?" badge: the chess mark for an interesting (gambit) move -->
+  <circle cx="394" cy="126" r="82" fill="#5e8f35"/>
+  <circle cx="394" cy="126" r="70" fill="url(#gold)"/>
+  <g fill="#2b3d14">
+    <rect x="350" y="86" width="18" height="52" rx="9"/>
+    <circle cx="359" cy="159" r="10"/>
+    <circle cx="414" cy="159" r="10"/>
+  </g>
+  <path fill="none" stroke="#2b3d14" stroke-width="17" stroke-linecap="round" stroke-linejoin="round" d="M392 106C392 87 436 85 436 108C436 125 414 124 414 138"/>
+</svg>

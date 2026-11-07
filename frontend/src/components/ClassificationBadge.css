@@ -1,0 +1,13 @@
+.cls-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  line-height: 1;
+}
+.cls-badge svg { display: block; flex: 0 0 auto; }
+.cls-badge .cls-label {
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: capitalize;
+}

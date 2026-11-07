@@ -1,0 +1,46 @@
+.eval-bar {
+  position: relative;
+  width: 22px;
+  /* next to a Board in a flex row: as tall as the board */
+  height: auto;
+  align-self: stretch;
+  min-height: 120px;
+  background: #403d39;
+  border-radius: 3px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+}
+.eval-bar .eval-bar-white {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #f0f0f0;
+  transition: height 0.35s ease-out, top 0.35s ease-out;
+}
+.eval-bar.white-bottom .eval-bar-white { bottom: 0; }
+.eval-bar.white-top .eval-bar-white { top: 0; }
+.eval-bar .eval-bar-mid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(129, 182, 76, 0.7);
+}
+.eval-bar .eval-bar-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  padding: 3px 0;
+  pointer-events: none;
+}
+.eval-bar .eval-bar-label.top { top: 0; }
+.eval-bar .eval-bar-label.bottom { bottom: 0; }
+.eval-bar .eval-bar-label.on-white { color: #262421; }
+.eval-bar .eval-bar-label.on-black { color: #f0f0f0; }

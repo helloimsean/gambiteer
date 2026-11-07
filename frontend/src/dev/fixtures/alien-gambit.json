@@ -1,0 +1,368 @@
+{
+  "id": "alien-gambit",
+  "name": "Alien Gambit",
+  "side": "white",
+  "eco": "B15",
+  "family": "1.e4 c6 Caro-Kann Defense",
+  "summary": "An aggressive gambit against the Caro-Kann: after 1.e4 c6 2.d4 d5 3.Nc3 dxe4 4.Nxe4 Nf6 5.Ng5 h6 White plays 6.Nxf7!?, giving a knight for a pawn to pull Black's king into the open. White then develops quickly with Nf3, Bc4 or Bd3, castles and attacks along the e- and f-files. It is objectively dubious but very dangerous over the board. This small file is a frontend development fixture; the real repertoire lives in data/openings.",
+  "keyIdeas": [
+    "6.Nxf7 trades a knight for a pawn and the right of Black's king to castle.",
+    "The a2-g8 diagonal is the key attacking line: Bc4+ often comes with tempo.",
+    "Ne5+ is a recurring resource because no black pawn can chase the knight from e5.",
+    "Pile up on e6 with Re1 and Qe2 or Qf3: it is the pawn that holds Black's position together."
+  ],
+  "typicalPlans": [
+    "Castle short, put a rook on e1 and attack e6.",
+    "Use Nh4 and Qf3 or Qh5+ to bring more pieces to the kingside."
+  ],
+  "commonMistakes": [
+    "Attacking too slowly: if Black gets ...Kg8 and ...Nbd7 in, the extra piece decides."
+  ],
+  "sources": [
+    "https://www.chess.com/openings/Caro-Kann-Defense"
+  ],
+  "lines": [
+    {
+      "id": "main",
+      "name": "Main line: 7...Bf5 8.Bc4+",
+      "category": "main",
+      "description": "Black develops the bishop actively. White checks on c4, castles and brings the rook to e1 to pile up on e6.",
+      "evaluation": "Objectively better for Black (a piece for a pawn), but White's attack is easy to play.",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "Takes the centre and frees the queen and the light-squared bishop.",
+          "nag": ""
+        },
+        {
+          "san": "c6",
+          "why": "The Caro-Kann: Black prepares ...d5 with a solid pawn chain.",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "Builds the classical two-pawn centre.",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "Black challenges e4 straight away, as planned with ...c6.",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "Defends e4 with a piece and keeps the c-pawn free.",
+          "nag": ""
+        },
+        {
+          "san": "dxe4",
+          "why": "The main reply: Black releases the tension and gets the f5/g4 squares for the bishop.",
+          "nag": ""
+        },
+        {
+          "san": "Nxe4",
+          "why": "Recaptures and keeps a knight in the centre.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "Black offers a knight trade to blunt White's centralised knight.",
+          "nag": ""
+        },
+        {
+          "san": "Ng5",
+          "why": "Avoids the trade and eyes f7, the weakest square in Black's camp.",
+          "nag": "!?"
+        },
+        {
+          "san": "h6",
+          "why": "Natural: Black asks the knight where it is going, expecting it to retreat.",
+          "nag": ""
+        },
+        {
+          "san": "Nxf7",
+          "why": "The Alien Gambit: White gives up the knight for a pawn to drag the king into the open.",
+          "nag": "!?"
+        },
+        {
+          "san": "Kxf7",
+          "why": "Black has to take; otherwise White has won a pawn and forks the queen and rook.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops with tempo-free calm: the king on f7 will not find safety easily.",
+          "nag": ""
+        },
+        {
+          "san": "Bf5",
+          "why": "Black develops the light-squared bishop outside the pawn chain before playing ...e6.",
+          "nag": ""
+        },
+        {
+          "san": "Bc4+",
+          "why": "The bishop checks along the open a2-g8 diagonal, which is why the f7 sacrifice works.",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "Blocking with the pawn is the most solid answer; the king stays on f7 for now.",
+          "nag": ""
+        },
+        {
+          "san": "O-O",
+          "why": "White castles quickly and gets ready to open the e-file with Re1.",
+          "nag": ""
+        },
+        {
+          "san": "Nbd7",
+          "why": "Black develops and prepares ...Nb6 or ...Kg8 to tidy up the king.",
+          "nag": ""
+        },
+        {
+          "san": "Re1",
+          "why": "The rook lines up against e6, the pawn that keeps Black's position together.",
+          "nag": ""
+        },
+        {
+          "san": "Bd6",
+          "why": "Black develops the last minor piece and gets ready to castle by hand.",
+          "nag": ""
+        },
+        {
+          "san": "Nh4",
+          "why": "Hits the bishop on f5 and makes room for Qf3 or Qh5+.",
+          "nag": ""
+        },
+        {
+          "san": "Bh7",
+          "why": "The bishop keeps an eye on the b1-h7 diagonal and stays out of the knight's reach.",
+          "nag": ""
+        },
+        {
+          "san": "Qf3",
+          "why": "The queen joins the attack along the f-file against the pinned knight on f6.",
+          "nag": ""
+        }
+      ]
+    },
+    {
+      "id": "accepted-e6",
+      "name": "7...e6: the solid shell",
+      "category": "accepted",
+      "description": "Black blocks the diagonal at once. White aims the bishop at h7 and jumps into e5 with check.",
+      "evaluation": "Black is better on material; White has long-term pressure on the exposed king.",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "Takes the centre and frees the queen and the light-squared bishop.",
+          "nag": ""
+        },
+        {
+          "san": "c6",
+          "why": "The Caro-Kann: Black prepares ...d5 with a solid pawn chain.",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "Builds the classical two-pawn centre.",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "Black challenges e4 straight away, as planned with ...c6.",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "Defends e4 with a piece and keeps the c-pawn free.",
+          "nag": ""
+        },
+        {
+          "san": "dxe4",
+          "why": "The main reply: Black releases the tension and gets the f5/g4 squares for the bishop.",
+          "nag": ""
+        },
+        {
+          "san": "Nxe4",
+          "why": "Recaptures and keeps a knight in the centre.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "Black offers a knight trade to blunt White's centralised knight.",
+          "nag": ""
+        },
+        {
+          "san": "Ng5",
+          "why": "Avoids the trade and eyes f7, the weakest square in Black's camp.",
+          "nag": "!?"
+        },
+        {
+          "san": "h6",
+          "why": "Natural: Black asks the knight where it is going, expecting it to retreat.",
+          "nag": ""
+        },
+        {
+          "san": "Nxf7",
+          "why": "The Alien Gambit: White gives up the knight for a pawn to drag the king into the open.",
+          "nag": "!?"
+        },
+        {
+          "san": "Kxf7",
+          "why": "Black has to take; otherwise White has won a pawn and forks the queen and rook.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops with tempo-free calm: the king on f7 will not find safety easily.",
+          "nag": ""
+        },
+        {
+          "san": "e6",
+          "why": "Shuts the a2-g8 diagonal before White can check on c4.",
+          "nag": ""
+        },
+        {
+          "san": "Bd3",
+          "why": "With c4 closed the bishop points at g6 and h7 instead.",
+          "nag": ""
+        },
+        {
+          "san": "c5",
+          "why": "Black strikes back in the centre to open lines for the extra piece.",
+          "nag": ""
+        },
+        {
+          "san": "Ne5+",
+          "why": "The knight lands on e5 with check and can never be chased by a pawn.",
+          "nag": ""
+        },
+        {
+          "san": "Ke7",
+          "why": "The king steps towards the queenside, away from the knight checks.",
+          "nag": ""
+        },
+        {
+          "san": "Qf3",
+          "why": "The queen attacks f6 and supports a later Qf7+.",
+          "nag": ""
+        },
+        {
+          "san": "Nbd7",
+          "why": "Black adds a defender to e5 and f6.",
+          "nag": ""
+        },
+        {
+          "san": "Bf4",
+          "why": "White develops the last minor piece and reinforces the knight on e5.",
+          "nag": ""
+        }
+      ]
+    },
+    {
+      "id": "trap-7-bg4",
+      "name": "Trap: 7...Bg4? 8.Ne5+!",
+      "category": "trap",
+      "description": "Pinning the knight looks natural, but Ne5+ is check and attacks the bishop at the same time.",
+      "evaluation": "White regains the piece and keeps an extra pawn against an exposed king.",
+      "moves": [
+        {
+          "san": "e4",
+          "why": "Takes the centre and frees the queen and the light-squared bishop.",
+          "nag": ""
+        },
+        {
+          "san": "c6",
+          "why": "The Caro-Kann: Black prepares ...d5 with a solid pawn chain.",
+          "nag": ""
+        },
+        {
+          "san": "d4",
+          "why": "Builds the classical two-pawn centre.",
+          "nag": ""
+        },
+        {
+          "san": "d5",
+          "why": "Black challenges e4 straight away, as planned with ...c6.",
+          "nag": ""
+        },
+        {
+          "san": "Nc3",
+          "why": "Defends e4 with a piece and keeps the c-pawn free.",
+          "nag": ""
+        },
+        {
+          "san": "dxe4",
+          "why": "The main reply: Black releases the tension and gets the f5/g4 squares for the bishop.",
+          "nag": ""
+        },
+        {
+          "san": "Nxe4",
+          "why": "Recaptures and keeps a knight in the centre.",
+          "nag": ""
+        },
+        {
+          "san": "Nf6",
+          "why": "Black offers a knight trade to blunt White's centralised knight.",
+          "nag": ""
+        },
+        {
+          "san": "Ng5",
+          "why": "Avoids the trade and eyes f7, the weakest square in Black's camp.",
+          "nag": "!?"
+        },
+        {
+          "san": "h6",
+          "why": "Natural: Black asks the knight where it is going, expecting it to retreat.",
+          "nag": ""
+        },
+        {
+          "san": "Nxf7",
+          "why": "The Alien Gambit: White gives up the knight for a pawn to drag the king into the open.",
+          "nag": "!?"
+        },
+        {
+          "san": "Kxf7",
+          "why": "Black has to take; otherwise White has won a pawn and forks the queen and rook.",
+          "nag": ""
+        },
+        {
+          "san": "Nf3",
+          "why": "Develops with tempo-free calm: the king on f7 will not find safety easily.",
+          "nag": ""
+        },
+        {
+          "san": "Bg4",
+          "why": "A natural pin that loses material: the bishop is undefended after Ne5+.",
+          "nag": "?"
+        },
+        {
+          "san": "Ne5+",
+          "why": "Fork: the knight checks the king and attacks the bishop on g4.",
+          "nag": "!"
+        },
+        {
+          "san": "Ke8",
+          "why": "The king has to move, and nothing can protect the bishop in time.",
+          "nag": ""
+        },
+        {
+          "san": "Nxg4",
+          "why": "White takes the bishop back; the sacrificed piece is regained.",
+          "nag": ""
+        },
+        {
+          "san": "Nxg4",
+          "why": "Black recaptures, but the knight on g4 is now loose.",
+          "nag": ""
+        },
+        {
+          "san": "Qxg4",
+          "why": "White is a pawn up and Black's king can no longer castle.",
+          "nag": ""
+        }
+      ]
+    }
+  ]
+}

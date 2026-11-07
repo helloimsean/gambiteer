@@ -1,0 +1,504 @@
+/* ------------------------------------------------------------------
+   Gambiteer: global theme (dark only, chess.com-like)
+   Every colour used by the app is a CSS variable defined here.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* palette from ARCHITECTURE.md */
+  --bg: #262421;
+  --panel: #312e2b;
+  --panel-2: #3a3734;          /* raised rows / hover inside a panel */
+  --border: #3c3936;
+  --border-strong: #4a4643;
+  --text: #e8e6e3;
+  --text-muted: #9e9c99;
+  --text-dim: #6f6c69;
+  --accent: #81b64c;
+  --accent-hover: #93c75e;
+  --accent-active: #6f9f3f;
+  --accent-text: #0f1a07;
+  --danger: #fa412d;
+  --warn: #f7c631;
+  --info: #5c8bb0;
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+  --highlight-last: rgba(255, 255, 0, 0.45);
+  --highlight-selected: rgba(255, 255, 0, 0.55);
+  --check: #ff3b30;
+
+  /* classification palette (chess.com) */
+  --cls-brilliant: #1baca6;
+  --cls-great: #5c8bb0;
+  --cls-best: #95bb4a;
+  --cls-excellent: #96bc4b;
+  --cls-good: #96af8b;
+  --cls-book: #a88865;
+  --cls-inaccuracy: #f7c631;
+  --cls-mistake: #ffa459;
+  --cls-blunder: #fa412d;
+  --cls-miss: #ff7769;
+
+  /* layout */
+  --nav-w: 200px;
+  --side-w: 400px;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+
+  --font: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, Consolas, 'Cascadia Mono', Menlo, monospace;
+
+  color-scheme: dark;
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --nav-w: 64px;
+    --side-w: 360px;
+  }
+}
+
+/* ---------- reset / base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+h4 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+p { margin: 0 0 8px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+small, .small { font-size: 12px; }
+.muted { color: var(--text-muted); }
+.dim { color: var(--text-dim); }
+.bold { font-weight: 600; }
+.nowrap { white-space: nowrap; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- scrollbars ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 2px solid var(--panel); }
+*::-webkit-scrollbar-thumb:hover { background: #5a5653; }
+
+/* ---------- layout helpers ---------- */
+.row { display: flex; align-items: center; gap: 8px; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.wrap { flex-wrap: wrap; }
+.spacer { flex: 1 1 auto; }
+.grow { flex: 1 1 auto; min-width: 0; min-height: 0; }
+.center { display: flex; align-items: center; justify-content: center; }
+.gap-4 { gap: 4px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.scroll-y { overflow-y: auto; min-height: 0; }
+
+/* Standard tab workspace: board column + right side panel.
+   Tabs may use this or roll their own grid. */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-w);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px;
+}
+/* The board column is a size container: the board frame takes the column width, but never more
+   than the column height minus --below-board-h (room for the controls under the board; set it
+   on .workspace-board when a tab puts more there) and never more than 85vh. */
+.workspace-board {
+  --below-board-h: 64px;
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+.workspace-board .board-frame {
+  display: flex;
+  gap: 8px;
+  width: min(100cqw, calc(100cqh - var(--below-board-h)), 85vh);
+  min-width: 330px;
+  flex: 0 0 auto;
+}
+.workspace-board .board-frame .board-root {
+  flex: 1 1 auto;
+  min-width: 300px;
+}
+.workspace-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* ---------- panels ---------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.panel-header .panel-title { flex: 1 1 auto; }
+.panel-body {
+  padding: 12px 14px;
+  min-height: 0;
+}
+.panel-body.scroll { overflow-y: auto; }
+.panel-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.panel-tabs button {
+  flex: 1 1 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 10px 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.panel-tabs button:hover { color: var(--text); }
+.panel-tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  transition: border-color 0.12s, transform 0.12s;
+}
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+
+.divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, transform 0.05s;
+}
+.btn:hover { background: #45413d; border-color: #57524e; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled, .btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.btn-sm { min-height: 28px; padding: 0 10px; font-size: 12.5px; }
+.btn.btn-lg { min-height: 42px; padding: 0 20px; font-size: 15px; }
+.btn.btn-icon { padding: 0; width: 34px; }
+.btn.btn-icon.btn-sm { width: 28px; }
+.btn.btn-block { width: 100%; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 3px 0 var(--accent-active);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-primary:active { box-shadow: none; transform: translateY(2px); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); border-color: transparent; }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.btn-danger:hover { background: rgba(250, 65, 45, 0.12); }
+
+.btn-group { display: inline-flex; }
+.btn-group .btn { border-radius: 0; }
+.btn-group .btn:first-child { border-top-left-radius: var(--radius-sm); border-bottom-left-radius: var(--radius-sm); }
+.btn-group .btn:last-child { border-top-right-radius: var(--radius-sm); border-bottom-right-radius: var(--radius-sm); }
+.btn-group .btn + .btn { margin-left: -1px; }
+.btn-group .btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+/* ---------- inputs ---------- */
+.input,
+input[type='text'],
+input[type='number'],
+input[type='search'],
+textarea,
+select {
+  background: #211f1c;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font: inherit;
+  min-height: 34px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+textarea { min-height: 80px; resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.4; }
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+label.field > span.field-label { font-weight: 600; }
+
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border-strong);
+  border-radius: 3px;
+  outline: none;
+  margin: 10px 0;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+/* ---------- badges ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 18px;
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+.badge-white { background: #eeeed2; color: #262421; border-color: #d8d8bc; }
+.badge-black { background: #1b1a18; color: #e8e6e3; border-color: #4a4643; }
+.badge-green { background: rgba(129, 182, 76, 0.18); color: var(--accent); border-color: rgba(129, 182, 76, 0.4); }
+.badge-red { background: rgba(250, 65, 45, 0.15); color: #ff8a7a; border-color: rgba(250, 65, 45, 0.4); }
+.badge-yellow { background: rgba(247, 198, 49, 0.15); color: var(--warn); border-color: rgba(247, 198, 49, 0.4); }
+.badge-blue { background: rgba(92, 139, 176, 0.18); color: #8fb6d6; border-color: rgba(92, 139, 176, 0.4); }
+.badge-eco { font-family: var(--mono); letter-spacing: 0.03em; }
+
+/* ---------- misc ---------- */
+.kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: #1f1d1b;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--text-muted);
+}
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex: 0 0 auto;
+}
+.status-dot.ok { background: var(--accent); box-shadow: 0 0 6px rgba(129, 182, 76, 0.7); }
+.status-dot.bad { background: var(--danger); }
+.status-dot.unknown { background: var(--warn); }
+
+.progress {
+  width: 100%;
+  height: 8px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.move-san {
+  font-weight: 600;
+  font-family: var(--font);
+}
+.nag { color: var(--warn); font-weight: 700; margin-left: 2px; }
+.nag.good { color: var(--accent); }
+.nag.bad { color: var(--danger); }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-in { animation: fade-in 0.15s ease-out; }
+
+/* ---------- chessground tweaks (board colours from the theme) ---------- */
+cg-board {
+  /* checkerboard in theme colours; top-left square is always light (a8 or h1) */
+  background-color: var(--board-dark) !important;
+  background-image: conic-gradient(
+    var(--board-dark) 25%,
+    var(--board-light) 0 50%,
+    var(--board-dark) 0 75%,
+    var(--board-light) 0
+  ) !important;
+  background-size: 25% 25% !important;
+}
+cg-board square.last-move { background-color: var(--highlight-last); }
+cg-board square.selected { background-color: var(--highlight-selected); }
+cg-board square.check {
+  background: radial-gradient(ellipse at center, rgba(255, 0, 0, 1) 0%, rgba(231, 0, 0, 1) 25%, rgba(169, 0, 0, 0) 89%, rgba(158, 0, 0, 0) 100%);
+}
+/* legal-move hints (chess.com style): dot on empty squares, ring on captures */
+cg-board square.move-dest {
+  background: radial-gradient(rgba(0, 0, 0, 0.16) 19%, rgba(0, 0, 0, 0) 20%);
+}
+cg-board square.oc.move-dest {
+  background: radial-gradient(transparent 0%, transparent 79%, rgba(0, 0, 0, 0.16) 80%);
+}
+cg-board square.move-dest:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* Coordinates inside the board, chess.com style: ranks at the top-left of the left-most file,
+   files at the bottom-right of the bottom rank, coloured with the opposite square colour.
+   (rank/file children are in a1..h8 order; chessground flips them with flex direction.) */
+.cg-wrap coords {
+  opacity: 1;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: clamp(9px, calc(var(--board-size, 480px) * 0.027), 16px);
+}
+.cg-wrap coords.ranks {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.cg-wrap coords.ranks coord {
+  flex: 1 1 0;
+  transform: none;
+  padding: 0.2em 0 0 0.3em;
+  line-height: 1;
+}
+.cg-wrap coords.files {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  text-align: right;
+  text-transform: none;
+}
+.cg-wrap coords.files coord {
+  flex: 1 1 0;
+  padding: 0 0.3em 0.15em 0;
+  line-height: 1;
+}
+.cg-wrap.orientation-white coords.ranks coord:nth-child(odd),
+.cg-wrap.orientation-white coords.files coord:nth-child(odd),
+.cg-wrap.orientation-black coords.ranks coord:nth-child(even),
+.cg-wrap.orientation-black coords.files coord:nth-child(even) {
+  color: var(--board-light);
+}
+.cg-wrap.orientation-white coords.ranks coord:nth-child(even),
+.cg-wrap.orientation-white coords.files coord:nth-child(even),
+.cg-wrap.orientation-black coords.ranks coord:nth-child(odd),
+.cg-wrap.orientation-black coords.files coord:nth-child(odd) {
+  color: var(--board-dark);
+}
+
+/* arrows a bit more opaque than lichess' default */
+.cg-wrap .cg-shapes { opacity: 0.75; }

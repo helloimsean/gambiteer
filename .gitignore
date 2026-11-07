@@ -1,0 +1,24 @@
+# secrets
+.lichess_token
+.env
+
+# dependencies and build output
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Stockfish is downloaded separately (see README): the binary is over GitHub's 100 MB limit
+# and has its own license (GPLv3)
+engines/*
+!engines/README.md
+
+# generated data, caches, test screenshots and logs
+data/_cache/
+data/_reports/
+frontend/screenshots/
+frontend/test-results/
+*.log
