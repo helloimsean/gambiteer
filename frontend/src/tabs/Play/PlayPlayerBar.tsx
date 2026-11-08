@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type JSX } from 'react'
+import { useLayoutEffect, useRef, type JSX, type ReactNode } from 'react'
 import type { Side } from '../../api/types'
 import { Icon, type IconName } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
@@ -39,10 +39,12 @@ export interface PlayPlayerBarProps {
   toMove: boolean
   thinking?: boolean
   testId?: string
+  /** Crazyhouse: shown instead of the captured pieces. */
+  pocket?: ReactNode
 }
 
 /** Name plate above/below the board with captured pieces and the material difference. */
-export function PlayPlayerBar({ name, detail, icon, color, captured, advantage, toMove, thinking, testId }: PlayPlayerBarProps): JSX.Element {
+export function PlayPlayerBar({ name, detail, icon, color, captured, advantage, toMove, thinking, testId, pocket }: PlayPlayerBarProps): JSX.Element {
   const capturedColor: Side = color === 'white' ? 'black' : 'white'
   // group equal pieces so they overlap like on chess.com
   const groups: { piece: PieceSymbol; count: number }[] = []
@@ -66,16 +68,18 @@ export function PlayPlayerBar({ name, detail, icon, color, captured, advantage, 
             </span>
           ) : null}
         </div>
-        <div className="play-captured" aria-label={`Captured: ${captured.join(' ') || 'nothing'}`}>
-          {groups.map((g) => (
-            <span key={g.piece} className="play-captured-group" data-piece={g.piece} data-count={g.count}>
-              {Array.from({ length: g.count }, (_, i) => (
-                <PlayPieceIcon key={i} piece={g.piece} color={capturedColor} />
-              ))}
-            </span>
-          ))}
-          {advantage > 0 ? <span className="play-advantage">+{advantage}</span> : null}
-        </div>
+        {pocket ?? (
+          <div className="play-captured" aria-label={`Captured: ${captured.join(' ') || 'nothing'}`}>
+            {groups.map((g) => (
+              <span key={g.piece} className="play-captured-group" data-piece={g.piece} data-count={g.count}>
+                {Array.from({ length: g.count }, (_, i) => (
+                  <PlayPieceIcon key={i} piece={g.piece} color={capturedColor} />
+                ))}
+              </span>
+            ))}
+            {advantage > 0 ? <span className="play-advantage">+{advantage}</span> : null}
+          </div>
+        )}
       </div>
       <span className={`play-turn-dot${toMove ? ' on' : ''}`} title={toMove ? 'To move' : undefined} />
     </div>

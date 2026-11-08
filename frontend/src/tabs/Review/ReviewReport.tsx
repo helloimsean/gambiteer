@@ -2,7 +2,7 @@
  * Game report pieces: the accuracy header (both players, big numbers), the classification count
  * table with badges for both sides, and the summary (opening, engine, key moments).
  */
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 import type { Classification, Players, ReviewResult, Side } from '../../api/types'
 import { CLASSIFICATION_COLORS, CLASSIFICATION_LABELS, ClassificationBadge } from '../../components/ClassificationBadge'
 import { Icon } from '../../components/Icon'
@@ -17,9 +17,11 @@ export interface ReviewAccuracyHeaderProps {
   players?: Players
   gameResult?: string
   onNew: () => void
+  /** Shown along the bottom of the header (the PGN export buttons). */
+  actions?: ReactNode
 }
 
-export function ReviewAccuracyHeader({ result, players, gameResult, onNew }: ReviewAccuracyHeaderProps): JSX.Element {
+export function ReviewAccuracyHeader({ result, players, gameResult, onNew, actions }: ReviewAccuracyHeaderProps): JSX.Element {
   return (
     <div className="panel review-header" data-testid="review-header">
       <div className="panel-header">
@@ -40,6 +42,7 @@ export function ReviewAccuracyHeader({ result, players, gameResult, onNew }: Rev
         </div>
         <PlayerAccuracy side="black" name={sideName(players, 'black')} accuracy={result.accuracy.black} />
       </div>
+      {actions ? <div className="review-export">{actions}</div> : null}
     </div>
   )
 }

@@ -439,7 +439,7 @@ try {
   ok = await check(`Review: paste PGN, review at depth ${DEPTH} to completion`, async () => {
     await gotoTab('Review', '[data-testid="review-setup"]')
     await page.locator('.review-model-select select').first().waitFor({ timeout: 10000 })
-    await page.getByRole('button', { name: 'Paste PGN' }).click()
+    await page.getByRole('button', { name: 'Import PGN' }).click()
     await page.getByTestId('review-pgn').fill(REVIEW_PGN)
     await page.getByTestId('review-depth-input').fill(DEPTH)
     await page.getByTestId('review-depth-input').blur()

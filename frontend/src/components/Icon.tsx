@@ -25,7 +25,10 @@ export type IconName =
   | 'warning'
   | 'external'
   | 'chevronDown'
+  | 'chevronUp'
   | 'chevronRight'
+  | 'history'
+  | 'download'
   | 'hint'
   | 'undo'
   | 'flag'
@@ -34,6 +37,7 @@ export type IconName =
   | 'knight'
   | 'engine'
   | 'brain'
+  | 'fish'
   | 'book'
   | 'target'
   | 'search'
@@ -222,7 +226,21 @@ const PATHS: Record<IconName, JSX.Element> = {
     </>
   ),
   chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronUp: <path d="m6 15 6-6 6 6" />,
   chevronRight: <path d="m9 6 6 6-6 6" />,
+  history: (
+    <>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5" />
+      <path d="M3.5 3.5v5h5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 4v12M7 11l5 5 5-5" />
+      <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+    </>
+  ),
   knight: (
     <path d="M8 20h9c0-5-1.5-8.5-5-10.5.5-1.3.5-2.5-.3-3.5-.6-.7-1.2-.8-1.7-.5l-.5 1.5c-1.5.5-3 2-3.5 4 0 .5.3.8.8.8 1 0 1.7-.6 2.3-1.3.5 1.3.2 2.7-.8 3.8C7.2 15.4 7 17.5 7 19.5z" />
   ),
@@ -237,6 +255,12 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M9.5 3A3.5 3.5 0 0 0 6 6.5v.6A3.5 3.5 0 0 0 4.5 13 3.5 3.5 0 0 0 6 19.4V20a2 2 0 0 0 4 0V5.5A2.5 2.5 0 0 0 9.5 3z" />
       <path d="M14.5 3A3.5 3.5 0 0 1 18 6.5v.6a3.5 3.5 0 0 1 1.5 5.9A3.5 3.5 0 0 1 18 19.4V20a2 2 0 0 1-4 0V5.5A2.5 2.5 0 0 1 14.5 3z" />
+    </>
+  ),
+  fish: (
+    <>
+      <path d="M2 12c3-5 9-7 14-3l5-3v12l-5-3c-5 4-11 2-14-3z" />
+      <path d="M7.5 10.5v.01" />
     </>
   ),
   edit: (

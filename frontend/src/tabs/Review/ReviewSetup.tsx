@@ -1,6 +1,7 @@
-/** Right-panel setup card: source (last game / PGN), depth, model, start button and progress. */
-import type { JSX, ReactNode } from 'react'
+/** Right-panel setup card: source (selected game / PGN), depth, model, start button and progress. */
+import { useState, type JSX, type ReactNode } from 'react'
 import { Icon } from '../../components/Icon'
+import { PgnFileButton } from '../../components/PgnFileButton'
 import { Spinner } from '../../components/Spinner'
 import type { LastGame } from '../../state/AppContext'
 import { sideName, timeAgo } from './reviewUtils'
@@ -23,7 +24,9 @@ export interface ReviewRunInfo {
 export interface ReviewSetupProps {
   source: ReviewSource
   onSource: (s: ReviewSource) => void
-  lastGame: LastGame | null
+  /** The last game played, or the game sent from History. */
+  selectedGame: LastGame | null
+  selectedLabel: string
   pgnText: string
   onPgnText: (t: string) => void
   depth: number
@@ -46,9 +49,10 @@ const SAMPLE_PGN = [
 ].join('\n')
 
 export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
-  const { source, onSource, lastGame, pgnText, onPgnText, depth, onDepth, modelPicker, run, error, canStart, onStart, onCancel } = props
+  const { source, onSource, selectedGame, selectedLabel, pgnText, onPgnText, depth, onDepth, modelPicker, run, error, canStart, onStart, onCancel } = props
   const busy = run !== null
   const customDepth = !REVIEW_DEPTHS.some((d) => d.depth === depth)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   return (
     <div className="panel grow review-setup" data-testid="review-setup">
@@ -66,29 +70,29 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
           <span className="review-field-label">Game</span>
           <div className="btn-group review-source">
             <button type="button" className={`btn btn-sm${source === 'last' ? ' active' : ''}`} onClick={() => onSource('last')} disabled={busy}>
-              <Icon name="play" size={14} /> Last game
+              <Icon name="play" size={14} /> {selectedLabel}
             </button>
             <button type="button" className={`btn btn-sm${source === 'pgn' ? ' active' : ''}`} onClick={() => onSource('pgn')} disabled={busy}>
-              <Icon name="upload" size={14} /> Paste PGN
+              <Icon name="upload" size={14} /> Import PGN
             </button>
           </div>
           {source === 'last' ? (
-            lastGame && lastGame.sans.length > 0 ? (
+            selectedGame && selectedGame.sans.length > 0 ? (
               <div className="review-lastgame card" data-testid="review-lastgame">
                 <div className="row">
-                  <span className="badge badge-white">{sideName(lastGame.players, 'white')}</span>
+                  <span className="badge badge-white">{sideName(selectedGame.players, 'white')}</span>
                   <span className="muted small">vs</span>
-                  <span className="badge badge-black">{sideName(lastGame.players, 'black')}</span>
+                  <span className="badge badge-black">{sideName(selectedGame.players, 'black')}</span>
                   <span className="spacer" />
-                  {lastGame.result ? <span className="bold">{lastGame.result}</span> : null}
+                  {selectedGame.result ? <span className="bold">{selectedGame.result}</span> : null}
                 </div>
                 <div className="small muted">
-                  {Math.ceil(lastGame.sans.length / 2)} moves{lastGame.reason ? ` · ${lastGame.reason}` : ''} · {timeAgo(lastGame.playedAt)}
+                  {Math.ceil(selectedGame.sans.length / 2)} moves{selectedGame.reason ? ` · ${selectedGame.reason}` : ''} · {timeAgo(selectedGame.playedAt)}
                 </div>
               </div>
             ) : (
               <div className="review-empty-note small muted">
-                No finished game yet. Play one in the <b>Play</b> tab (it shows up here), or paste a PGN.
+                No finished game yet. Play one in the <b>Play</b> tab (it shows up here), or import a PGN.
               </div>
             )
           ) : (
@@ -104,12 +108,25 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
                 data-testid="review-pgn"
               />
               <div className="row small">
-                <span className="dim">PGN or plain SAN moves. Only the main line is reviewed.</span>
+                <PgnFileButton
+                  onText={(text) => {
+                    setFileError(null)
+                    onPgnText(text)
+                  }}
+                  onError={setFileError}
+                  disabled={busy}
+                />
                 <span className="spacer" />
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => onPgnText(SAMPLE_PGN)} disabled={busy}>
                   Sample
                 </button>
               </div>
+              <span className="dim small">Paste a PGN or plain SAN moves, or open a file. Only the main line of the first game is reviewed.</span>
+              {fileError ? (
+                <div className="review-error" role="alert" data-testid="review-file-error">
+                  <Icon name="warning" size={16} /> <span>{fileError}</span>
+                </div>
+              ) : null}
             </>
           )}
         </div>
@@ -188,7 +205,7 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
           </div>
         ) : (
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onStart} disabled={!canStart} data-testid="review-start">
-            <Icon name="review" size={18} /> Start review
+            <Icon name="review" size={18} /> Game Review
           </button>
         )}
       </div>

@@ -9,7 +9,7 @@ from ..deps import services
 from ..engine import EngineUnavailable
 from ..maia import installed_ratings
 from ..ollama_client import OllamaError
-from ..schemas import HealthResponse, MaiaHealth, OllamaHealth, OllamaModelsResponse, StockfishHealth
+from ..schemas import FairyHealth, HealthResponse, MaiaHealth, OllamaHealth, OllamaModelsResponse, StockfishHealth
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["system"])
@@ -43,6 +43,7 @@ async def health(request: Request) -> HealthResponse:
             ratings=maia_ratings,
             path=str(svc.maia.path),
         ),
+        fairy=FairyHealth(available=svc.fairy.available, path=str(svc.fairy.path)),
     )
 
 

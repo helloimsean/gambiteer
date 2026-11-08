@@ -77,6 +77,46 @@
 .play-captured-group .play-piece + .play-piece {
   margin-left: -11px;
 }
+.play-pocket {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 26px;
+}
+.play-pocket-piece {
+  position: relative;
+  display: inline-flex;
+  padding: 1px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: grab;
+}
+.play-pocket-piece:hover:not(:disabled),
+.play-pocket-piece.armed {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+.play-pocket-piece:disabled {
+  cursor: default;
+}
+.play-pocket-piece .cg-wrap {
+  pointer-events: none;
+}
+.play-pocket-count {
+  position: absolute;
+  right: -2px;
+  bottom: -3px;
+  min-width: 13px;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+}
 .play-advantage {
   color: var(--text-muted);
   font-size: 12px;
@@ -435,7 +475,8 @@
   gap: 10px;
   padding: 10px 0 0;
 }
-.play-select {
+.play-select,
+.play-variant-select {
   display: flex;
   width: 100%;
 }

@@ -6,6 +6,7 @@ import { Slider } from '../../components/Slider'
 import { Spinner } from '../../components/Spinner'
 import { Toggle } from '../../components/Toggle'
 import { formatSanPath } from '../../lib/chess'
+import { VARIANTS, variantInfo } from '../../lib/variants'
 import {
   ELO_MAX,
   ELO_MIN,
@@ -15,13 +16,18 @@ import {
   MAIA_ELO_PRESETS,
   MAIA_ELO_STEP,
   MOVETIME_OPTIONS,
+  PANICFISH_ELO_PER_CHECK,
+  PANICFISH_START_ELO,
   RANDOM_LINE,
   UCI_ELO_MIN,
+  colorIsLocked,
   eloLevel,
   formatMovetime,
   setupElo,
   strengthCaption,
+  variantBlocked,
   type ColorChoice,
+  type FairyStatus,
   type MaiaStatus,
   type OpeningMode,
   type PlaySetup,
@@ -33,6 +39,7 @@ export interface PlaySetupFormProps {
   maiaStatus: MaiaStatus
   /** Ratings with an installed net; null when not known yet. */
   maiaRatings: readonly number[] | null
+  fairyStatus: FairyStatus
   onChange: (patch: Partial<PlaySetup>) => void
   /** Opening summaries (null while loading). */
   openings: OpeningSummary[] | null
@@ -54,6 +61,10 @@ const MAIA_BLURB = 'A neural network trained on millions of real online games. I
 const MAIA_RATING_NOTE = 'Maia has one trained model per 100 rating points, from 1100 to 1900. These are Lichess ratings and the match is approximate.'
 const MAIA_MOVE_TIME_NOTE = "Maia doesn't search, so this is just how long it waits before answering."
 const MAIA_INSTALL_COMMAND = 'python tools\\install_maia.py'
+const FAIRY_INSTALL_COMMAND = 'python tools\\install_fairy.py'
+const PANICFISH_BLURB = `I am Stockfish 19 that loses ${PANICFISH_ELO_PER_CHECK} Elo every time you check me. I start at full ${PANICFISH_START_ELO} grandmaster strength and slowly lose more sanity with each check.`
+const PANICFISH_CHECKS_TO_ZERO = PANICFISH_START_ELO / PANICFISH_ELO_PER_CHECK
+const FAIRY_NOTE = 'Stockfish 19 only plays standard chess and Chess960, so Fairy-Stockfish plays this variant. Elo is only a rough guide here.'
 const ELO_EXPLAINER = 'Elo is a chess rating: higher means stronger. Beginners are around 800, club players around 1500, masters 2200 and up. Lichess ratings run higher than chess.com ones.'
 const MAIA_RATING_COUNT = (MAIA_ELO_MAX - MAIA_ELO_MIN) / MAIA_ELO_STEP + 1
 
@@ -71,7 +82,7 @@ function moveInRadioGroup(e: KeyboardEvent<HTMLElement>): void {
 }
 
 /** The new-game settings (used inline in the side panel and inside the New game dialog). */
-export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openings, openingsError, opening, openingError, onRetry }: PlaySetupFormProps): JSX.Element {
+export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onChange, openings, openingsError, opening, openingError, onRetry }: PlaySetupFormProps): JSX.Element {
   const lineOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [{ value: RANDOM_LINE, label: 'Random line' }]
     if (!opening) return opts
@@ -85,6 +96,13 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
 
   const selectedLine = opening && setup.lineId !== RANDOM_LINE ? opening.lines.find((l) => l.id === setup.lineId) ?? null : null
   const isMaia = setup.bot === 'maia'
+  const isPanicfish = setup.bot === 'panicfish'
+  const isStockfish = setup.bot === 'stockfish'
+  const variant = variantInfo(setup.variant)
+  const isStandard = setup.variant === 'standard'
+  const usesFairy = variant.engine === 'fairy'
+  const maiaUnplayable = maiaStatus === 'missing' || !isStandard
+  const colorLocked = colorIsLocked(setup)
   const elo = setupElo(setup)
   const setElo = (value: number) => onChange(isMaia ? { maiaElo: value } : { elo: value })
   const presets: readonly number[] = isMaia ? MAIA_ELO_PRESETS : ELO_PRESETS
@@ -108,7 +126,26 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
           <span className="play-bot-install" data-testid="play-maia-install">
             Not installed. To add it, run <code>{MAIA_INSTALL_COMMAND}</code>, then restart.
           </span>
+        ) : !isStandard ? (
+          <span className="play-bot-install" data-testid="play-maia-standard-only">
+            Only plays standard chess.
+          </span>
         ) : null}
+      </span>
+    </>
+  )
+
+  const panicfishCardBody = (
+    <>
+      <span className="play-mode-radio" />
+      <span className="play-mode-text">
+        <strong>Panicfish</strong>
+        <span>{PANICFISH_BLURB}</span>
+        {variant.hasChecks ? null : (
+          <span className="play-bot-install" data-testid="play-panicfish-blocked">
+            {variant.name} has no checks, so it would never lose any Elo.
+          </span>
+        )}
       </span>
     </>
   )
@@ -131,6 +168,18 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
 
   return (
     <div className="play-setup" data-testid="play-setup">
+      <section className="play-setup-section" data-testid="play-variant">
+        <Select label="Variant" value={setup.variant} options={VARIANTS.map((v) => ({ value: v.id, label: v.name }))} onChange={(v) => onChange({ variant: v })} className="play-variant-select" />
+        <p className="play-setup-note" data-testid="play-variant-rule">
+          {variant.rule}
+        </p>
+        {variantBlocked(setup.variant, fairyStatus) ? (
+          <p className="play-setup-note play-bot-install" data-testid="play-fairy-install">
+            {variant.name} needs the Fairy-Stockfish engine. To add it, run <code>{FAIRY_INSTALL_COMMAND}</code>, then restart.
+          </p>
+        ) : null}
+      </section>
+
       <section className="play-setup-section">
         <div className="play-setup-label">I play as</div>
         <div className="btn-group play-color-group" role="radiogroup" aria-label="Colour" onKeyDown={moveInRadioGroup}>
@@ -143,6 +192,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
               tabIndex={setup.color === o.value ? 0 : -1}
               className={`btn${setup.color === o.value ? ' active' : ''}`}
               data-color={o.value}
+              disabled={colorLocked && o.value !== 'white'}
               onClick={() => onChange({ color: o.value })}
             >
               {o.value === 'random' ? (
@@ -154,6 +204,11 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
             </button>
           ))}
         </div>
+        {colorLocked ? (
+          <p className="play-setup-note" data-testid="play-color-locked">
+            Only Black has a king in Horde, so you play the pawns against Panicfish.
+          </p>
+        ) : null}
       </section>
 
       <section className="play-setup-section">
@@ -162,19 +217,19 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
           <button
             type="button"
             role="radio"
-            aria-checked={!isMaia}
-            tabIndex={isMaia ? -1 : 0}
-            className={`play-mode${isMaia ? '' : ' active'}`}
+            aria-checked={isStockfish}
+            tabIndex={isStockfish ? 0 : -1}
+            className={`play-mode${isStockfish ? ' active' : ''}`}
             data-bot="stockfish"
             onClick={() => onChange({ bot: 'stockfish' })}
           >
             <span className="play-mode-radio" />
             <span className="play-mode-text">
-              <strong>Stockfish</strong>
+              <strong>{usesFairy ? 'Fairy-Stockfish' : 'Stockfish'}</strong>
               <span>{STOCKFISH_BLURB}</span>
             </span>
           </button>
-          {maiaStatus === 'missing' ? (
+          {maiaUnplayable ? (
             // a plain element rather than a disabled button, so the install command can be selected and copied
             <div role="radio" aria-checked={false} aria-disabled="true" className="play-mode disabled" data-bot="maia">
               {maiaCardBody}
@@ -192,15 +247,41 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
               {maiaCardBody}
             </button>
           )}
+          {variant.hasChecks ? (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isPanicfish}
+              tabIndex={isPanicfish ? 0 : -1}
+              className={`play-mode${isPanicfish ? ' active' : ''}`}
+              data-bot="panicfish"
+              onClick={() => onChange({ bot: 'panicfish' })}
+            >
+              {panicfishCardBody}
+            </button>
+          ) : (
+            <div role="radio" aria-checked={false} aria-disabled="true" className="play-mode disabled" data-bot="panicfish">
+              {panicfishCardBody}
+            </div>
+          )}
         </div>
       </section>
 
+      {isPanicfish ? (
+        <section className="play-setup-section">
+          <div className="play-setup-label">Bot strength (Elo)</div>
+          <p className="play-setup-note" data-testid="play-panicfish-note">
+            Starts at {PANICFISH_START_ELO} with no limit on its strength. After {PANICFISH_CHECKS_TO_ZERO} checks it reaches 0 Elo and plays random moves.
+            {usesFairy ? ` ${FAIRY_NOTE}` : ''}
+          </p>
+        </section>
+      ) : (
       <section className="play-setup-section">
         <div className="play-elo-head">
           <div>
             <div className="play-setup-label">Bot strength (Elo)</div>
             <div className="play-elo-caption" data-testid="play-strength-caption">
-              {strengthCaption(setup.bot, elo)}
+              {strengthCaption(setup.bot, elo, setup.variant)}
             </div>
           </div>
           <div className="play-elo-value">
@@ -241,7 +322,9 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
         <p className="play-setup-note" data-testid="play-strength-note">
           {isMaia
             ? MAIA_RATING_NOTE
-            : elo >= UCI_ELO_MIN
+            : usesFairy
+              ? FAIRY_NOTE
+              : elo >= UCI_ELO_MIN
               ? 'Stockfish limits itself to this rating.'
               : "Stockfish can't limit itself this low, so it plays weaker moves on purpose. The rating is approximate."}
         </p>
@@ -251,6 +334,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
           </p>
         ) : null}
       </section>
+      )}
 
       <section className="play-setup-section">
         <div className="play-setup-label">Bot move time</div>
@@ -277,6 +361,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
         ) : null}
       </section>
 
+      {isStandard ? (
       <section className="play-setup-section">
         <Toggle checked={setup.useOpening} onChange={toggleOpening} label="Start from an opening line" disabled={!openings || openings.length === 0} />
         {openingsError ? (
@@ -357,6 +442,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, onChange, openin
           </div>
         ) : null}
       </section>
+      ) : null}
     </div>
   )
 }

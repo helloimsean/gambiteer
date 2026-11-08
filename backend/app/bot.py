@@ -9,6 +9,9 @@
   are excluded unless elo < 700. **This sub-1320 strength is approximate**: it has not been
   calibrated against rated play.
 
+Panicfish loses 300 Elo per check, and the frontend sends what it has left. 3600 means no limit at
+all. Anything from there down is the ladder above, and 0 is a uniformly random legal move.
+
 The analysis engine is a separate process, so these strength options never affect analysis.
 """
 from __future__ import annotations
@@ -26,6 +29,9 @@ from .chessutil import ScoreDict, score_to_dict
 
 UCI_ELO_MIN = 1320
 UCI_ELO_MAX = 3190
+STOCKFISH_ELO_RANGE = (UCI_ELO_MIN, UCI_ELO_MAX)
+FAIRY_ELO_RANGE = (500, 2850)
+PANICFISH_FULL_ELO = 3600
 MIX_MULTIPV = 5
 CP_LOSS_CAP = 500
 CAP_EXEMPT_BELOW = 700
@@ -84,10 +90,39 @@ def pick_mixed(cp_losses: Sequence[float], elo: int, rng: random.Random) -> int:
 class BotChoice:
     move: chess.Move
     score: ScoreDict | None
-    mode: str  # "uci_elo" | "skill"
+    mode: str  # "uci_elo" | "skill" | "full" | "random"
     elo: int
     skill: int | None = None
     candidates: int = 1
+
+
+async def _timed_move(engine: BotEngine, board: chess.Board, movetime_ms: int) -> tuple[chess.Move, ScoreDict | None]:
+    result = await engine.play(
+        board, chess.engine.Limit(time=max(0.05, movetime_ms / 1000)), info=chess.engine.INFO_SCORE
+    )
+    if result.move is None:
+        raise RuntimeError("engine returned no move")
+    score = result.info.get("score") if result.info else None
+    return result.move, score_to_dict(score) if score is not None else None
+
+
+async def choose_panicfish_move(
+    engine: BotEngine,
+    board: chess.Board,
+    elo: int,
+    movetime_ms: int = 800,
+    rng: random.Random | None = None,
+    uci_elo_range: tuple[int, int] = STOCKFISH_ELO_RANGE,
+) -> BotChoice:
+    if not any(board.legal_moves):
+        raise ValueError("the game is over: no legal moves")
+    if elo <= 0:
+        return BotChoice(move=(rng or random.Random()).choice(list(board.legal_moves)), score=None, mode="random", elo=0)
+    if elo >= PANICFISH_FULL_ELO:
+        await engine.configure({"UCI_LimitStrength": False, "Skill Level": 20})
+        move, score = await _timed_move(engine, board, movetime_ms)
+        return BotChoice(move=move, score=score, mode="full", elo=elo)
+    return await choose_bot_move(engine, board, elo, movetime_ms, rng, uci_elo_range)
 
 
 async def choose_bot_move(
@@ -96,25 +131,16 @@ async def choose_bot_move(
     elo: int,
     movetime_ms: int = 800,
     rng: random.Random | None = None,
+    uci_elo_range: tuple[int, int] = STOCKFISH_ELO_RANGE,
 ) -> BotChoice:
     if not any(board.legal_moves):
         raise ValueError("the game is over: no legal moves")
     elo = int(elo)
-    if elo >= UCI_ELO_MIN:
-        uci_elo = min(UCI_ELO_MAX, elo)
-        await engine.configure({"UCI_LimitStrength": True, "UCI_Elo": uci_elo, "Skill Level": 20})
-        result = await engine.play(
-            board, chess.engine.Limit(time=max(0.05, movetime_ms / 1000)), info=chess.engine.INFO_SCORE
-        )
-        if result.move is None:
-            raise RuntimeError("engine returned no move")
-        score = result.info.get("score") if result.info else None
-        return BotChoice(
-            move=result.move,
-            score=score_to_dict(score) if score is not None else None,
-            mode="uci_elo",
-            elo=elo,
-        )
+    lowest, highest = uci_elo_range
+    if elo >= lowest:
+        await engine.configure({"UCI_LimitStrength": True, "UCI_Elo": min(highest, elo), "Skill Level": 20})
+        move, score = await _timed_move(engine, board, movetime_ms)
+        return BotChoice(move=move, score=score, mode="uci_elo", elo=elo)
 
     skill = skill_level_for(elo)
     depth = depth_for(elo)

@@ -51,8 +51,19 @@ model turns the engine's facts into plain-language explanations.
   * **Maia** (optional, step 5 of the install) is more human-like: a neural network trained on
     millions of real online games. It plays like a person at that rating, including human-style
     mistakes. See [How bot strength works](#how-bot-strength-works).
+  * **Panicfish** is Stockfish 19 at full strength that loses 300 Elo every time you check it. After
+    12 checks it has nothing left and plays random moves.
+  * **Variants**: pick Crazyhouse, Chess960, King of the Hill, Three-Check, Antichess, Atomic, Horde
+    or Racing Kings from the dropdown. Chess960 runs on Stockfish 19; the others need Fairy-Stockfish
+    (optional, step 6 of the install). Hint, Review and Analyze are for standard chess only, and
+    variant games still appear in History.
 * **Review**: chess.com-style game review (brilliant to blunder, accuracy, eval graph), with an AI
-  explanation of why each move was good or bad.
+  explanation of why each move was good or bad. Press **Play best move**, or play any legal move on
+  the board, and Stockfish grades it in a side line under that move.
+* **History** (under **More** in the sidebar): every game you finish against a bot, with its Elo, the
+  result and, once you have reviewed the game, both players' accuracy. It is saved in your browser.
+* **PGN import and export**: paste a PGN or open a `.pgn` file in Analyze and Review, and copy or
+  download a game as PGN from either tab.
 
 ### Openings included
 
@@ -82,6 +93,7 @@ You can add your own (see [Adding an opening](#adding-an-opening)).
 | [Ollama](https://ollama.com/download) | any recent version | the AI explanations (everything else works without it) |
 | Stockfish 19 | step 4 below | analysis, bots, review, the coach's verdicts |
 | Maia (optional) | step 5 below | the human-like bot |
+| Fairy-Stockfish (optional) | step 6 below | seven of the eight variants in **Play** |
 
 The quickest way is `winget` in a PowerShell or Command Prompt window:
 
@@ -148,7 +160,19 @@ enabled. `python tools\check_maia.py` tests whether the engine runs on your PC.
 lc0 needs the [Microsoft Visual C++ 2015-2022 x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
 Most Windows PCs already have it; install it if Maia reports that lc0 could not start.
 
-### 6. Download an AI model
+### 6. Install Fairy-Stockfish, for the variants (optional)
+
+Stockfish 19 only plays standard chess and Chess960. Fairy-Stockfish plays the other seven variants.
+Skip this step if you only want those two. From the `Chess Openings` folder:
+
+```powershell
+python tools\install_fairy.py
+```
+
+This downloads one file to `engines\fairy\` and checks it against a pinned SHA-256. It is not in the
+repository. Restart Gambiteer afterwards. `python tools\check_fairy.py` tests the engine on your PC.
+
+### 7. Download an AI model
 
 Start Ollama (it runs in the system tray after installing), then pull a model:
 
@@ -160,7 +184,7 @@ ollama pull llama3.2:3b     # small and fast; works on smaller GPUs or the CPU (
 One model is enough. Gambiteer uses `gpt-oss:20b` when it is installed and otherwise the first
 model it finds; you can switch models in Settings.
 
-### 7. Start it
+### 8. Start it
 
 Double-click **`start.bat`**. It builds the interface the first time, starts the backend and opens
 <http://localhost:8000> in your browser. Keep the window open while you use the app; close it (or
@@ -200,6 +224,15 @@ games.
 Maia does not search: it picks one of the moves the network expects a player at that rating to
 choose, so it can vary and make human-style mistakes. *Bot move time* is therefore only how long it
 waits before answering.
+
+**Panicfish** starts with no limit on its strength, which is the "3600". The first check drops it to
+3300, and Stockfish's own limiter tops out at 3190, so that is where it plays until it falls lower.
+Below 1320 it uses the same move mixing as the Stockfish bot, and at 0 it picks any legal move at
+random. A takeback gives the Elo back. Antichess and Racing Kings have no checks, so Panicfish is not
+offered there, and in Horde you play the pawns because only Black has a king to check.
+
+Elo means less in the **variants**: Fairy-Stockfish's limiter was not built with them in mind, so
+treat the number as a rough guide.
 
 ## Development
 
@@ -327,6 +360,7 @@ Threads, hash sizes and depths are in `backend/app/config.py` (see `backend/READ
 | Old interface after an update | `start.bat -Rebuild`, then reload the browser with Ctrl+F5. |
 | Stockfish dot is red / "engine unavailable" | Check that `engines\stockfish19.exe` exists (step 4) or set `STOCKFISH_PATH`. Antivirus tools sometimes quarantine engines. |
 | Maia card says "Not installed", or "Bot move failed: Maia is unavailable" | Run `python tools\install_maia.py` (step 5), then restart Gambiteer. `python tools\check_maia.py` shows what is wrong with the engine. If it says lc0 could not start, install the [Microsoft Visual C++ 2015-2022 x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Antivirus tools sometimes quarantine engines. |
+| A variant says it needs Fairy-Stockfish, or "Bot move failed: Fairy-Stockfish ..." | Run `python tools\install_fairy.py` (step 6), then restart Gambiteer. `python tools\check_fairy.py` shows what is wrong with the engine. Antivirus tools sometimes quarantine engines. |
 | "Bot move failed: Maia stopped unexpectedly" | Press **Retry**: the next move starts a fresh engine. If it keeps happening, run `python tools\check_maia.py`, then `python tools\install_maia.py` to repair the install. |
 | Ollama dot is red / "Coach unavailable" | Start Ollama (tray app, or `ollama serve`) and check that `ollama list` shows a model. Then click the refresh icon at the bottom left. |
 | Explanations are slow | Use a smaller model (`llama3.2:3b`). The first request after loading a model is the slowest. |
@@ -346,8 +380,8 @@ frontend/               Vite + React + TypeScript, chessground, chess.js  -> fro
   public/logo.svg       the Gambiteer logo
   e2e/journey.e2e.mjs   full end-to-end user journey (Playwright)
 data/openings/          opening repertoires (JSON)
-tools/                  validate_opening.py, check_coverage.py, install_maia.py, check_maia.py
-engines/                stockfish19.exe, and lc0/ + maia/ for Maia (none in git)  -> engines/README.md
+tools/                  validate_opening.py, check_coverage.py, install_maia.py, check_maia.py, install_fairy.py, check_fairy.py
+engines/                stockfish19.exe, lc0/ + maia/ for Maia, fairy/ for the variants (none in git)  -> engines/README.md
 docs/screenshots/       pictures used in this README
 ```
 
@@ -372,10 +406,13 @@ FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
 Gambiteer uses [Stockfish](https://stockfishchess.org) (GPLv3, downloaded separately),
 [python-chess](https://github.com/niklasf/python-chess) (GPLv3),
 [chessground](https://github.com/lichess-org/chessground) (GPLv3),
-[chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause), [FastAPI](https://fastapi.tiangolo.com)
+[chessops](https://github.com/niklasf/chessops) (GPLv3), [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause), [FastAPI](https://fastapi.tiangolo.com)
 (MIT), [React](https://react.dev) (MIT), [Vite](https://vite.dev) (MIT) and
 [Ollama](https://ollama.com) (MIT). Opening statistics come from the
 [Lichess opening explorer](https://lichess.org/analysis#explorer).
+
+The variants other than Chess960 run on [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)
+(GPL-3.0), downloaded separately by `tools/install_fairy.py`.
 
 The optional human-like bot runs the [Maia](https://github.com/CSSLab/maia-chess) networks (GPL-3.0)
 inside [Leela Chess Zero](https://github.com/LeelaChessZero/lc0) (lc0, GPL-3.0). Both are downloaded

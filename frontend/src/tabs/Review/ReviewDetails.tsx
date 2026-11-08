@@ -13,10 +13,15 @@ import { ReviewModelPicker, ReviewOllamaDown } from './ReviewModelPicker'
 import { classificationSentence, friendlyExplainError, reviewPlyOffset, sideName } from './reviewUtils'
 import type { ReviewExplainApi } from './useReviewExplain'
 import type { ReviewModelsState } from './useReviewModels'
+import type { VariationMove } from './useReviewVariation'
 
 export interface ReviewDetailsProps {
   result: ReviewResult
   ply: number
+  /** A move tried on the board, shown instead of the game's move. */
+  tried: { move: VariationMove; absPly: number } | null
+  onPlayBest: () => void
+  onRetryTried: (move: VariationMove) => void
   players?: Players
   explain: ReviewExplainApi
   models: ReviewModelsState & { retry: () => void }
@@ -33,14 +38,61 @@ export interface ReviewDetailsProps {
 const LINE_PLIES = 10
 
 export function ReviewDetails(props: ReviewDetailsProps): JSX.Element {
-  const { result, ply, players } = props
+  const { result, ply, players, tried, onPlayBest, onRetryTried } = props
   const offset = reviewPlyOffset(result)
   const move: ReviewMove | null = ply > 0 ? (result.moves[ply - 1] ?? null) : null
 
+  if (tried) {
+    return (
+      <div className="review-details" data-testid="review-details">
+        <TriedFacts move={tried.move} absPly={tried.absPly} players={players} onPlayBest={onPlayBest} onRetry={onRetryTried} />
+      </div>
+    )
+  }
+
   return (
     <div className="review-details" data-testid="review-details">
-      {move ? <MoveFacts move={move} offset={offset} players={players} /> : <StartFacts result={result} keyCount={props.keyPlies.length} />}
+      {move ? (
+        <MoveFacts move={move} absPly={offset + move.ply} players={players} onPlayBest={onPlayBest} />
+      ) : (
+        <StartFacts result={result} keyCount={props.keyPlies.length} />
+      )}
       <ExplainPanel {...props} move={move} />
+    </div>
+  )
+}
+
+interface TriedFactsProps {
+  move: VariationMove
+  absPly: number
+  players?: Players
+  onPlayBest: () => void
+  onRetry: (move: VariationMove) => void
+}
+
+function TriedFacts({ move, absPly, players, onPlayBest, onRetry }: TriedFactsProps): JSX.Element {
+  if (move.verdict) return <MoveFacts move={move.verdict} absPly={absPly} players={players} onPlayBest={onPlayBest} />
+  return (
+    <div className="review-facts" data-testid="review-tried-pending">
+      <div className="review-verdict">
+        {move.error ? <Icon name="warning" size={22} /> : <Spinner size={22} />}
+        <span className="review-verdict-text">
+          {moveNumberPrefix(absPly)}
+          {move.san}
+        </span>
+      </div>
+      {move.error ? (
+        <div className="row small">
+          <span className="review-explain-error grow" role="alert">
+            Could not check this move: {move.error}
+          </span>
+          <button type="button" className="btn btn-sm" onClick={() => onRetry(move)} data-testid="review-tried-retry">
+            Retry
+          </button>
+        </div>
+      ) : (
+        <p className="small muted review-start-hint">Stockfish is checking this move…</p>
+      )}
     </div>
   )
 }
@@ -54,14 +106,39 @@ function StartFacts({ result, keyCount }: { result: ReviewResult; keyCount: numb
       </div>
       <p className="small muted review-start-hint">
         Step through the game with <span className="kbd">←</span> <span className="kbd">→</span>, click a move, the
-        graph or a count in the summary. {result.moves.length} plies, {keyCount} key moment{keyCount === 1 ? '' : 's'}.
+        graph or a count in the summary. {result.moves.length} plies, {keyCount} key moment{keyCount === 1 ? '' : 's'}. You
+        can also play any move on the board to see what Stockfish thinks of it.
       </p>
     </div>
   )
 }
 
-function MoveFacts({ move, offset, players }: { move: ReviewMove; offset: number; players?: Players }): JSX.Element {
-  const absPly = offset + move.ply
+/** What the facts need: a graded game move and a graded tried move both have these. */
+type GradedMove = Pick<
+  ReviewMove,
+  | 'san'
+  | 'uci'
+  | 'fenAfter'
+  | 'color'
+  | 'evalBefore'
+  | 'evalAfter'
+  | 'bestMove'
+  | 'playedPv'
+  | 'winPctBefore'
+  | 'winPctAfter'
+  | 'classification'
+  | 'bookWhy'
+  | 'bookOpening'
+>
+
+interface MoveFactsProps {
+  move: GradedMove
+  absPly: number
+  players?: Players
+  onPlayBest: () => void
+}
+
+function MoveFacts({ move, absPly, players, onPlayBest }: MoveFactsProps): JSX.Element {
   const label = `${moveNumberPrefix(absPly)}${move.san}`
   const color = CLASSIFICATION_COLORS[move.classification]
   const differs = move.bestMove.uci !== '' && move.bestMove.uci.slice(0, 4) !== move.uci.slice(0, 4)
@@ -109,6 +186,9 @@ function MoveFacts({ move, offset, players }: { move: ReviewMove; offset: number
               </div>
             ) : null}
           </div>
+          <button type="button" className="btn btn-sm btn-primary review-play-best" onClick={onPlayBest} data-testid="review-play-best">
+            <Icon name="autoplay" size={14} /> Play best move
+          </button>
         </div>
       ) : move.classification !== 'book' ? (
         <div className="review-fact-row">
@@ -143,7 +223,7 @@ function MoveFacts({ move, offset, players }: { move: ReviewMove; offset: number
 }
 
 /** "white" / "black" / "even" for the eval pill colour. */
-function scoreSide(score: ReviewMove['evalAfter'], fen: string): 'white' | 'black' | 'even' {
+function scoreSide(score: GradedMove['evalAfter'], fen: string): 'white' | 'black' | 'even' {
   if ('mate' in score) {
     if (score.mate > 0) return 'white'
     if (score.mate < 0) return 'black'

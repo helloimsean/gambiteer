@@ -44,3 +44,17 @@ python tools\check_maia.py
 
 On Linux or macOS the script downloads only the nets; build lc0 yourself and set `LC0_PATH` to it.
 `MAIA_WEIGHTS_DIR` points at a different folder of nets.
+
+## Fairy-Stockfish (optional)
+
+[Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) (GPL-3.0) plays the variants
+Stockfish 19 does not know: Crazyhouse, King of the Hill, Three-Check, Antichess, Atomic, Horde and
+Racing Kings. From the project root:
+
+```powershell
+python tools\install_fairy.py
+```
+
+This downloads release `fairy_sf_14` (x86-64-modern build) to `engines\fairy\fairy-stockfish.exe` and
+checks it against a pinned SHA-256. Then restart Gambiteer. `python tools\check_fairy.py` asks it for
+a move in every variant. To use a copy somewhere else, or on Linux or macOS, set `FAIRY_PATH`.

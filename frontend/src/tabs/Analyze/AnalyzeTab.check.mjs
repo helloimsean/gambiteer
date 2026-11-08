@@ -290,7 +290,7 @@ try {
     await page.locator('[data-testid="analyze-copy-pgn"]').click()
     await page.waitForTimeout(200)
     const clip = await page.evaluate(() => navigator.clipboard.readText())
-    assert(clip.includes('1.e4 c6 2.d4 d5 3.Nc3 dxe4 4.Nxe4 Nf6 5.Ng5') && clip.includes('[Event'), `pgn ${clip}`)
+    assert(clip.includes('1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nf6 5. Ng5') && clip.includes('[Event'), `pgn ${clip}`)
     return clip.replace(/\n/g, ' ').slice(0, 120)
   })
 

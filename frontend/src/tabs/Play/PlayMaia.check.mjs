@@ -555,6 +555,7 @@ try {
     await playUci('d8h4')
     await page.locator('[data-testid="play-over"]').waitFor({ timeout: 5000 })
     await page.locator('[data-testid="play-over-review"]').click()
+    await page.locator('[data-testid="review-start"]').click()
     const body = (await posted).postDataJSON()
     same(body.players, { white: 'Maia (1500)', black: 'You' }, 'review players')
   })
@@ -842,7 +843,7 @@ try {
     same(await activeAttr('data-bot'), 'maia', 'focus follows')
     await page.keyboard.press('ArrowUp')
     same(await selectedBot(), 'stockfish', 'ArrowUp')
-    same(await page.locator(`${FORM} button[data-bot]`).evaluateAll((els) => els.map((e) => e.tabIndex)), [0, -1], 'tab stops')
+    same(await page.locator(`${FORM} button[data-bot]`).evaluateAll((els) => els.map((e) => e.tabIndex)), [0, -1, -1], 'tab stops')
     await page.keyboard.press('Tab')
     const ring = await page.evaluate(() => {
       const el = document.activeElement

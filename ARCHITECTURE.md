@@ -14,7 +14,8 @@ gambiteer\                 (project root)
   engines\stockfish19.exe  Stockfish 19 (universal x86-64 build; UCI_Elo 1320..3190, Skill Level 0..20)
   engines\lc0\, engines\maia\  lc0 and the 9 Maia nets (optional; git-ignored; python tools\install_maia.py)
   data\openings\*.json     opening repertoire files (schema: tools/validate_opening.py docstring)
-  tools\                   data tooling (validate_opening.py, check_coverage.py) and Maia setup (install_maia.py, check_maia.py)
+  engines\fairy\           Fairy-Stockfish for the variants (optional; git-ignored; python tools\install_fairy.py)
+  tools\                   data tooling (validate_opening.py, check_coverage.py), Maia setup (install_maia.py, check_maia.py) and Fairy-Stockfish setup (install_fairy.py, check_fairy.py)
   backend\                 FastAPI + python-chess (Python 3.14)
     app\main.py            app factory, CORS, static serving of frontend/dist, router includes
     app\config.py          paths and defaults
@@ -80,13 +81,13 @@ interface LineMeta { id, name, category, description, evaluation, sans: string[]
 
 | Method | Path | Request | Response |
 |---|---|---|---|
-| GET | `/api/health` | | `{ ok, stockfish: { name, path }, ollama: { ok, models: string[] }, openings: number, maia: { available: boolean, ratings: number[], path: string } }` (`ratings`: those whose weight file exists; `path`: lc0; checking Maia only looks at files and never starts lc0) |
+| GET | `/api/health` | | `{ ok, stockfish: { name, path }, ollama: { ok, models: string[] }, openings: number, maia: { available: boolean, ratings: number[], path: string }, fairy: { available: boolean, path: string } }` (`ratings`: those whose weight file exists; `path`: lc0; checking Maia and Fairy-Stockfish only looks at files and never starts them) |
 | GET | `/api/openings` | | `OpeningSummary[]` |
 | GET | `/api/openings/{id}` | | `OpeningFull` (404 if unknown) |
 | GET | `/api/openings/{id}/quiz?mode=positions|traps&limit=50` | | `QuizItem[]` (see Quiz) |
 | POST | `/api/analyze` | `{ fen, multipv?: 1-5 (default 3), depth?: number (default 18), movetime_ms?: number }` | `{ fen, depth, lines: EngineLine[] }` one-shot analysis |
 | WS | `/ws/analyze` | client sends `{ fen, multipv }` any time; server streams `{ type:"info", fen, depth, seldepth, nodes, nps, lines: EngineLine[] }` ~5-10/s (at most 10/s; `fen` echoed exactly as sent) until a new fen arrives or client sends `{ stop: true }`; bad input gets `{ type:"error", message }` | |
-| POST | `/api/bot/move` | `{ fen, elo, movetime_ms?: number (default 800), bot?: "stockfish"\|"maia" (default "stockfish"), moves?: string[] (UCI moves from the start, oldest first), start_fen?: string (root of those moves; default the standard start) }`. `elo`: 400-3190 for Stockfish (else 422); one of 1100, 1200, ..., 1900 for Maia (else 400). Stockfish ignores `moves` and `start_fen`; Maia ignores `movetime_ms`. See Maia | `{ uci, san, fen_after, eval: Score|null, strength: { mode: "uci_elo"\|"skill"\|"maia", skill?: number, elo } }` (503 naming `tools/install_maia.py` when Maia is not installed or lc0 failed) |
+| POST | `/api/bot/move` | `{ fen, elo, movetime_ms?: number (default 800), bot?: "stockfish"\|"maia"\|"panicfish" (default "stockfish"), variant?: "standard"\|"chess960"\|"crazyhouse"\|"kingofthehill"\|"3check"\|"antichess"\|"atomic"\|"horde"\|"racingkings" (default "standard"), moves?: string[] (UCI moves from the start, oldest first), start_fen?: string (root of those moves; default the standard start) }`. `elo`: 400-3190 for Stockfish and 0-3600 for Panicfish (else 422); one of 1100, 1200, ..., 1900 for Maia (else 400, as is Maia with any other variant). Stockfish ignores `moves` and `start_fen`; Maia ignores `movetime_ms`. See Maia | `{ uci, san, fen_after, eval: Score|null, strength: { mode: "uci_elo"\|"skill"\|"maia"\|"full"\|"random", skill?: number, elo } }` (503 naming `tools/install_maia.py` when Maia is not installed or lc0 failed, or `tools/install_fairy.py` when a variant needs Fairy-Stockfish and it is missing) |
 | POST | `/api/pgn/parse` | `{ pgn }` | `{ headers: Record<string,string>, moves: { san, uci, fen }[] , startFen }` (400 on bad PGN) |
 | POST | `/api/review` | `{ moves: string[] (UCI or SAN from the initial position), startFen?, depth?: 12-24 (default 16; the API also accepts 4-30), players?: { white, black } }` | `{ jobId }` (400 on an illegal move) |
 | GET | `/api/review/{jobId}` | | `ReviewJob` (status: queued|running|done|error; progress 0..1; result when done) |
@@ -255,6 +256,20 @@ interface CoachMove {
   cpLoss at 500 unless elo < 700. Document that sub-1320 strength is approximate.
 * Never let UCI_LimitStrength leak into the analysis engine: separate processes.
 
+### Variants and Panicfish (`variants.py`, `bot.py`)
+
+* **Engines.** Standard chess and Chess960 run on Stockfish 19. The other seven run on Fairy-Stockfish
+  (`fairy_path`, env `FAIRY_PATH`, default `engines/fairy/fairy-stockfish.exe`), a separate
+  `EngineManager` with one `bot` slot that starts with the first variant move. `parse_variant_fen`
+  builds the matching `chess.variant` board, and passing that board to the engine selects the variant
+  (python-chess manages `UCI_Variant` and `UCI_Chess960`). The Elo limiter uses 500-2850 on
+  Fairy-Stockfish (its advertised range) and 1320-3190 on Stockfish.
+* **Panicfish.** The frontend sends the Elo it has left, derived by replaying the moves, so a takeback
+  restores it and the backend keeps no state. 3600 = no limit (`mode: "full"`); anything lower goes
+  through `choose_bot_move`; 0 = a uniformly random legal move with no engine (`mode: "random"`).
+* **Tests** use `backend/tests/fixtures/fake_fairy.py`. `tools/check_fairy.py` is what exercises the
+  real engine, and it is run by hand.
+
 ### Maia (`maia.py`)
 
 Maia is 9 neural nets trained on Lichess games at one rating band each (`maia-1100.pb.gz` ...
@@ -415,7 +430,9 @@ Tabs:
   or "play the opening with hints" where the student's book moves are confirmed with a green check).
   During play: clocks are not needed; show captured pieces and material difference, move list, resign,
   takeback, flip, "hint" (one-shot `/api/analyze` best move arrow). Game over modal (mate, stalemate,
-  draw by rule, resign) with "Review this game" (hands the move list to Review) and "Rematch".
+  draw by rule, resign) with "Review this game" (opens Review's setup card on the game) and "Rematch".
+  **History** (`lib/gameHistory.ts`, `tabs/History`): each finished game is saved to `game-history-v1`
+  (newest first, at most 1000), and a finished review adds its accuracy to the games with those moves.
   **Choosing Maia** (`PlayGame.ts`, `PlaySetupForm.tsx`): the setup (`play-setup-v1`) holds `bot`, `elo`
   (Stockfish) and `maiaElo` separately, so switching bots loses neither; the game (`play-game-v1`)
   stores its `bot`. Saved games and setups without these fields load as Stockfish; a saved Maia
@@ -436,6 +453,16 @@ Tabs:
   is shown as "Bot move failed" with Retry. Every place that names the bot goes through
   `botName(bot)` / `botTitle(bot, elo)` ("Stockfish 19", "Maia (1500)"). Below 820 px the tab stacks
   the board and the panel and scrolls (the setup form first when there is no game).
+  **Variants** (`lib/variants.ts`, on chessops, because chess.js is standard-only): the setup and the
+  game store `variant`, and games keep a SAN list as before (a Crazyhouse drop is `N@f3`). `fitToVariant`
+  (`PlayGame.ts`) keeps a choice the variant does not allow out of play without overwriting it: Maia and
+  opening lines are standard-only, Panicfish needs checks (not Antichess or Racing Kings), and in Horde
+  it needs you to have the pawns. `Board` takes `rules` (dests, check, promotion) for positions chess.js
+  cannot read, and `dropPiece` / `onDrop` / `handleRef` for the Crazyhouse pocket (`PlayPocket.tsx`). Hint,
+  Review and Analyze are standard-only, so a variant game is recorded in History (`variant`) but not
+  handed to them. Availability comes from `health.fairy`; Start is disabled and the form gives the
+  install command when the chosen variant needs it. **Panicfish**: `botEloNow` counts the student's
+  checks in the replay, so nothing about its strength is stored.
 * **Review**: input = last played game or pasted PGN (`/api/pgn/parse`); settings = depth (12 fast /
   16 default / 20 deep) and Ollama model (from `/api/ollama/models`). Run: progress bar fed by
   `/ws/review/{jobId}`. Result: header with accuracy per side (big numbers like chess.com), count table
@@ -444,7 +471,9 @@ Tabs:
   played move and the engine best move (green), the eval before/after, the best line, the book `why`
   if any, and the LLM explanation panel with an "Explain" button (streams via `/ws/explain`) plus
   "Explain all key moments" (runs sequentially over inaccuracies/mistakes/blunders/misses/brilliants).
-  Keyboard left/right navigates.
+  Keyboard left/right navigates. Any legal move on the board, or "Play best move", starts a side line
+  under that move (`useReviewVariation.ts`): each move is graded with `POST /api/coach/move`, the report
+  is not changed, and going to any move of the game closes the line.
 
 ## Quiz items (served by the backend)
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { Icon } from '../../components/Icon'
+import { PgnFileButton } from '../../components/PgnFileButton'
 import { START_FEN } from '../../lib/chess'
 import { looksLikeFen, normalizeFen, parseGame, type ParsedGame } from './analyzeHelpers'
 
@@ -34,8 +35,8 @@ export function AnalyzeImport({ onLoadFen, onLoadGame }: AnalyzeImportProps): JS
 
   useEffect(() => () => ctrlRef.current?.abort(), [])
 
-  const load = async () => {
-    const input = text.trim()
+  const load = async (source: string) => {
+    const input = source.trim()
     if (!input) {
       setNotice({ kind: 'error', text: 'Paste a FEN or a PGN first.' })
       return
@@ -87,15 +88,23 @@ export function AnalyzeImport({ onLoadFen, onLoadGame }: AnalyzeImportProps): JS
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               e.preventDefault()
-              void load()
+              void load(text)
             }
           }}
         />
       </label>
-      <div className="row">
-        <button type="button" className="btn btn-primary" onClick={() => void load()} disabled={busy} data-testid="analyze-import-load">
+      <div className="row wrap">
+        <button type="button" className="btn btn-primary" onClick={() => void load(text)} disabled={busy} data-testid="analyze-import-load">
           <Icon name="upload" size={16} /> {busy ? 'Loading…' : 'Load'}
         </button>
+        <PgnFileButton
+          onText={(fileText) => {
+            setText(fileText)
+            void load(fileText)
+          }}
+          onError={(message) => setNotice({ kind: 'error', text: message })}
+          disabled={busy}
+        />
         <button type="button" className="btn btn-ghost" onClick={() => { setText(''); setNotice(null) }} disabled={busy || !text}>
           Clear
         </button>

@@ -1,4 +1,7 @@
-"""POST /api/bot/move: Stockfish (strength-limited) or Maia (human-like, runs on lc0)."""
+"""POST /api/bot/move: Stockfish (strength-limited), Maia (human-like, runs on lc0) or Panicfish.
+
+Standard chess and Chess960 run on Stockfish 19, the other variants on Fairy-Stockfish.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -9,8 +12,7 @@ import chess
 import chess.engine
 from fastapi import APIRouter, HTTPException, Request
 
-from ..bot import BotChoice, choose_bot_move
-from ..chessutil import parse_fen
+from ..bot import FAIRY_ELO_RANGE, STOCKFISH_ELO_RANGE, BotChoice, choose_bot_move, choose_panicfish_move
 from ..deps import Services, services
 from ..engine import EngineUnavailable
 from ..maia import (
@@ -25,6 +27,7 @@ from ..maia import (
     weight_path,
 )
 from ..schemas import BotMoveRequest, BotMoveResponse
+from ..variants import FAIRY_INSTALL_HINT, FAIRY_SLOT, needs_fairy, parse_variant_fen
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/bot", tags=["bot"])
@@ -65,20 +68,34 @@ async def _maia_choice(svc: Services, board: chess.Board, req: BotMoveRequest) -
         raise _maia_stopped() from exc
 
 
+async def _engine_choice(svc: Services, board: chess.Board, req: BotMoveRequest) -> BotChoice:
+    uses_fairy = needs_fairy(req.variant)
+    if uses_fairy and not svc.fairy.available:
+        raise EngineUnavailable(f"Fairy-Stockfish plays this variant and it is not installed. {FAIRY_INSTALL_HINT}")
+    manager, slot, elo_range = (
+        (svc.fairy, FAIRY_SLOT, FAIRY_ELO_RANGE) if uses_fairy else (svc.engines, "bot", STOCKFISH_ELO_RANGE)
+    )
+    choose = choose_panicfish_move if req.bot == "panicfish" else choose_bot_move
+    try:
+        async with manager.use(slot) as engine:
+            return await choose(engine, board, req.elo, req.movetime_ms, uci_elo_range=elo_range)
+    except chess.engine.EngineError as exc:
+        log.warning("%s failed during a move: %s", manager.label, exc)
+        raise EngineUnavailable(f"{manager.label} stopped unexpectedly. {RETRY_HINT}") from exc
+
+
 @router.post("/move", response_model=BotMoveResponse, response_model_exclude_unset=True)
 async def bot_move(req: BotMoveRequest, request: Request) -> dict[str, Any]:
+    if req.bot == "maia" and req.variant != "standard":
+        raise HTTPException(status_code=400, detail="Maia only plays standard chess.")
     try:
-        board = parse_fen(req.fen)
+        board = parse_variant_fen(req.variant, req.fen)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not any(board.legal_moves):
         raise HTTPException(status_code=400, detail="the game is over: no legal moves")
     svc = services(request)
-    if req.bot == "maia":
-        choice = await _maia_choice(svc, board, req)
-    else:
-        async with svc.engines.use("bot") as engine:
-            choice = await choose_bot_move(engine, board, req.elo, req.movetime_ms)
+    choice = await (_maia_choice if req.bot == "maia" else _engine_choice)(svc, board, req)
     san = board.san(choice.move)
     board.push(choice.move)
     strength: dict[str, Any] = {"mode": choice.mode, "elo": choice.elo}

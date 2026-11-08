@@ -2,8 +2,9 @@
  * Pure helpers for the Review tab: phrasing, graph scaling, positions per ply, persistence shape.
  */
 import type { Classification, Players, ReviewMove, ReviewResult, Score, Side } from '../../api/types'
-import { START_FEN, plyOffsetFromFen } from '../../lib/chess'
+import { START_FEN, plyOffsetFromFen, sansToPgn } from '../../lib/chess'
 import { mateWinner } from '../../lib/eval'
+import { pgnFileName } from '../../lib/pgnTransfer'
 
 /** Order of the classification count table (chess.com game report order). */
 export const REVIEW_TABLE_ORDER: readonly Classification[] = [
@@ -144,8 +145,29 @@ export interface ReviewGame {
   players?: Players
   /** "1-0" | "0-1" | "1/2-1/2" | "*" when known. */
   result?: string
+  /** PGN Date tag ("2026.11.06") when known. */
+  date?: string
   /** Where it came from, for the header ("Last game", "PGN"). */
-  source: 'last' | 'pgn' | 'request'
+  source: 'last' | 'pgn'
+}
+
+/** The reviewed game as a PGN: its moves and players, without the review's classifications. */
+export function reviewPgn(game: ReviewGame): string {
+  const result = game.result ?? '*'
+  const headers = {
+    Event: 'Game Review',
+    Site: 'Gambiteer',
+    Date: game.date ?? '????.??.??',
+    White: game.players?.white ?? '?',
+    Black: game.players?.black ?? '?',
+    Result: result,
+  }
+  return sansToPgn(game.sans, { headers, result, startFen: game.startFen })
+}
+
+export function reviewFileName(game: ReviewGame): string {
+  const date = game.date?.includes('?') ? undefined : game.date
+  return pgnFileName([game.players?.white ?? 'White', 'vs', game.players?.black ?? 'Black', date].filter(Boolean).join(' '))
 }
 
 /** localStorage key of the last review (survives tab switches and reloads). */

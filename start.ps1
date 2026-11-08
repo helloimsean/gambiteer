@@ -166,6 +166,11 @@ if (-not (Test-Path $lc0) -or -not (Test-Path (Join-Path $maiaNets 'maia-*.pb.gz
     Write-Host 'Info: the Maia bot is not installed (optional). To add it: python tools\install_maia.py, then restart.' -ForegroundColor Cyan
 }
 
+$fairy = if ($env:FAIRY_PATH) { $env:FAIRY_PATH } else { Join-Path $Root 'engines\fairy\fairy-stockfish.exe' }
+if (-not (Test-Path $fairy)) {
+    Write-Host 'Info: Fairy-Stockfish is not installed (optional, it plays 7 of the 8 variants). To add it: python tools\install_fairy.py, then restart.' -ForegroundColor Cyan
+}
+
 $busy = $null
 try {
     $busy = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop | Select-Object -First 1

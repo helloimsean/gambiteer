@@ -9,7 +9,8 @@ import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js'
 import type { Side } from '../api/types'
 
 export type { Move, PieceSymbol, Square }
-export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
+/** 'k' only exists in Antichess. */
+export type PromotionPiece = 'q' | 'r' | 'b' | 'n' | 'k'
 export type CgColor = 'white' | 'black'
 export type Dests = Map<Square, Square[]>
 
@@ -297,13 +298,13 @@ export function moveNumberPrefix(ply: number): string {
   return ply % 2 === 1 ? `${n}.` : `${n}...`
 }
 
-/** Pretty "1.e4 Nf6 2.Nc3" string for a SAN path (optionally starting at a given ply). */
-export function formatSanPath(sans: readonly string[], startPly = 0): string {
+/** Pretty "1.e4 Nf6 2.Nc3" string for a SAN path; `numberGap` " " gives PGN's "1. e4". */
+export function formatSanPath(sans: readonly string[], startPly = 0, numberGap = ''): string {
   const parts: string[] = []
   sans.forEach((san, i) => {
     const ply = startPly + i + 1
-    if (ply % 2 === 1) parts.push(`${Math.ceil(ply / 2)}.${san}`)
-    else if (i === 0) parts.push(`${Math.ceil(ply / 2)}...${san}`)
+    if (ply % 2 === 1) parts.push(`${Math.ceil(ply / 2)}.${numberGap}${san}`)
+    else if (i === 0) parts.push(`${Math.ceil(ply / 2)}...${numberGap}${san}`)
     else parts.push(san)
   })
   return parts.join(' ')
@@ -355,7 +356,7 @@ export function sansToPgn(
     h.FEN = opts.startFen
   }
   for (const [k, v] of Object.entries(h)) headers.push(`[${k} "${v.replace(/"/g, '\\"')}"]`)
-  const body = formatSanPath(sans, opts.startFen ? plyOffsetFromFen(opts.startFen) : 0)
+  const body = formatSanPath(sans, opts.startFen ? plyOffsetFromFen(opts.startFen) : 0, ' ')
   const result = opts.result ?? '*'
   return `${headers.length ? headers.join('\n') + '\n\n' : ''}${body}${body ? ' ' : ''}${result}\n`
 }
@@ -364,6 +365,7 @@ export function sansToPgn(
 export function plyOffsetFromFen(fen: string): number {
   const parts = fen.split(' ')
   const turn = parts[1] ?? 'w'
-  const moveNo = Number(parts[5] ?? '1')
+  // the last field, because a Three-Check FEN has an extra one
+  const moveNo = Number(parts.length >= 6 ? parts[parts.length - 1] : '1')
   return (moveNo - 1) * 2 + (turn === 'b' ? 1 : 0)
 }
