@@ -227,14 +227,14 @@ try {
   await page.reload({ waitUntil: 'networkidle' })
   await gotoPlay(page)
 
-  await check('setup form shows with strength caption (approximate below 1320, UCI_Elo above)', async () => {
+  await check('setup form shows with strength caption (roughly below 1320, limited above)', async () => {
     await page.locator('[data-testid="play-setup"]').waitFor()
     await page.locator('button[data-elo="800"]').click()
     const low = await page.locator('[data-testid="play-strength-caption"]').innerText()
-    assert(low.includes('approximate (Skill Level + mixing)'), `caption at 800: ${low}`)
+    assert(low.includes('Stockfish 19, roughly this Elo'), `caption at 800: ${low}`)
     await page.locator('button[data-elo="2500"]').click()
     const high = await page.locator('[data-testid="play-strength-caption"]').innerText()
-    assert(high.includes('Stockfish 19, UCI_Elo'), `caption at 2500: ${high}`)
+    assert(high.includes('Stockfish 19, limited to this Elo'), `caption at 2500: ${high}`)
     // slider drag via keyboard to the max
     const slider = page.locator('.play-elo-slider input[type=range]')
     await slider.focus()

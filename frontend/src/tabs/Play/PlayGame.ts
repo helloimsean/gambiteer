@@ -6,7 +6,7 @@
  * replaying the list with chess.js, which also gives threefold-repetition detection for free.
  */
 import { Chess } from 'chess.js'
-import type { BotStrength, LineMeta, OpeningFull, Players, Side } from '../../api/types'
+import type { BotKind, BotStrength, Health, LineMeta, OpeningFull, Players, Side } from '../../api/types'
 import type { LastGame, ReviewRequestPayload } from '../../state/AppContext'
 import { START_FEN, gameStatus, oppositeSide, turnFromFen, type Move } from '../../lib/chess'
 import { loadJson, saveJson } from '../../lib/storage'
@@ -23,6 +23,11 @@ export const ELO_MAX = 3190
 /** From this Elo up the backend uses Stockfish's own UCI_LimitStrength/UCI_Elo. */
 export const UCI_ELO_MIN = 1320
 export const ELO_PRESETS = [800, 1200, 1500, 2000, 2500, 3190] as const
+export const MAIA_ELO_MIN = 1100
+export const MAIA_ELO_MAX = 1900
+/** Maia has one trained net per 100 rating points. */
+export const MAIA_ELO_STEP = 100
+export const MAIA_ELO_PRESETS = [1100, 1300, 1500, 1700, 1900] as const
 export const MOVETIME_OPTIONS = [300, 800, 2000] as const
 /** Delay before the bot plays a book move from the line (feels less robotic than instant). */
 export const BOOK_MOVE_DELAY_MS = 450
@@ -40,7 +45,11 @@ export type OpeningMode = 'end' | 'hints'
 
 export interface PlaySetup {
   color: ColorChoice
+  bot: BotKind
+  /** Stockfish's Elo. */
   elo: number
+  /** Maia's rating, kept apart from `elo` so switching bots loses neither. */
+  maiaElo: number
   movetimeMs: number
   useOpening: boolean
   openingId: string
@@ -51,7 +60,9 @@ export interface PlaySetup {
 
 export const DEFAULT_SETUP: PlaySetup = {
   color: 'white',
+  bot: 'stockfish',
   elo: 1200,
+  maiaElo: 1500,
   movetimeMs: 800,
   useOpening: false,
   openingId: '',
@@ -95,6 +106,8 @@ export interface PlayGame {
   /** Unique per game; async bot replies check it so they never land in a newer game. */
   id: string
   studentColor: Side
+  bot: BotKind
+  /** The bot's Elo (Stockfish) or rating (Maia). */
   elo: number
   movetimeMs: number
   startFen: string
@@ -241,13 +254,19 @@ export function alternativeBookLine(full: OpeningFull | null | undefined, sans: 
 
 // ---------------------------------------------------------------- labels
 
-export function botName(): string {
-  return 'Stockfish 19'
+export function botName(bot: BotKind): string {
+  return bot === 'maia' ? 'Maia' : 'Stockfish 19'
+}
+
+/** "Stockfish 19 (1200)", "Maia (1500)". */
+export function botTitle(bot: BotKind, elo: number): string {
+  return `${botName(bot)} (${elo})`
 }
 
 /** Caption under the Elo slider (contract wording from ARCHITECTURE.md). */
-export function strengthCaption(elo: number): string {
-  return elo >= UCI_ELO_MIN ? 'Stockfish 19, UCI_Elo' : 'approximate (Skill Level + mixing)'
+export function strengthCaption(bot: BotKind, elo: number): string {
+  if (bot === 'maia') return `Maia ${elo}, trained on Lichess players rated about ${elo}`
+  return elo >= UCI_ELO_MIN ? 'Stockfish 19, limited to this Elo' : 'Stockfish 19, roughly this Elo'
 }
 
 /** Rough human description of an Elo. */
@@ -264,10 +283,11 @@ export function eloLevel(elo: number): string {
 }
 
 /** What the backend reported about the strength it used. */
-export function strengthDetail(s: BotStrength | null, elo: number): string {
-  if (!s) return elo >= UCI_ELO_MIN ? `UCI_Elo ${elo}` : `approx. ${elo} (Skill Level + mixing)`
-  if (s.mode === 'uci_elo') return `UCI_Elo ${s.elo}`
-  return `Skill Level ${s.skill ?? '?'} + mixing (approx. ${s.elo})`
+export function strengthDetail(bot: BotKind, s: BotStrength | null, elo: number): string {
+  if (bot === 'maia') return strengthCaption(bot, s?.elo ?? elo)
+  const shown = s?.elo ?? elo
+  const exact = s ? s.mode === 'uci_elo' : elo >= UCI_ELO_MIN
+  return exact ? `Limited to ${shown} Elo` : `About ${shown} Elo (approximate)`
 }
 
 export function formatMovetime(ms: number): string {
@@ -308,11 +328,11 @@ export function resultHeadline(game: PlayGame): string {
   if (!o || !game.result) return ''
   const how = reasonText(game.result.reason)
   if (o === 'draw') return `Draw ${how}`
-  return o === 'win' ? `You won ${how}` : `${botName()} won ${how}`
+  return o === 'win' ? `You won ${how}` : `${botName(game.bot)} won ${how}`
 }
 
 export function gamePlayers(game: PlayGame): Players {
-  const bot = `${botName()} (${game.elo})`
+  const bot = botTitle(game.bot, game.elo)
   return game.studentColor === 'white' ? { white: 'You', black: bot } : { white: bot, black: 'You' }
 }
 
@@ -386,7 +406,8 @@ export function createGame(setup: PlaySetup, full: OpeningFull | null): PlayGame
     version: 1,
     id: newGameId(),
     studentColor,
-    elo: clampElo(setup.elo),
+    bot: setup.bot,
+    elo: setupElo(setup),
     movetimeMs: setup.movetimeMs,
     startFen: START_FEN,
     sans,
@@ -409,7 +430,8 @@ export function rematchSetup(game: PlayGame, current: PlaySetup): PlaySetup {
   return {
     ...current,
     color: game.opening ? game.studentColor : oppositeSide(game.studentColor),
-    elo: game.elo,
+    bot: game.bot,
+    ...(game.bot === 'maia' ? { maiaElo: game.elo } : { elo: game.elo }),
     movetimeMs: game.movetimeMs,
     useOpening: Boolean(game.opening),
     openingId: game.opening?.id ?? current.openingId,
@@ -423,6 +445,56 @@ export function clampElo(elo: number): number {
   return Math.min(ELO_MAX, Math.max(ELO_MIN, Math.round(elo)))
 }
 
+/** The nearest rating Maia has a net for. */
+export function clampMaiaElo(elo: number): number {
+  if (!Number.isFinite(elo)) return DEFAULT_SETUP.maiaElo
+  const stepped = Math.round(elo / MAIA_ELO_STEP) * MAIA_ELO_STEP
+  return Math.min(MAIA_ELO_MAX, Math.max(MAIA_ELO_MIN, stepped))
+}
+
+/** The strength a new game from this setup is played at. */
+export function setupElo(setup: PlaySetup): number {
+  return setup.bot === 'maia' ? clampMaiaElo(setup.maiaElo) : clampElo(setup.elo)
+}
+
+// ---------------------------------------------------------------- Maia availability
+
+/** Can Maia be played? "unknown" until /api/health has answered, so nothing flashes "not installed". */
+export type MaiaStatus = 'unknown' | 'available' | 'missing'
+
+export function maiaStatusOf(health: Health | null): MaiaStatus {
+  if (!health) return 'unknown'
+  return health.maia?.available ? 'available' : 'missing' // an older backend does not report Maia
+}
+
+/** The ratings with an installed net, or null when that is not known (then all of them are offered). */
+export function maiaRatingsOf(health: Health | null): readonly number[] | null {
+  return health?.maia?.ratings ?? null
+}
+
+/** Whether a game at this strength can get replies on this install. */
+export function botCanPlay(bot: BotKind, elo: number, status: MaiaStatus, ratings: readonly number[] | null): boolean {
+  if (bot !== 'maia') return true
+  return status !== 'missing' && (ratings === null || ratings.includes(elo))
+}
+
+function nearestRating(elo: number, ratings: readonly number[]): number {
+  return ratings.reduce((best, r) => (Math.abs(r - elo) < Math.abs(best - elo) ? r : best))
+}
+
+/**
+ * The setup the form shows and a new game uses: a stored choice of Maia that cannot be played
+ * becomes Stockfish, and a rating whose net is missing becomes the nearest installed one. The
+ * stored values are not changed, so the choice returns once Maia is fully installed.
+ */
+export function playableSetup(setup: PlaySetup, status: MaiaStatus, ratings: readonly number[] | null): PlaySetup {
+  if (setup.bot !== 'maia') return setup
+  if (status === 'missing') return { ...setup, bot: 'stockfish' }
+  const rating = clampMaiaElo(setup.maiaElo)
+  if (!ratings || ratings.length === 0 || ratings.includes(rating)) return setup
+  return { ...setup, maiaElo: nearestRating(rating, ratings) }
+}
+
 // ---------------------------------------------------------------- persistence
 
 export function loadSetup(): PlaySetup {
@@ -430,7 +502,9 @@ export function loadSetup(): PlaySetup {
   const out: PlaySetup = { ...DEFAULT_SETUP }
   if (!s || typeof s !== 'object') return out
   if (s.color === 'white' || s.color === 'black' || s.color === 'random') out.color = s.color
+  if (s.bot === 'stockfish' || s.bot === 'maia') out.bot = s.bot
   if (typeof s.elo === 'number') out.elo = clampElo(s.elo)
+  if (typeof s.maiaElo === 'number') out.maiaElo = clampMaiaElo(s.maiaElo)
   if (typeof s.movetimeMs === 'number' && (MOVETIME_OPTIONS as readonly number[]).includes(s.movetimeMs)) out.movetimeMs = s.movetimeMs
   if (typeof s.useOpening === 'boolean') out.useOpening = s.useOpening
   if (typeof s.openingId === 'string') out.openingId = s.openingId
@@ -484,11 +558,14 @@ export function loadSavedGame(): PlayGame | null {
       mode: o.mode === 'end' ? 'end' : 'hints',
     }
   }
+  const bot: BotKind = g.bot === 'maia' ? 'maia' : 'stockfish' // games saved before Maia have no `bot`
+  const savedElo = typeof g.elo === 'number' ? g.elo : NaN
   const game: PlayGame = {
     version: 1,
     id: g.id,
     studentColor: g.studentColor,
-    elo: clampElo(typeof g.elo === 'number' ? g.elo : DEFAULT_SETUP.elo),
+    bot,
+    elo: bot === 'maia' ? clampMaiaElo(savedElo) : clampElo(savedElo),
     movetimeMs: typeof g.movetimeMs === 'number' && g.movetimeMs > 0 ? g.movetimeMs : DEFAULT_SETUP.movetimeMs,
     startFen,
     sans,

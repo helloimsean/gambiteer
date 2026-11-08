@@ -160,6 +160,12 @@ if (-not (Test-Path $stockfish)) {
     Write-Host '         Download it as described in engines\README.md (or the Install section of README.md).' -ForegroundColor Yellow
 }
 
+$lc0 = if ($env:LC0_PATH) { $env:LC0_PATH } else { Join-Path $Root 'engines\lc0\lc0.exe' }
+$maiaNets = if ($env:MAIA_WEIGHTS_DIR) { $env:MAIA_WEIGHTS_DIR } else { Join-Path $Root 'engines\maia' }
+if (-not (Test-Path $lc0) -or -not (Test-Path (Join-Path $maiaNets 'maia-*.pb.gz'))) {
+    Write-Host 'Info: the Maia bot is not installed (optional). To add it: python tools\install_maia.py, then restart.' -ForegroundColor Cyan
+}
+
 $busy = $null
 try {
     $busy = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop | Select-Object -First 1

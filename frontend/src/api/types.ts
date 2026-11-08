@@ -205,16 +205,24 @@ export type AnalysisCommand = { fen: string; multipv: number } | { stop: true }
 
 // ---------------------------------------------------------------- bot
 
+export type BotKind = 'stockfish' | 'maia'
+
 export interface BotMoveRequest {
   fen: string
-  /** 400-3190. */
+  /** Stockfish: 400-3190. Maia: 1100, 1200, ..., 1900. */
   elo: number
-  /** Default 800. */
+  /** Default 800. Maia ignores it. */
   movetime_ms?: number
+  /** Default "stockfish". */
+  bot?: BotKind
+  /** Maia: UCI moves played from `start_fen`, oldest first. */
+  moves?: string[]
+  /** Maia: root FEN of `moves` (default: the standard start). */
+  start_fen?: string
 }
 
 export interface BotStrength {
-  mode: 'uci_elo' | 'skill'
+  mode: 'uci_elo' | 'skill' | 'maia'
   skill?: number
   elo: number
 }
@@ -457,4 +465,7 @@ export interface Health {
   stockfish: { name: string; path: string }
   ollama: { ok: boolean; models: string[] }
   openings: number
+  /** `ratings`: the ratings whose weight file exists; `path`: lc0. Only looks at files, never starts lc0. */
+  /** Absent from a backend older than this frontend (a restart fixes that). */
+  maia?: { available: boolean; ratings: number[]; path: string }
 }

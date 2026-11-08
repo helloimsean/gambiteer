@@ -25,7 +25,7 @@ def test_health(client: TestClient) -> None:
     r = client.get("/api/health")
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"ok", "stockfish", "ollama", "openings"}
+    assert set(body) == {"ok", "stockfish", "ollama", "openings", "maia"}
     assert body["openings"] == 1
     assert body["stockfish"]["path"].endswith(".exe") or body["stockfish"]["path"]
     assert isinstance(body["ollama"]["ok"], bool) and isinstance(body["ollama"]["models"], list)

@@ -1,7 +1,7 @@
 # Gambiteer: backend
 
 FastAPI + python-chess service for the trainer: opening trees and quizzes, Stockfish 19 analysis
-(one-shot and live over a WebSocket), strength-limited bot moves, PGN parsing, game review with
+(one-shot and live over a WebSocket), bot moves (strength-limited Stockfish or human-like Maia), PGN parsing, game review with
 chess.com-style classifications, Ollama explanations, and a single-move coach for the Learn tab's
 practice mode. The JSON contracts are in
 `../ARCHITECTURE.md`; the Pydantic models are in `app/schemas.py`.
@@ -28,6 +28,8 @@ python -m uvicorn app.main:app --port 8000
 | Variable | Default | Meaning |
 |---|---|---|
 | `STOCKFISH_PATH` | `engines/stockfish19.exe` | UCI engine executable |
+| `LC0_PATH` | `engines/lc0/lc0.exe` | lc0 executable that runs Maia (optional) |
+| `MAIA_WEIGHTS_DIR` | `engines/maia` | folder with the Maia nets, `maia-<rating>.pb.gz` |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server used for explanations |
 | `OLLAMA_MODEL` | `gpt-oss:20b` | preferred explanation model; if it is not installed, the first installed model is used |
 | `DATA_DIR` | `data/openings` | folder with the opening JSON files (schema: `tools/validate_opening.py`) |
@@ -46,11 +48,12 @@ app/openings.py        load + merge opening lines into trees, quiz items; reload
 app/review.py          pure classification / win% / accuracy functions + ReviewService (asyncio jobs)
 app/coach.py           single-move coach: engine verdict for one move (reuses review.py's pure functions)
 app/bot.py             strength-limited move choice (UCI_Elo >= 1320, Skill Level + softmax mixing below)
+app/maia.py            human-like move choice: reads the Maia net's policy from lc0 and samples from it
 app/ollama_client.py   httpx client for Ollama, prompt builders for review and coach moves (facts computed with python-chess)
 app/chessutil.py       FEN/move parsing, score conversion, SAN PVs, SEE, hanging pieces
 app/deps.py            access to the services stored on app.state
 app/routers/           openings, analysis (+ /ws/analyze), bot, pgn, review (+ /ws/review/{id}), explain (+ /ws/explain), coach (+ /ws/coach), system
-tests/                 pytest suite; tests/fixtures/alien-gambit.json is a small opening file for the tests
+tests/                 pytest suite; tests/fixtures has a small opening file and fake_lc0.py, a stand-in for lc0
 ```
 
 ## Behaviour notes
@@ -70,6 +73,14 @@ tests/                 pytest suite; tests/fixtures/alien-gambit.json is a small
   is **approximate**: Skill Level `round((elo-400)/920*7)` at a shallow depth, plus picking among the
   top 5 moves with probability softmax(-cpLoss/T), T = 60 + (1320-elo)*0.35, moves losing > 500 cp
   excluded unless elo < 700. It has not been calibrated against rated play.
+* **Maia (`bot: "maia"`).** A neural net per 100 Lichess rating points (1100 to 1900), run by lc0 with
+  search off (`go nodes 1`), so `movetime_ms` is ignored. The bot samples from the net's policy so it
+  varies and makes human-style mistakes; the sampling constants at the top of `app/maia.py` are not yet
+  calibrated against real play. Send `moves` (and `start_fen`) so the net sees the game's history; bad
+  history falls back to the FEN. Install with `python tools\install_maia.py` (see `../engines/README.md`)
+  and test the real engine with `python tools\check_maia.py`. Without it, a Maia request gets a 503
+  naming the installer, and `/api/health` reports `maia.available: false` (it only looks at files and
+  never starts lc0, which starts with the first Maia move).
 * **Review.** Moves may be UCI or SAN. Each position is analysed once with MultiPV 2 at the job's depth
   (the UI uses 12/16/20; the API accepts 4-30). Progress is pushed after every position. Jobs live in
   memory (the oldest finished ones are dropped beyond 50). "Book" means the SAN path is in the opening
@@ -103,4 +114,6 @@ python -m pytest -q
 ```
 
 Tests never need Ollama. Stockfish-backed tests are skipped when `STOCKFISH_PATH` does not exist. They
-use the fixture opening in `tests/fixtures/`, not `data/openings`.
+use the fixture opening in `tests/fixtures/`, not `data/openings`. Maia tests never start a real lc0: they
+run on `tests/fixtures/fake_lc0.py`, so they prove nothing about the real engine. `tools/check_maia.py` does that.
+To try the app without lc0, point `LC0_PATH` at `fake_lc0.py` (its moves are random, not chess).

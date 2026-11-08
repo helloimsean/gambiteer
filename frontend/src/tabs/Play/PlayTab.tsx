@@ -1,6 +1,6 @@
 /**
- * Play tab: a game against Stockfish 19 at a chosen Elo (POST /api/bot/move), optionally starting
- * from one of the opening lines (pre-played, or played out with book hints).
+ * Play tab: a game against a bot, Stockfish 19 or Maia, at a chosen Elo (POST /api/bot/move),
+ * optionally starting from one of the opening lines (pre-played, or played out with book hints).
  *
  * State: the game itself is a SAN list (see PlayGame.ts) persisted to localStorage on every change,
  * so switching tabs or reloading resumes it; the bot reply is re-requested when the tab mounts on
@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react'
 import * as api from '../../api/client'
-import type { BotStrength, Side } from '../../api/types'
+import type { BotKind, BotMoveRequest, BotMoveResponse, BotStrength, Side } from '../../api/types'
 import { Board, type BoardShape } from '../../components/Board'
 import { ClassificationBadge } from '../../components/ClassificationBadge'
 import { Icon } from '../../components/Icon'
@@ -22,6 +22,7 @@ import {
   formatSanPath,
   materialInfo,
   moveNumberPrefix,
+  moveToUci,
   oppositeSide,
   parseUci,
   plyOffsetFromFen,
@@ -42,19 +43,25 @@ import {
   RANDOM_LINE,
   alternativeBookLine,
   bookState,
+  botCanPlay,
   botName,
+  botTitle,
   createGame,
   formatMovetime,
   loadSavedGame,
   loadSetup,
+  maiaRatingsOf,
+  maiaStatusOf,
   moverOfPly,
   outcomeFor,
+  playableSetup,
   rematchSetup,
   replayGame,
   resignGame,
   resultHeadline,
   saveGame,
   saveSetup,
+  setupElo,
   strengthDetail,
   takebackTarget,
   toLastGame,
@@ -90,9 +97,12 @@ function errorText(err: unknown): string {
 }
 
 export function PlayTab(): JSX.Element {
-  const { settings, setLastGame, navigate, playRequest, clearRequest } = useApp()
+  const { settings, setLastGame, navigate, playRequest, clearRequest, health } = useApp()
 
-  const [setup, setSetup] = useState<PlaySetup>(loadSetup)
+  const [storedSetup, setSetup] = useState<PlaySetup>(loadSetup)
+  const maiaStatus = maiaStatusOf(health)
+  const maiaRatings = maiaRatingsOf(health)
+  const setup = useMemo(() => playableSetup(storedSetup, maiaStatus, maiaRatings), [storedSetup, maiaStatus, maiaRatings])
   const [game, setGame] = useState<PlayGame | null>(loadSavedGame)
   const [flipped, setFlipped] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -171,6 +181,7 @@ export function PlayTab(): JSX.Element {
     const id = game.id
     const ply = game.sans.length
     const fenNow = liveFen
+    const isMaia = game.bot === 'maia'
     setBotError(null)
     setBotThinking(true)
 
@@ -187,19 +198,31 @@ export function PlayTab(): JSX.Element {
       }
     }
 
+    const landReply = (res: BotMoveResponse) => {
+      setBotThinking(false)
+      const san = uciToSan(fenNow, res.uci)
+      if (!san) {
+        setBotError(`The engine answered with an illegal move (${res.uci}).`)
+        return
+      }
+      setStrength(res.strength)
+      setGame((prev) => (prev && prev.id === id && prev.sans.length === ply ? withMove(prev, san) : prev))
+    }
+
+    const req: BotMoveRequest = isMaia
+      ? { fen: fenNow, elo: game.elo, bot: 'maia', moves: (replay?.moves ?? []).map(moveToUci), start_fen: game.startFen }
+      : { fen: fenNow, elo: game.elo, movetime_ms: game.movetimeMs }
+    const sentAt = performance.now()
+    let replyDelay: ReturnType<typeof setTimeout> | undefined
     const ctrl = new AbortController()
     api
-      .botMove({ fen: fenNow, elo: game.elo, movetime_ms: game.movetimeMs }, ctrl.signal)
+      .botMove(req, ctrl.signal)
       .then((res) => {
         if (ctrl.signal.aborted) return
-        setBotThinking(false)
-        const san = uciToSan(fenNow, res.uci)
-        if (!san) {
-          setBotError(`The engine answered with an illegal move (${res.uci}).`)
-          return
-        }
-        setStrength(res.strength)
-        setGame((prev) => (prev && prev.id === id && prev.sans.length === ply ? withMove(prev, san) : prev))
+        // Maia answers at once, so its move time is a wait counted from the request
+        const wait = isMaia ? game.movetimeMs - (performance.now() - sentAt) : 0
+        if (wait > 0) replyDelay = setTimeout(() => landReply(res), wait)
+        else landReply(res)
       })
       .catch((err: unknown) => {
         if (ctrl.signal.aborted) return
@@ -208,9 +231,11 @@ export function PlayTab(): JSX.Element {
       })
     return () => {
       ctrl.abort()
+      clearTimeout(replyDelay)
       setBotThinking(false)
     }
-    // `game` is read for its id/elo/movetime; the position is fully described by gameId + liveFen
+    // `game` is read for its id/elo/movetime/bot, `replay` for its moves; the position is fully
+    // described by gameId + liveFen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, liveFen, isBotTurn, bookExpected, botRetry])
 
@@ -387,6 +412,11 @@ export function PlayTab(): JSX.Element {
 
   const rematch = () => {
     if (!game) return
+    // Maia or this rating's net is gone: the dialog says how to install it and offers what is there
+    if (!botCanPlay(game.bot, game.elo, maiaStatus, maiaRatings)) {
+      openNewGame()
+      return
+    }
     startGame(rematchSetup(game, setup))
   }
 
@@ -448,13 +478,14 @@ export function PlayTab(): JSX.Element {
   }, [hint, activeMiss, fen, isLive])
 
   const material = useMemo(() => materialInfo(fen), [fen])
-  const elo = game?.elo ?? setup.elo
+  const bot: BotKind = game?.bot ?? setup.bot
+  const elo = game?.elo ?? setupElo(setup)
 
   const renderBar = (side: Side) => {
     const isStudent = side === studentColor
     return (
       <PlayPlayerBar
-        name={isStudent ? 'You' : botName()}
+        name={isStudent ? 'You' : botName(bot)}
         detail={isStudent ? (game ? side : undefined) : String(elo)}
         icon={isStudent ? 'knight' : 'robot'}
         color={side}
@@ -498,7 +529,7 @@ export function PlayTab(): JSX.Element {
       return (
         <div className="play-status thinking" data-testid="play-status">
           <Spinner size={16} />
-          <span className="grow">{botName()} is thinking...</span>
+          <span className="grow">{botName(bot)} is thinking...</span>
         </div>
       )
     }
@@ -534,7 +565,7 @@ export function PlayTab(): JSX.Element {
               {moveNumberPrefix(ply + plyOffsetFromFen(game.startFen))}
               {san}
             </strong>{' '}
-            <span className="muted">{mark === 'check' ? 'is book. Well played!' : byStudent ? '(book)' : `${botName()} follows the line.`}</span>
+            <span className="muted">{mark === 'check' ? 'is book. Well played!' : byStudent ? '(book)' : `${botName(game.bot)} follows the line.`}</span>
           </div>
           {why ? <div className="play-book-why">{why}</div> : null}
         </div>
@@ -624,6 +655,7 @@ export function PlayTab(): JSX.Element {
       className="workspace play-tab"
       data-testid="play-tab"
       data-game-id={game?.id ?? ''}
+      data-bot={bot}
       data-turn={turn}
       data-over={over ? 'true' : 'false'}
       data-thinking={botThinking ? 'true' : 'false'}
@@ -675,8 +707,8 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">vs {botName()}</span>
-              <span className="badge badge-green" title={strengthDetail(strength, game.elo)}>
+              <span className="panel-title">vs {botName(game.bot)}</span>
+              <span className="badge badge-green" title={strengthDetail(game.bot, strength, game.elo)}>
                 {game.elo}
               </span>
               <span className="badge" title="Bot move time">
@@ -686,7 +718,7 @@ export function PlayTab(): JSX.Element {
             <div className="play-panel-top">
               {renderStatus()}
               <div className="play-strength muted small" title="Strength mode reported by the backend">
-                {strengthDetail(strength, game.elo)}
+                {strengthDetail(game.bot, strength, game.elo)}
               </div>
               {renderOpening()}
               {!isLive ? (
@@ -734,11 +766,13 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">Play vs {botName()}</span>
+              <span className="panel-title">Play vs {botName(setup.bot)}</span>
             </div>
             <div className="panel-body scroll grow">
               <PlaySetupForm
                 setup={setup}
+                maiaStatus={maiaStatus}
+                maiaRatings={maiaRatings}
                 onChange={updateSetup}
                 openings={openings.list}
                 openingsError={openings.listError}
@@ -788,6 +822,8 @@ export function PlayTab(): JSX.Element {
         ) : null}
         <PlaySetupForm
           setup={setup}
+          maiaStatus={maiaStatus}
+          maiaRatings={maiaRatings}
           onChange={updateSetup}
           openings={openings.list}
           openingsError={openings.listError}
@@ -813,7 +849,7 @@ export function PlayTab(): JSX.Element {
           </>
         }
       >
-        <p>Resign this game against {botName()} ({elo})?</p>
+        <p>Resign this game against {botTitle(bot, elo)}?</p>
       </Modal>
 
       <PlayGameOverModal

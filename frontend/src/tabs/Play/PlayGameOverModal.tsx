@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { Icon } from '../../components/Icon'
 import { Modal } from '../../components/Modal'
-import { botName, outcomeFor, reasonText, type PlayGame } from './PlayGame'
+import { botName, botTitle, outcomeFor, reasonText, type PlayGame } from './PlayGame'
 
 export interface PlayGameOverModalProps {
   open: boolean
@@ -16,7 +16,7 @@ export interface PlayGameOverModalProps {
 export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, onNewGame }: PlayGameOverModalProps): JSX.Element | null {
   if (!game || !game.result) return null
   const outcome = outcomeFor(game)
-  const title = outcome === 'win' ? 'You won!' : outcome === 'loss' ? `${botName()} won` : 'Draw'
+  const title = outcome === 'win' ? 'You won!' : outcome === 'loss' ? `${botName(game.bot)} won` : 'Draw'
   const moves = Math.ceil(game.sans.length / 2)
   const o = game.opening
   return (
@@ -49,7 +49,7 @@ export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, on
         <div className="play-over-score mono">{game.result.result}</div>
         <div className="play-over-meta">
           <span>
-            You played {game.studentColor} vs {botName()} ({game.elo})
+            You played {game.studentColor} vs {botTitle(game.bot, game.elo)}
           </span>
           <span>
             {moves} move{moves === 1 ? '' : 's'}

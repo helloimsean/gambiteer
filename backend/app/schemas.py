@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from typing import Literal, get_args
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 # --------------------------------------------------------------------------- shared
 
@@ -147,14 +148,33 @@ class WsAnalyzeInfo(BaseModel):
 # --------------------------------------------------------------------------- bot
 
 
+_STOCKFISH_LIMITS = {"elo": (400, 3190), "movetime_ms": (50, 60_000)}
+
+
 class BotMoveRequest(BaseModel):
     fen: str
-    elo: int = Field(ge=400, le=3190)
-    movetime_ms: int = Field(default=800, ge=50, le=60_000)
+    bot: Literal["stockfish", "maia"] = "stockfish"  # before elo: its validator reads this field
+    elo: int
+    movetime_ms: int = 800  # Stockfish's search time; ignored for Maia, which does not search
+    moves: list[str] | None = None  # Maia only: UCI moves from start_fen, oldest first
+    start_fen: str | None = None  # Maia only: the root of moves (default: the standard start)
+
+    @field_validator("elo", "movetime_ms")
+    @classmethod
+    def _stockfish_limits(cls, value: int, info: ValidationInfo) -> int:
+        """Stockfish's ranges, a 422 as always. Maia's rating is checked by the router (a 400)."""
+        if info.data.get("bot") == "maia":
+            return value
+        low, high = _STOCKFISH_LIMITS[str(info.field_name)]
+        if value < low:
+            raise PydanticCustomError("greater_than_equal", "Input should be greater than or equal to {ge}", {"ge": low})
+        if value > high:
+            raise PydanticCustomError("less_than_equal", "Input should be less than or equal to {le}", {"le": high})
+        return value
 
 
 class BotStrength(BaseModel):
-    mode: Literal["uci_elo", "skill"]
+    mode: Literal["uci_elo", "skill", "maia"]
     skill: int | None = None
     elo: int
 
@@ -358,8 +378,15 @@ class OllamaHealth(BaseModel):
     models: list[str]
 
 
+class MaiaHealth(BaseModel):
+    available: bool
+    ratings: list[int]  # the ratings whose weight file exists
+    path: str  # the lc0 executable
+
+
 class HealthResponse(BaseModel):
     ok: bool
     stockfish: StockfishHealth
     ollama: OllamaHealth
     openings: int
+    maia: MaiaHealth

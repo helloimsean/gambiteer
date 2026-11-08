@@ -19,6 +19,7 @@ class Services:
     engines: EngineManager
     ollama: OllamaClient
     reviews: ReviewService
+    maia: EngineManager  # lc0, started by the first Maia move
 
 
 def services(conn: HTTPConnection) -> Services:

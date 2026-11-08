@@ -413,7 +413,16 @@ export function Board(props: BoardProps): JSX.Element {
     .join(' ')
 
   return (
-    <div ref={rootRef} className={rootClass} style={style} data-fen={fen} data-orientation={orientation}>
+    <div
+      ref={rootRef}
+      className={rootClass}
+      style={style}
+      data-fen={fen}
+      data-orientation={orientation}
+      // chessground remembers where the board is and re-measures only on scroll and resize, so a
+      // layout change that moves it (the phone layout after Start) would send every press to the wrong square
+      onPointerDownCapture={() => apiRef.current?.state.dom.bounds.clear()}
+    >
       <div ref={hostRef} className="board-cg" />
       {activePromo ? (
         <>

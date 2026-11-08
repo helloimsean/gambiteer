@@ -39,7 +39,7 @@ export const TABS: readonly TabInfo[] = [
   { id: 'learn', label: 'Learn', icon: 'learn', description: 'Browse your opening repertoire move by move, with the reason behind every move.' },
   { id: 'quiz', label: 'Quiz', icon: 'quiz', description: 'Drill lines, guess positions and spot traps. Weak spots come back more often.' },
   { id: 'analyze', label: 'Analyze', icon: 'analyze', description: 'Free analysis board with live Stockfish 19 lines and an eval bar.' },
-  { id: 'play', label: 'Play', icon: 'play', description: 'Play against Stockfish 19 at any Elo, optionally starting from an opening line.' },
+  { id: 'play', label: 'Play', icon: 'play', description: 'Play against Stockfish 19 or the human-like Maia at a chosen Elo, optionally starting from an opening line.' },
   { id: 'review', label: 'Review', icon: 'review', description: 'Game review with move classifications, accuracy and LLM explanations.' },
 ]
 

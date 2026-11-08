@@ -46,7 +46,11 @@ model turns the engine's facts into plain-language explanations.
   badly come up more often.
 * **Analyze**: a free analysis board with live Stockfish 19 lines (MultiPV 1-5), an eval bar,
   arrows, FEN/PGN import, and a label when the position is in your opening data.
-* **Play**: play a Stockfish bot at Elo 400-3190, optionally from one of your opening lines.
+* **Play**: play a bot, optionally from one of your opening lines. Pick your opponent:
+  * **Stockfish** is the strongest chess engine, held back to the Elo you choose (400-3190).
+  * **Maia** (optional, step 5 of the install) is more human-like: a neural network trained on
+    millions of real online games. It plays like a person at that rating, including human-style
+    mistakes. See [How bot strength works](#how-bot-strength-works).
 * **Review**: chess.com-style game review (brilliant to blunder, accuracy, eval graph), with an AI
   explanation of why each move was good or bad.
 
@@ -77,6 +81,7 @@ You can add your own (see [Adding an opening](#adding-an-opening)).
 | [Node.js](https://nodejs.org) | 20.19 or newer (LTS recommended) | building the web interface |
 | [Ollama](https://ollama.com/download) | any recent version | the AI explanations (everything else works without it) |
 | Stockfish 19 | step 4 below | analysis, bots, review, the coach's verdicts |
+| Maia (optional) | step 5 below | the human-like bot |
 
 The quickest way is `winget` in a PowerShell or Command Prompt window:
 
@@ -126,7 +131,24 @@ Copy-Item "$env:TEMP\stockfish19\stockfish\stockfish-windows-x86-64-universal.ex
 Or download it from <https://stockfishchess.org/download/>, unzip it and save the `.exe` as
 `engines\stockfish19.exe`.
 
-### 5. Download an AI model
+### 5. Install Maia, the human-like bot (optional)
+
+Maia is a second bot to play against. Skip this step if Stockfish is enough; you can add Maia at any
+time. From the `gambiteer` folder:
+
+```powershell
+python tools\install_maia.py
+```
+
+This downloads the Leela Chess Zero engine (lc0, CPU build) to `engines\lc0\` and the nine Maia
+networks to `engines\maia\`, and checks every file against a pinned SHA-256. Neither is in the
+repository. Start Gambiteer (or restart it if it was running) and the Maia card in **Play** is
+enabled. `python tools\check_maia.py` tests whether the engine runs on your PC.
+
+lc0 needs the [Microsoft Visual C++ 2015-2022 x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
+Most Windows PCs already have it; install it if Maia reports that lc0 could not start.
+
+### 6. Download an AI model
 
 Start Ollama (it runs in the system tray after installing), then pull a model:
 
@@ -138,7 +160,7 @@ ollama pull llama3.2:3b     # small and fast; works on smaller GPUs or the CPU (
 One model is enough. Gambiteer uses `gpt-oss:20b` when it is installed and otherwise the first
 model it finds; you can switch models in Settings.
 
-### 6. Start it
+### 7. Start it
 
 Double-click **`start.bat`**. It builds the interface the first time, starts the backend and opens
 <http://localhost:8000> in your browser. Keep the window open while you use the app; close it (or
@@ -158,6 +180,26 @@ python -m pip install -r backend\requirements.txt
 ```
 
 `start.bat` rebuilds the interface automatically when the code changed.
+
+## How bot strength works
+
+Elo is a chess rating: the higher it is, the stronger the player. Beginners are around 800, club
+players around 1500, and masters 2200 and up.
+
+**Stockfish** is much stronger than any person, so the Elo you choose makes it play worse on
+purpose. From 1320 up it uses Stockfish's own Elo limit; below that, a low Skill Level plus random
+move mixing approximates the strength.
+
+**Maia** is not a strong engine held back. There are nine separate networks, one for each 100
+rating points from 1100 to 1900, and each was trained on Lichess games between players of about
+that rating. So **Maia 1500** means "the network trained on Lichess players rated about 1500".
+These are Lichess ratings, which are not the same as chess.com or FIDE ratings, and the match is
+approximate: the way Gambiteer picks a move from the network has not been calibrated against real
+games.
+
+Maia does not search: it picks one of the moves the network expects a player at that rating to
+choose, so it can vary and make human-style mistakes. *Bot move time* is therefore only how long it
+waits before answering.
 
 ## Development
 
@@ -269,7 +311,8 @@ needs a strong GPU. The explanations are built only from facts computed by Stock
 python-chess, but any model can still get a detail wrong. The badges and evaluations always come
 from Stockfish.
 
-Other backend settings (environment variables): `STOCKFISH_PATH`, `DATA_DIR`, `FRONTEND_DIST`.
+Other backend settings (environment variables): `STOCKFISH_PATH`, `LC0_PATH`, `MAIA_WEIGHTS_DIR`,
+`DATA_DIR`, `FRONTEND_DIST`.
 Threads, hash sizes and depths are in `backend/app/config.py` (see `backend/README.md`).
 
 ## Troubleshooting
@@ -283,6 +326,8 @@ Threads, hash sizes and depths are in `backend/app/config.py` (see `backend/READ
 | Page says `frontend not built` | `start.bat -Rebuild`, or `npm run build` in `frontend`. |
 | Old interface after an update | `start.bat -Rebuild`, then reload the browser with Ctrl+F5. |
 | Stockfish dot is red / "engine unavailable" | Check that `engines\stockfish19.exe` exists (step 4) or set `STOCKFISH_PATH`. Antivirus tools sometimes quarantine engines. |
+| Maia card says "Not installed", or "Bot move failed: Maia is unavailable" | Run `python tools\install_maia.py` (step 5), then restart Gambiteer. `python tools\check_maia.py` shows what is wrong with the engine. If it says lc0 could not start, install the [Microsoft Visual C++ 2015-2022 x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Antivirus tools sometimes quarantine engines. |
+| "Bot move failed: Maia stopped unexpectedly" | Press **Retry**: the next move starts a fresh engine. If it keeps happening, run `python tools\check_maia.py`, then `python tools\install_maia.py` to repair the install. |
 | Ollama dot is red / "Coach unavailable" | Start Ollama (tray app, or `ollama serve`) and check that `ollama list` shows a model. Then click the refresh icon at the bottom left. |
 | Explanations are slow | Use a smaller model (`llama3.2:3b`). The first request after loading a model is the slowest. |
 | A new opening does not appear | Run `tools\validate_opening.py` on it; the backend log says why a file was skipped. |
@@ -301,8 +346,8 @@ frontend/               Vite + React + TypeScript, chessground, chess.js  -> fro
   public/logo.svg       the Gambiteer logo
   e2e/journey.e2e.mjs   full end-to-end user journey (Playwright)
 data/openings/          opening repertoires (JSON)
-tools/                  validate_opening.py, check_coverage.py
-engines/                put stockfish19.exe here (not in git)              -> engines/README.md
+tools/                  validate_opening.py, check_coverage.py, install_maia.py, check_maia.py
+engines/                stockfish19.exe, and lc0/ + maia/ for Maia (none in git)  -> engines/README.md
 docs/screenshots/       pictures used in this README
 ```
 
@@ -331,3 +376,11 @@ Gambiteer uses [Stockfish](https://stockfishchess.org) (GPLv3, downloaded separa
 (MIT), [React](https://react.dev) (MIT), [Vite](https://vite.dev) (MIT) and
 [Ollama](https://ollama.com) (MIT). Opening statistics come from the
 [Lichess opening explorer](https://lichess.org/analysis#explorer).
+
+The optional human-like bot runs the [Maia](https://github.com/CSSLab/maia-chess) networks (GPL-3.0)
+inside [Leela Chess Zero](https://github.com/LeelaChessZero/lc0) (lc0, GPL-3.0). Both are downloaded
+separately by `tools/install_maia.py`. Maia comes from this paper:
+
+> Reid McIlroy-Young, Siddhartha Sen, Jon Kleinberg and Ashton Anderson. "Aligning Superhuman AI with
+> Human Behavior: Chess as a Model System". *Proceedings of the 26th ACM SIGKDD International
+> Conference on Knowledge Discovery and Data Mining* (KDD 2020).
