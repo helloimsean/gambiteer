@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type JSX, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import './Modal.css'
@@ -20,19 +20,28 @@ export interface ModalProps {
 /** Centered dialog rendered in a portal. Esc and backdrop click call `onClose` when `dismissible`. */
 export function Modal({ open, onClose, title, children, footer, width, dismissible = true, className }: ModalProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && dismissible) {
         e.stopPropagation()
-        onClose()
+        onCloseRef.current()
       }
     }
     window.addEventListener('keydown', onKey)
-    panelRef.current?.focus()
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, dismissible])
+  }, [open, dismissible])
+
+  // only when it opens: callers re-render with new props while the user is working inside the dialog
+  useEffect(() => {
+    if (open) panelRef.current?.focus()
+  }, [open])
 
   if (!open) return null
 

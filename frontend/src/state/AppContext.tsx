@@ -26,21 +26,24 @@ import { loadJson, saveJson } from '../lib/storage'
 
 // ---------------------------------------------------------------- tabs
 
-export type TabId = 'learn' | 'quiz' | 'analyze' | 'play' | 'review'
+export type TabId = 'learn' | 'quiz' | 'analyze' | 'play' | 'review' | 'history'
 
 export interface TabInfo {
   id: TabId
   label: string
   icon: IconName
   description: string
+  /** Listed under the sidebar's More / Less toggle. */
+  more?: boolean
 }
 
 export const TABS: readonly TabInfo[] = [
   { id: 'learn', label: 'Learn', icon: 'learn', description: 'Browse your opening repertoire move by move, with the reason behind every move.' },
   { id: 'quiz', label: 'Quiz', icon: 'quiz', description: 'Drill lines, guess positions and spot traps. Weak spots come back more often.' },
   { id: 'analyze', label: 'Analyze', icon: 'analyze', description: 'Free analysis board with live Stockfish 19 lines and an eval bar.' },
-  { id: 'play', label: 'Play', icon: 'play', description: 'Play against Stockfish 19 at any Elo, optionally starting from an opening line.' },
+  { id: 'play', label: 'Play', icon: 'play', description: 'Play against Stockfish 19 or the human-like Maia at a chosen Elo, optionally starting from an opening line.' },
   { id: 'review', label: 'Review', icon: 'review', description: 'Game review with move classifications, accuracy and LLM explanations.' },
+  { id: 'history', label: 'History', icon: 'history', description: 'Every game you finished against the bots, with the Elo and your accuracy.', more: true },
 ]
 
 // ---------------------------------------------------------------- cross-tab requests
@@ -52,12 +55,8 @@ export interface AnalyzeRequestPayload {
   startFen?: string
 }
 
-/** Review a game given as SAN moves. */
-export interface ReviewRequestPayload {
-  sans: string[]
-  startFen?: string
-  players?: Players
-}
+/** Open the Review setup on this game (the one just played, or one from History). */
+export type ReviewRequestPayload = LastGame
 
 /** Quiz an opening (optionally a specific line / mode). */
 export interface QuizRequestPayload {
@@ -85,6 +84,7 @@ export interface NavigatePayloads {
   quiz: QuizRequestPayload
   learn: LearnRequestPayload
   play: PlayRequestPayload
+  history: never
 }
 
 // ---------------------------------------------------------------- settings / last game

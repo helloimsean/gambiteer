@@ -20,10 +20,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from .config import Settings
 from .deps import Services
 from .engine import EngineManager, EngineUnavailable
+from .maia import create_manager as create_maia_manager
 from .ollama_client import OllamaClient, OllamaError
 from .openings import OpeningStore
 from .review import ReviewService
 from .routers import analysis, bot, coach, explain, openings, pgn, review, system
+from .variants import create_manager as create_fairy_manager
 
 log = logging.getLogger("app")
 
@@ -48,6 +50,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store.load()
         engines = EngineManager.from_settings(settings)
         await engines.start()  # bind to this (the running) loop
+        maia = create_maia_manager(settings)  # no warm-up: lc0 starts with the first Maia move
+        await maia.start()
+        fairy = create_fairy_manager(settings)  # no warm-up either: it starts with the first variant move
+        await fairy.start()
         ollama = OllamaClient(
             settings.ollama_url,
             settings.ollama_model,
@@ -55,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             health_timeout_s=settings.ollama_health_timeout_s,
         )
         reviews = ReviewService(engines, store, max_jobs=settings.max_review_jobs, book_max_ply=settings.book_max_ply)
-        app.state.services = Services(settings, store, engines, ollama, reviews)
+        app.state.services = Services(settings, store, engines, ollama, reviews, maia, fairy)
         warm = asyncio.create_task(engines.warm_up("analysis")) if settings.warm_up_engines else None
         log.info(
             "backend ready: %d opening(s) from %s, stockfish %s, ollama %s",
@@ -70,6 +76,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     await warm
             await reviews.close()
             await engines.close()
+            await maia.close()
+            await fairy.close()
             await ollama.aclose()
 
     app = FastAPI(title="Gambiteer", version="1.0.0", lifespan=lifespan)

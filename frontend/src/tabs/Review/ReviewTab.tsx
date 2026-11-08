@@ -18,10 +18,13 @@ import { ClassificationBadge } from '../../components/ClassificationBadge'
 import { EvalBar } from '../../components/EvalBar'
 import { Icon } from '../../components/Icon'
 import { MoveList } from '../../components/MoveList'
+import { PgnActions } from '../../components/PgnActions'
 import { MoveNav, Toolbar, ToolbarButton } from '../../components/Toolbar'
-import { START_FEN, sanPathToFens } from '../../lib/chess'
+import { START_FEN, sanPathToFens, type PromotionPiece, type Square } from '../../lib/chess'
+import { recordAccuracy, sameMoves } from '../../lib/gameHistory'
+import { pgnDate } from '../../lib/pgnTransfer'
 import { loadJson, removeKey, saveJson } from '../../lib/storage'
-import { useApp, type ReviewRequestPayload } from '../../state/AppContext'
+import { useApp, type LastGame, type ReviewRequestPayload } from '../../state/AppContext'
 import { ReviewBoardOverlay } from './ReviewBoardOverlay'
 import { ReviewDetails } from './ReviewDetails'
 import { ReviewEvalGraph } from './ReviewEvalGraph'
@@ -33,12 +36,16 @@ import {
   keyMomentPlies,
   playersFromHeaders,
   positionAt,
+  reviewFileName,
+  reviewPgn,
   reviewPlyOffset,
   type ReviewGame,
   type SavedReviewState,
 } from './reviewUtils'
+import { ReviewVariationLine } from './ReviewVariationLine'
 import { useReviewExplain } from './useReviewExplain'
 import { useReviewModels } from './useReviewModels'
+import { useReviewVariation, variationEval } from './useReviewVariation'
 import './ReviewTab.css'
 
 type PanelTab = 'summary' | 'moves'
@@ -87,9 +94,17 @@ function safeFens(sans: readonly string[], startFen?: string): string[] {
 export function ReviewTab(): JSX.Element {
   const { lastGame, reviewRequest, clearRequest, settings, setSettings, navigate } = useApp()
 
-  // restored review (skipped when another tab just handed us a game to review)
-  const [saved] = useState<SavedReviewState | null>(() => (reviewRequest ? null : loadSaved()))
-  const [source, setSource] = useState<ReviewSource>(() => (lastGame && lastGame.sans.length > 0 ? 'last' : 'pgn'))
+  // the game another tab sent here; without one, the setup card offers the last game played
+  const [handedGame] = useState<LastGame | null>(() => (reviewRequest && reviewRequest.sans.length > 0 ? reviewRequest : null))
+  const selectedGame = handedGame ?? lastGame
+  const fromHistory = handedGame !== null && !(lastGame && sameMoves(handedGame, lastGame))
+
+  // restored review (skipped when another tab just handed us a different game)
+  const [saved] = useState<SavedReviewState | null>(() => {
+    const stored = loadSaved()
+    return handedGame && !(stored && sameMoves(stored.game, handedGame)) ? null : stored
+  })
+  const [source, setSource] = useState<ReviewSource>(() => (selectedGame && selectedGame.sans.length > 0 ? 'last' : 'pgn'))
   const [pgnText, setPgnText] = useState('')
   const [depth, setDepthState] = useState<number>(settings.defaultDepth)
   const [game, setGame] = useState<ReviewGame | null>(() => saved?.game ?? null)
@@ -122,13 +137,18 @@ export function ReviewTab(): JSX.Element {
 
   // ---------------------------------------------------------------- navigation
 
+  const tried = useReviewVariation(result?.depth ?? 0)
+  const { variation, clear: clearVariation } = tried
+
   const maxPly = result?.moves.length ?? 0
+  // every way of going to one of the game's moves closes a side line
   const goTo = useCallback(
     (p: number) => {
+      clearVariation()
       setPly(Math.max(0, Math.min(maxPly, p)))
       setPanelTab('moves')
     },
-    [maxPly],
+    [maxPly, clearVariation],
   )
 
   // ---------------------------------------------------------------- starting a review
@@ -160,9 +180,16 @@ export function ReviewTab(): JSX.Element {
 
   const onStart = useCallback(async () => {
     if (source === 'last') {
-      if (!lastGame || lastGame.sans.length === 0) return
+      if (!selectedGame || selectedGame.sans.length === 0) return
       void runReview(
-        { sans: lastGame.sans, startFen: lastGame.startFen, players: lastGame.players, result: lastGame.result, source: 'last' },
+        {
+          sans: selectedGame.sans,
+          startFen: selectedGame.startFen,
+          players: selectedGame.players,
+          result: selectedGame.result,
+          date: pgnDate(new Date(selectedGame.playedAt)),
+          source: 'last',
+        },
         depth,
       )
       return
@@ -186,6 +213,7 @@ export function ReviewTab(): JSX.Element {
           startFen: parsed.startFen && parsed.startFen !== START_FEN ? parsed.startFen : undefined,
           players: playersFromHeaders(parsed.headers),
           result: parsed.headers.Result,
+          date: parsed.headers.Date,
           source: 'pgn',
         },
         depth,
@@ -195,27 +223,17 @@ export function ReviewTab(): JSX.Element {
       setError(`Could not read the PGN: ${errorText(err)}`)
       setStarting(false)
     }
-  }, [source, lastGame, pgnText, depth, runReview])
+  }, [source, selectedGame, pgnText, depth, runReview])
 
-  // a game handed over by another tab ("Review this game") starts right away
+  // A game sent from another tab waits on the setup card until Game Review is pressed, to allow
+  // picking a depth first. Reopening the game that was just reviewed shows its report instead.
   const consumedRef = useRef<ReviewRequestPayload | null>(null)
   useEffect(() => {
     if (!reviewRequest || consumedRef.current === reviewRequest) return
     consumedRef.current = reviewRequest
     clearRequest('review')
-    if (reviewRequest.sans.length === 0) return
-    const sameAsLast = lastGame !== null && lastGame.sans.join(' ') === reviewRequest.sans.join(' ')
-    void runReview(
-      {
-        sans: reviewRequest.sans,
-        startFen: reviewRequest.startFen,
-        players: reviewRequest.players,
-        result: sameAsLast ? lastGame?.result : undefined,
-        source: 'request',
-      },
-      depth,
-    )
-  }, [reviewRequest, clearRequest, runReview, depth, lastGame])
+    if (handedGame && !saved) removeKey(REVIEW_STATE_KEY) // or an older report would replace this setup after a tab switch
+  }, [reviewRequest, clearRequest, handedGame, saved])
 
   const cancelRun = useCallback(() => {
     startTokenRef.current += 1
@@ -226,12 +244,13 @@ export function ReviewTab(): JSX.Element {
 
   const newReview = useCallback(() => {
     explain.stop()
+    clearVariation()
     startTokenRef.current += 1
     setJob(null)
     setError(null)
     setPly(0)
     removeKey(REVIEW_STATE_KEY)
-  }, [explain])
+  }, [explain, clearVariation])
 
   // ---------------------------------------------------------------- progress socket
 
@@ -316,6 +335,11 @@ export function ReviewTab(): JSX.Element {
     saveJson<SavedReviewState>(REVIEW_STATE_KEY, { jobId, game, result, explanations, savedAt: Date.now() })
   }, [result, jobId, game, doneKey])
 
+  // the accuracy shows up in History once a game has been reviewed
+  useEffect(() => {
+    if (result && game) recordAccuracy(game, result.accuracy)
+  }, [result, game])
+
   // remember the viewed ply of a finished review
   useEffect(() => {
     if (result && jobId) saveJson(REVIEW_PLY_KEY, { jobId, ply })
@@ -340,18 +364,19 @@ export function ReviewTab(): JSX.Element {
 
   const previewFens = useMemo(() => {
     if (game && (starting || active)) return safeFens(game.sans, game.startFen)
-    if (source === 'last' && lastGame && lastGame.sans.length > 0) return safeFens(lastGame.sans, lastGame.startFen)
+    if (source === 'last' && selectedGame && selectedGame.sans.length > 0) return safeFens(selectedGame.sans, selectedGame.startFen)
     return [START_FEN]
-  }, [game, starting, active, source, lastGame])
+  }, [game, starting, active, source, selectedGame])
 
   let fen: string
   let lastMove: string | null = null
   let evalScore: Score | null = null
   const pos = result ? positionAt(result, ply) : null
+  const triedMove = variation ? variation.moves[variation.index - 1] : null
   if (pos) {
-    fen = pos.fen
-    lastMove = pos.move?.uci ?? null
-    evalScore = pos.score
+    fen = triedMove?.fenAfter ?? pos.fen
+    lastMove = triedMove?.uci ?? pos.move?.uci ?? null
+    evalScore = variation ? variationEval(variation, pos.score) : pos.score
   } else if (active && job) {
     const n = previewFens.length - 1
     fen = previewFens[Math.min(n, Math.round(job.progress * n))] ?? START_FEN
@@ -370,9 +395,49 @@ export function ReviewTab(): JSX.Element {
         }
       : null
 
-  const canStart = source === 'last' ? Boolean(lastGame && lastGame.sans.length > 0) : pgnText.trim().length > 0
+  const canStart = source === 'last' ? Boolean(selectedGame && selectedGame.sans.length > 0) : pgnText.trim().length > 0
 
   const flip = useCallback(() => setOrientation((o) => (o === 'white' ? 'black' : 'white')), [])
+
+  const onBoardMove = (from: Square, to: Square, promotion?: PromotionPiece) => {
+    if (!result) return
+    const uci = `${from}${to}${promotion ?? ''}`
+    setPanelTab('moves')
+    if (variation) {
+      tried.play({ fenBefore: fen, basePly: variation.basePly, keep: variation.index, uci })
+      return
+    }
+    const next = result.moves[ply]
+    if (next?.uci === uci) {
+      goTo(ply + 1) // the move the game went on with: nothing new to try
+      return
+    }
+    tried.play({ fenBefore: fen, basePly: ply, keep: 0, uci, knownBest: next?.bestMove.uci === uci })
+  }
+
+  /** Replaces the move on show with the best move the panel names for it. */
+  const playBest = () => {
+    if (variation && triedMove?.verdict) {
+      tried.play({
+        fenBefore: triedMove.fenBefore,
+        basePly: variation.basePly,
+        keep: variation.index - 1,
+        uci: triedMove.verdict.bestMove.uci,
+        knownBest: true,
+      })
+    } else if (pos?.move) {
+      setPly(ply - 1)
+      tried.play({ fenBefore: pos.move.fenBefore, basePly: ply - 1, keep: 0, uci: pos.move.bestMove.uci, knownBest: true })
+    }
+  }
+
+  const navPly = variation ? variation.basePly + variation.index : ply
+  const navMax = variation ? variation.basePly + variation.moves.length : maxPly
+  const navTo = (p: number) => {
+    if (variation && p > variation.basePly) tried.select(p - variation.basePly)
+    else goTo(p)
+  }
+  const plyOffset = result ? reviewPlyOffset(result) : 0
 
   const modelPicker = (
     <ReviewModelPicker models={models} value={settings.ollamaModel} onChange={setModel} disabled={run !== null} />
@@ -384,8 +449,25 @@ export function ReviewTab(): JSX.Element {
         <div className="board-frame">
           <EvalBar score={evalScore} orientation={orientation} fen={fen} />
           <div className="review-board-wrap">
-            <Board fen={fen} orientation={orientation} lastMove={lastMove} interactive={false} coordinates={settings.coordinates} />
-            {pos?.move ? (
+            <Board
+              fen={fen}
+              orientation={orientation}
+              lastMove={lastMove}
+              interactive={result !== null}
+              onMove={onBoardMove}
+              coordinates={settings.coordinates}
+            />
+            {triedMove ? (
+              triedMove.verdict ? (
+                <ReviewBoardOverlay
+                  orientation={orientation}
+                  playedUci={triedMove.uci}
+                  classification={triedMove.verdict.classification}
+                  bestUci={triedMove.verdict.bestMove.uci}
+                  animKey={`tried-${triedMove.id}`}
+                />
+              ) : null
+            ) : pos?.move ? (
               <ReviewBoardOverlay
                 orientation={orientation}
                 playedUci={pos.move.uci}
@@ -400,7 +482,7 @@ export function ReviewTab(): JSX.Element {
           {result ? (
             <>
               <ReviewEvalGraph result={result} ply={ply} onSelect={goTo} />
-              <MoveNav ply={ply} maxPly={result.moves.length} onChange={goTo} keyboard>
+              <MoveNav ply={navPly} maxPly={navMax} onChange={navTo} keyboard>
                 <ToolbarButton icon="flip" title="Flip board" onClick={flip} />
                 <ToolbarButton icon="analyze" title="Open this position in Analyze" onClick={() => navigate('analyze', { fen })} />
               </MoveNav>
@@ -416,7 +498,13 @@ export function ReviewTab(): JSX.Element {
       <div className="workspace-side">
         {result && job ? (
           <>
-            <ReviewAccuracyHeader result={result} players={game?.players} gameResult={game?.result} onNew={newReview} />
+            <ReviewAccuracyHeader
+              result={result}
+              players={game?.players}
+              gameResult={game?.result}
+              onNew={newReview}
+              actions={game ? <PgnActions getPgn={() => reviewPgn(game)} fileName={reviewFileName(game)} /> : undefined}
+            />
             <div className="panel grow review-main">
               <div className="panel-tabs">
                 <button type="button" className={panelTab === 'summary' ? 'active' : ''} onClick={() => setPanelTab('summary')} data-testid="review-tab-summary">
@@ -442,6 +530,9 @@ export function ReviewTab(): JSX.Element {
                   <ReviewDetails
                     result={result}
                     ply={ply}
+                    tried={variation && triedMove ? { move: triedMove, absPly: plyOffset + variation.basePly + variation.index } : null}
+                    onPlayBest={playBest}
+                    onRetryTried={tried.retry}
                     players={game?.players}
                     explain={explain}
                     models={models}
@@ -455,9 +546,17 @@ export function ReviewTab(): JSX.Element {
                   <MoveList
                     className="review-movelist"
                     moves={result.moves.map((m) => m.san)}
-                    currentPly={ply}
-                    onSelect={setPly}
-                    startPly={reviewPlyOffset(result)}
+                    currentPly={variation ? -1 : ply}
+                    onSelect={goTo}
+                    startPly={plyOffset}
+                    insert={
+                      variation
+                        ? {
+                            afterPly: Math.min(variation.basePly + 1, result.moves.length),
+                            node: <ReviewVariationLine variation={variation} startPly={plyOffset + variation.basePly} onSelect={tried.select} />,
+                          }
+                        : undefined
+                    }
                     renderBadge={(p) => {
                       const m = result.moves[p - 1]
                       return m ? <ClassificationBadge classification={m.classification} size={15} /> : null
@@ -471,7 +570,8 @@ export function ReviewTab(): JSX.Element {
           <ReviewSetup
             source={source}
             onSource={setSource}
-            lastGame={lastGame}
+            selectedGame={selectedGame}
+            selectedLabel={fromHistory ? 'History game' : 'Last game'}
             pgnText={pgnText}
             onPgnText={setPgnText}
             depth={depth}

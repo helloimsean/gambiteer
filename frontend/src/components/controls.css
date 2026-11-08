@@ -73,6 +73,7 @@
 .ui-slider .ui-slider-head .ui-label { font-weight: 600; }
 .ui-slider .ui-slider-head .ui-value { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .ui-slider input[type='range'] { margin: 6px 0; }
+.ui-slider input[type='range']:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .ui-spinner {
   display: inline-block;

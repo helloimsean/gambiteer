@@ -70,6 +70,7 @@
   background: var(--accent);
 }
 .nav-item .icon { flex: 0 0 auto; }
+.nav-more { font-size: 13px; }
 .nav-footer {
   margin-top: auto;
   padding: 10px 12px 12px;

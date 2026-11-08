@@ -92,35 +92,3 @@ export async function parseGame(text: string, signal?: AbortSignal): Promise<Par
   }
 }
 
-/** Copy text to the clipboard; falls back to execCommand when the async API is unavailable. */
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  } catch {
-    /* fall through to the legacy path */
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.top = '-1000px'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    ta.remove()
-    return ok
-  } catch {
-    return false
-  }
-}
-
-/** Today's date as a PGN Date tag ("2026.11.06"). */
-export function pgnDate(d = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`
-}

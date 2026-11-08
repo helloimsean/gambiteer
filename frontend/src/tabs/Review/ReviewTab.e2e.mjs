@@ -70,7 +70,7 @@ try {
   })
 
   await check('paste PGN and start review at depth ' + DEPTH, async () => {
-    await page.getByRole('button', { name: 'Paste PGN' }).click()
+    await page.getByRole('button', { name: 'Import PGN' }).click()
     await page.getByTestId('review-pgn').fill(OPERA)
     await page.getByTestId('review-depth-input').fill(DEPTH)
     await page.getByTestId('review-start').click()
@@ -292,7 +292,11 @@ try {
     assert(name?.includes('You'), `white name ${name}`)
     await shot(page, '10-last-game')
   })
-  await check('"Review this game" from Play auto-starts a review', async () => {
+  await check('"Review this game" from Play waits for depth and the Game Review button', async () => {
+    let reviewPosts = 0
+    page.on('request', (r) => {
+      if (r.method() === 'POST' && r.url().endsWith('/api/review')) reviewPosts += 1
+    })
     await page.getByRole('button', { name: 'Play', exact: true }).click()
     await page.getByTestId('play-setup').waitFor({ timeout: 8000 })
     await page.locator('[data-testid="play-setup"] [data-color="white"]').click()
@@ -314,13 +318,22 @@ try {
     await page.getByRole('button', { name: 'Resign' }).first().click()
     await page.getByTestId('play-resign-confirm').click()
     await page.getByTestId('play-over-review').click()
-    await page.getByTestId('review-tab').waitFor({ timeout: 5000 })
+    await page.getByTestId('review-lastgame').waitFor({ timeout: 5000 })
+    await sleep(1500) // long enough for a review to have started if anything still auto-starts it
+    assert(reviewPosts === 0, `${reviewPosts} review(s) started without the button`)
+    assert((await page.getByTestId('review-tab').getAttribute('data-phase')) === 'setup', 'not on the setup card')
+    assert(await page.locator('.review-depths .btn').first().isEnabled(), 'depth buttons are disabled')
+    const start = page.getByTestId('review-start')
+    assert((await start.textContent())?.trim() === 'Game Review', `button says "${await start.textContent()}"`)
+    await shot(page, '11-from-play-setup')
+    await page.getByTestId('review-depth-input').fill(DEPTH)
+    await start.click()
     await page.locator('[data-phase="done"]').waitFor({ timeout: 60000 })
     const white = await page.locator('.review-player-white .review-player-name').textContent()
     const plies = await page.locator('[data-testid="review-counts"] .review-count').allTextContents()
     const total = plies.reduce((a, c) => a + Number(c), 0)
     assert(white?.includes('You') && total === 2, `white "${white}", ${total} plies`)
-    await shot(page, '11-from-play')
+    await shot(page, '12-from-play')
     return `${white} vs ${await page.locator('.review-player-black .review-player-name').textContent()}`
   })
 } finally {

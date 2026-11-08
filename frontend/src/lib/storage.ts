@@ -6,6 +6,8 @@
  *   settings-v1     AppSettings (shell)
  *   quiz-stats-v1   { [openingId]: { [nodeId]: { correct, wrong, lastSeen } } } (Quiz tab)
  *   last-game-v1    LastGame (shell, so Review survives a reload)
+ *   game-history-v1 HistoryGame[] (lib/gameHistory.ts)
+ *   nav-more-open-v1 boolean (sidebar More / Less)
  */
 
 export function loadJson<T>(key: string, fallback: T): T {

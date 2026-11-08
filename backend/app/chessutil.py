@@ -39,6 +39,15 @@ def color_name(color: chess.Color) -> str:
     return "white" if color == chess.WHITE else "black"
 
 
+def require_valid(board: chess.Board) -> chess.Board:
+    """The board, if its position is legal. Invalid positions can crash engines, so ValueError otherwise."""
+    status = board.status()
+    if status != chess.STATUS_VALID:
+        problems = [flag.name.lower() for flag in chess.Status if flag and flag in status]
+        raise ValueError("illegal position: " + (", ".join(problems) or str(status)))
+    return board
+
+
 def parse_fen(fen: str) -> chess.Board:
     """Parse a FEN and make sure it is a position Stockfish can safely search.
 
@@ -50,11 +59,7 @@ def parse_fen(fen: str) -> chess.Board:
         board = chess.Board(fen.strip())
     except ValueError as exc:
         raise ValueError(f"invalid FEN: {exc}") from exc
-    status = board.status()
-    if status != chess.STATUS_VALID:
-        problems = [flag.name.lower() for flag in chess.Status if flag and flag in status]
-        raise ValueError("illegal position: " + (", ".join(problems) or str(status)))
-    return board
+    return require_valid(board)
 
 
 def is_standard_start(board: chess.Board) -> bool:

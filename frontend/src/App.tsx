@@ -1,5 +1,5 @@
 import { Component, useMemo, useState, type ErrorInfo, type JSX, type ReactNode } from 'react'
-import { AppProvider, TABS, useApp, type TabId } from './state/AppContext'
+import { AppProvider, TABS, useApp, type TabId, type TabInfo } from './state/AppContext'
 import { EmptyState } from './components/EmptyState'
 import { Icon } from './components/Icon'
 import { Modal } from './components/Modal'
@@ -10,8 +10,12 @@ import { QuizTab } from './tabs/Quiz/QuizTab'
 import { AnalyzeTab } from './tabs/Analyze/AnalyzeTab'
 import { PlayTab } from './tabs/Play/PlayTab'
 import { ReviewTab } from './tabs/Review/ReviewTab'
+import { HistoryTab } from './tabs/History/HistoryTab'
 import { DevPlayground } from './dev/DevPlayground'
+import { loadJson, saveJson } from './lib/storage'
 import './App.css'
+
+const NAV_MORE_KEY = 'nav-more-open-v1'
 
 interface TabBoundaryProps {
   tab: TabId
@@ -69,6 +73,8 @@ function renderTab(tab: TabId): JSX.Element {
       return <PlayTab />
     case 'review':
       return <ReviewTab />
+    case 'history':
+      return <HistoryTab />
   }
 }
 
@@ -141,6 +147,26 @@ function StatusRow({ ok, name, detail, title }: { ok: boolean | null; name: stri
 function Shell(): JSX.Element {
   const { activeTab, navigate, health, healthError, settings, setSettings, refreshHealth } = useApp()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(() => loadJson<boolean>(NAV_MORE_KEY, false) === true)
+
+  const toggleMore = () => {
+    setMoreOpen(!moreOpen)
+    saveJson(NAV_MORE_KEY, !moreOpen)
+  }
+
+  const navItem = (t: TabInfo) => (
+    <button
+      key={t.id}
+      type="button"
+      className={`nav-item${activeTab === t.id ? ' active' : ''}`}
+      onClick={() => navigate(t.id)}
+      title={t.description}
+      aria-current={activeTab === t.id ? 'page' : undefined}
+    >
+      <Icon name={t.icon} size={22} />
+      <span>{t.label}</span>
+    </button>
+  )
 
   // null = unknown (first request pending), false = backend unreachable or that component is down
   const stockfishOk = health ? Boolean(health.stockfish?.name) : healthError ? false : null
@@ -155,19 +181,19 @@ function Shell(): JSX.Element {
           <span>Gambiteer</span>
         </div>
         <div className="nav-items">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`nav-item${activeTab === t.id ? ' active' : ''}`}
-              onClick={() => navigate(t.id)}
-              title={t.description}
-              aria-current={activeTab === t.id ? 'page' : undefined}
-            >
-              <Icon name={t.icon} size={22} />
-              <span>{t.label}</span>
-            </button>
-          ))}
+          {TABS.filter((t) => !t.more).map(navItem)}
+          <button
+            type="button"
+            className="nav-item nav-more"
+            onClick={toggleMore}
+            title={moreOpen ? 'Show less' : 'Show more'}
+            aria-expanded={moreOpen}
+            data-testid="nav-more"
+          >
+            <Icon name={moreOpen ? 'chevronUp' : 'chevronDown'} size={22} />
+            <span>{moreOpen ? 'Less' : 'More'}</span>
+          </button>
+          {moreOpen ? TABS.filter((t) => t.more).map(navItem) : null}
         </div>
         <div className="nav-footer">
           <StatusRow

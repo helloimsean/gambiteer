@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, type JSX, type ReactNode } from 'react'
 import { scrollIntoViewWithin } from '../lib/dom'
 import './MoveList.css'
 
@@ -18,6 +18,11 @@ export interface MoveListProps {
   startPly?: number
   /** Optional badge per move (e.g. a ClassificationBadge). `ply` is 1-based as above. */
   renderBadge?: (ply: number, san: string) => ReactNode
+  /**
+   * Shown right after move `afterPly` (1-based as above), such as a side line. A row is split around
+   * it when that move is White's, so Black's reply continues on the row below.
+   */
+  insert?: { afterPly: number; node: ReactNode }
   /** Keep the current move scrolled into view. Default true. */
   autoScroll?: boolean
   emptyText?: string
@@ -31,6 +36,7 @@ export function MoveList({
   onSelect,
   startPly = 0,
   renderBadge,
+  insert,
   autoScroll = true,
   emptyText = 'No moves yet',
   className,
@@ -85,15 +91,28 @@ export function MoveList({
     )
   }
 
+  const row = (num: number, white: number | null, black: number | null) => (
+    <div className="move-row">
+      <span className="move-num">{num}.</span>
+      {cell(white)}
+      {cell(black)}
+    </div>
+  )
+  const insertIdx = insert ? insert.afterPly - 1 : null
+
   return (
     <div className={`move-list${className ? ` ${className}` : ''}`} ref={containerRef}>
-      {rows.map((r) => (
-        <div className="move-row" key={r.num}>
-          <span className="move-num">{r.num}.</span>
-          {cell(r.white)}
-          {cell(r.black)}
-        </div>
-      ))}
+      {rows.map((r) => {
+        if (insertIdx === null || (r.white !== insertIdx && r.black !== insertIdx)) return <Fragment key={r.num}>{row(r.num, r.white, r.black)}</Fragment>
+        const split = r.white === insertIdx && r.black !== null
+        return (
+          <Fragment key={r.num}>
+            {split ? row(r.num, r.white, null) : row(r.num, r.white, r.black)}
+            {insert?.node}
+            {split ? row(r.num, null, r.black) : null}
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

@@ -7,8 +7,9 @@ from fastapi import APIRouter, Request
 
 from ..deps import services
 from ..engine import EngineUnavailable
+from ..maia import installed_ratings
 from ..ollama_client import OllamaError
-from ..schemas import HealthResponse, OllamaHealth, OllamaModelsResponse, StockfishHealth
+from ..schemas import FairyHealth, HealthResponse, MaiaHealth, OllamaHealth, OllamaModelsResponse, StockfishHealth
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["system"])
@@ -31,11 +32,18 @@ async def health(request: Request) -> HealthResponse:
     except OllamaError:
         ollama = OllamaHealth(ok=False, models=[])
     svc.openings.refresh_if_changed()
+    maia_ratings = installed_ratings(svc.settings.maia_weights_dir)  # files only: never starts lc0
     return HealthResponse(
         ok=stockfish_ok,
         stockfish=StockfishHealth(name=engines.engine_name, path=str(engines.path)),
         ollama=ollama,
         openings=len(svc.openings),
+        maia=MaiaHealth(
+            available=svc.maia.available and bool(maia_ratings),
+            ratings=maia_ratings,
+            path=str(svc.maia.path),
+        ),
+        fairy=FairyHealth(available=svc.fairy.available, path=str(svc.fairy.path)),
     )
 
 

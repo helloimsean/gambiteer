@@ -1,6 +1,7 @@
 /**
- * Play tab: a game against Stockfish 19 at a chosen Elo (POST /api/bot/move), optionally starting
- * from one of the opening lines (pre-played, or played out with book hints).
+ * Play tab: a game against a bot (Stockfish 19, Maia or Panicfish; POST /api/bot/move), in standard
+ * chess or one of the variants, optionally starting from one of the opening lines (pre-played, or
+ * played out with book hints).
  *
  * State: the game itself is a SAN list (see PlayGame.ts) persisted to localStorage on every change,
  * so switching tabs or reloading resumes it; the bot reply is re-requested when the tab mounts on
@@ -9,8 +10,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react'
 import * as api from '../../api/client'
-import type { BotStrength, Side } from '../../api/types'
-import { Board, type BoardShape } from '../../components/Board'
+import type { BotKind, BotMoveRequest, BotMoveResponse, BotStrength, Side, VariantId } from '../../api/types'
+import { Board, type BoardHandle, type BoardShape } from '../../components/Board'
 import { ClassificationBadge } from '../../components/ClassificationBadge'
 import { Icon } from '../../components/Icon'
 import { Modal } from '../../components/Modal'
@@ -26,14 +27,15 @@ import {
   parseUci,
   plyOffsetFromFen,
   sanToUci,
-  tryMove,
   turnFromFen,
   uciToSan,
   type PromotionPiece,
   type Square,
 } from '../../lib/chess'
+import { recordGame } from '../../lib/gameHistory'
 import { playSound } from '../../lib/sounds'
 import { findNodeByPath } from '../../lib/tree'
+import { boardRulesFor, checksGiven, pocketsOf, variantDrop, variantInfo, type PocketRole } from '../../lib/variants'
 import { useApp } from '../../state/AppContext'
 import {
   BOOK_MOVE_DELAY_MS,
@@ -42,30 +44,42 @@ import {
   RANDOM_LINE,
   alternativeBookLine,
   bookState,
+  botCanPlay,
+  botEloNow,
   botName,
+  botTitle,
   createGame,
+  fairyStatusOf,
   formatMovetime,
+  legalMove,
   loadSavedGame,
   loadSetup,
+  maiaRatingsOf,
+  maiaStatusOf,
   moverOfPly,
   outcomeFor,
+  playableSetup,
   rematchSetup,
   replayGame,
   resignGame,
   resultHeadline,
+  sanOfEngineMove,
   saveGame,
   saveSetup,
+  setupElo,
   strengthDetail,
   takebackTarget,
+  toHistoryGame,
   toLastGame,
-  toReviewRequest,
   truncateGame,
+  variantBlocked,
   withMove,
   type PlayGame,
   type PlaySetup,
 } from './PlayGame'
 import { PlayGameOverModal } from './PlayGameOverModal'
 import { PlayPlayerBar } from './PlayPlayerBar'
+import { PlayPocket } from './PlayPocket'
 import { PlaySetupForm } from './PlaySetupForm'
 import { usePlayOpenings } from './usePlayOpenings'
 import './PlayTab.css'
@@ -90,9 +104,13 @@ function errorText(err: unknown): string {
 }
 
 export function PlayTab(): JSX.Element {
-  const { settings, setLastGame, navigate, playRequest, clearRequest } = useApp()
+  const { settings, setLastGame, navigate, playRequest, clearRequest, health } = useApp()
 
-  const [setup, setSetup] = useState<PlaySetup>(loadSetup)
+  const [storedSetup, setSetup] = useState<PlaySetup>(loadSetup)
+  const maiaStatus = maiaStatusOf(health)
+  const maiaRatings = maiaRatingsOf(health)
+  const fairyStatus = fairyStatusOf(health)
+  const setup = useMemo(() => playableSetup(storedSetup, maiaStatus, maiaRatings), [storedSetup, maiaStatus, maiaRatings])
   const [game, setGame] = useState<PlayGame | null>(loadSavedGame)
   const [flipped, setFlipped] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -109,6 +127,9 @@ export function PlayTab(): JSX.Element {
   const [bookMiss, setBookMiss] = useState<BookMiss | null>(null)
   const [shake, setShake] = useState(0)
   const [startError, setStartError] = useState<string | null>(null)
+  /** Crazyhouse: the pocket piece a click on a square will drop, for the position it was picked up in. */
+  const [armed, setArmed] = useState<{ role: PocketRole; fen: string } | null>(null)
+  const boardHandleRef = useRef<BoardHandle>(null)
 
   const openings = usePlayOpenings([setup.useOpening ? setup.openingId : '', game?.opening?.id ?? ''])
   const setupOpening = setup.useOpening && setup.openingId ? (openings.full[setup.openingId] ?? null) : null
@@ -132,7 +153,8 @@ export function PlayTab(): JSX.Element {
 
   const startFen = game?.startFen ?? START_FEN
   const sans = game?.sans
-  const replay = useMemo(() => (sans ? replayGame(startFen, sans) : null), [startFen, sans])
+  const variant: VariantId = game?.variant ?? 'standard'
+  const replay = useMemo(() => (sans ? replayGame(startFen, sans, variant) : null), [startFen, sans, variant])
   const fens = replay?.fens ?? [START_FEN]
   const total = game?.sans.length ?? 0
   const shownPly = viewPly === null ? total : Math.min(viewPly, total)
@@ -151,6 +173,10 @@ export function PlayTab(): JSX.Element {
   const book = useMemo(() => bookState(game), [game])
   const bookExpected = book?.inBook ? book.expected : null
   const activeMiss = bookMiss && bookMiss.fen === liveFen ? bookMiss : null
+  const armedRole = armed && armed.fen === liveFen && canMove ? armed.role : null
+  const botElo = game ? botEloNow(game, replay?.moves ?? []) : setupElo(setup)
+  const boardRules = useMemo(() => (variant === 'standard' ? undefined : boardRulesFor(variant, fen)), [variant, fen])
+  const reviewable = variant === 'standard'
 
   /** "why" of the opening node reached after `path` (empty when unknown). */
   const whyOf = useCallback(
@@ -171,6 +197,7 @@ export function PlayTab(): JSX.Element {
     const id = game.id
     const ply = game.sans.length
     const fenNow = liveFen
+    const isMaia = game.bot === 'maia'
     setBotError(null)
     setBotThinking(true)
 
@@ -187,19 +214,37 @@ export function PlayTab(): JSX.Element {
       }
     }
 
+    const landReply = (res: BotMoveResponse) => {
+      setBotThinking(false)
+      const san = sanOfEngineMove(game.variant, fenNow, res.uci)
+      if (!san) {
+        setBotError(`The engine answered with an illegal move (${res.uci}).`)
+        return
+      }
+      setStrength(res.strength)
+      setGame((prev) => (prev && prev.id === id && prev.sans.length === ply ? withMove(prev, san) : prev))
+    }
+
+    const req: BotMoveRequest = isMaia
+      ? { fen: fenNow, elo: game.elo, bot: 'maia', moves: (replay?.moves ?? []).map((m) => m.uci), start_fen: game.startFen }
+      : {
+          fen: fenNow,
+          elo: botElo,
+          movetime_ms: game.movetimeMs,
+          ...(game.bot === 'panicfish' ? { bot: game.bot } : {}),
+          ...(game.variant !== 'standard' ? { variant: game.variant } : {}),
+        }
+    const sentAt = performance.now()
+    let replyDelay: ReturnType<typeof setTimeout> | undefined
     const ctrl = new AbortController()
     api
-      .botMove({ fen: fenNow, elo: game.elo, movetime_ms: game.movetimeMs }, ctrl.signal)
+      .botMove(req, ctrl.signal)
       .then((res) => {
         if (ctrl.signal.aborted) return
-        setBotThinking(false)
-        const san = uciToSan(fenNow, res.uci)
-        if (!san) {
-          setBotError(`The engine answered with an illegal move (${res.uci}).`)
-          return
-        }
-        setStrength(res.strength)
-        setGame((prev) => (prev && prev.id === id && prev.sans.length === ply ? withMove(prev, san) : prev))
+        // Maia and a broken Panicfish answer at once, so their move time is a wait counted from the request
+        const wait = isMaia || (game.bot === 'panicfish' && botElo === 0) ? game.movetimeMs - (performance.now() - sentAt) : 0
+        if (wait > 0) replyDelay = setTimeout(() => landReply(res), wait)
+        else landReply(res)
       })
       .catch((err: unknown) => {
         if (ctrl.signal.aborted) return
@@ -208,9 +253,11 @@ export function PlayTab(): JSX.Element {
       })
     return () => {
       ctrl.abort()
+      clearTimeout(replyDelay)
       setBotThinking(false)
     }
-    // `game` is read for its id/elo/movetime; the position is fully described by gameId + liveFen
+    // `game` is read for its id/elo/movetime/bot, `replay` for its moves; the position is fully
+    // described by gameId + liveFen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, liveFen, isBotTurn, bookExpected, botRetry])
 
@@ -221,7 +268,8 @@ export function PlayTab(): JSX.Element {
   useEffect(() => {
     if (!game?.result || announcedRef.current === game.id) return
     announcedRef.current = game.id
-    setLastGame(toLastGame(game))
+    if (game.variant === 'standard') setLastGame(toLastGame(game)) // what Review and Analyze open
+    if (game.sans.length > 0) recordGame(toHistoryGame(game))
     setBookMiss(null)
     setHint(null)
     if (overTimerRef.current) clearTimeout(overTimerRef.current)
@@ -284,11 +332,12 @@ export function PlayTab(): JSX.Element {
 
   const handleMove = (from: Square, to: Square, promotion?: PromotionPiece) => {
     if (!game || !canMove) return
-    const mv = tryMove(liveFen, from, to, promotion)
+    const mv = legalMove(game.variant, liveFen, from, to, promotion)
     if (!mv) {
       playSound('illegal')
       return
     }
+    setArmed(null)
     setHint(null)
     setHintError(null)
 
@@ -332,9 +381,27 @@ export function PlayTab(): JSX.Element {
   const playAnyway = () => {
     if (!game || !activeMiss || !canMove) return
     const { from, to, promotion } = activeMiss.attempted
-    const mv = tryMove(liveFen, from, to, promotion)
+    const mv = legalMove(game.variant, liveFen, from, to, promotion)
     setBookMiss(null)
     if (mv) setGame(withMove(game, mv.san))
+  }
+
+  // ------------------------------------------------------------ Crazyhouse drops
+
+  const handleDrop = (role: PocketRole, square: Square) => {
+    if (!game || !canMove) return
+    const mv = variantDrop(game.variant, liveFen, role, square)
+    if (!mv) {
+      playSound('illegal')
+      return
+    }
+    setArmed(null)
+    setGame(withMove(game, mv.san))
+  }
+
+  const pickFromPocket = (role: PocketRole, event?: MouseEvent) => {
+    setArmed(armedRole === role ? null : { role, fen: liveFen })
+    if (event) boardHandleRef.current?.dragNewPiece(role, studentColor, event)
   }
 
   // ------------------------------------------------------------ actions
@@ -387,14 +454,20 @@ export function PlayTab(): JSX.Element {
 
   const rematch = () => {
     if (!game) return
+    // Maia or this rating's net is gone: the dialog says how to install it and offers what is there
+    if (!botCanPlay(game.bot, game.elo, maiaStatus, maiaRatings) || variantBlocked(game.variant, fairyStatus)) {
+      openNewGame()
+      return
+    }
     startGame(rematchSetup(game, setup))
   }
 
   const reviewGame = () => {
     if (!game) return
-    setLastGame(toLastGame(game))
+    const finished = toLastGame(game)
+    setLastGame(finished)
     setOverOpen(false)
-    navigate('review', toReviewRequest(game))
+    navigate('review', finished)
   }
 
   // ------------------------------------------------------------ cross-tab request
@@ -404,6 +477,7 @@ export function PlayTab(): JSX.Element {
     if (!playRequest) return
     const patch: Partial<PlaySetup> = {}
     if (playRequest.openingId) {
+      patch.variant = 'standard'
       patch.useOpening = true
       patch.openingId = playRequest.openingId
       patch.lineId = playRequest.lineId ?? RANDOM_LINE
@@ -448,18 +522,27 @@ export function PlayTab(): JSX.Element {
   }, [hint, activeMiss, fen, isLive])
 
   const material = useMemo(() => materialInfo(fen), [fen])
-  const elo = game?.elo ?? setup.elo
+  const showMaterial = variantInfo(variant).hasMaterial
+  const pockets = useMemo(() => (variant === 'crazyhouse' ? pocketsOf(fen) : null), [variant, fen])
+  const threeCheck = useMemo(() => (variant === '3check' ? checksGiven(fen) : null), [variant, fen])
+  const bot: BotKind = game?.bot ?? setup.bot
+  const botLabel = botName(bot, game?.variant ?? setup.variant)
 
   const renderBar = (side: Side) => {
     const isStudent = side === studentColor
     return (
       <PlayPlayerBar
-        name={isStudent ? 'You' : botName()}
-        detail={isStudent ? (game ? side : undefined) : String(elo)}
+        name={isStudent ? 'You' : botLabel}
+        detail={isStudent ? (game ? side : undefined) : String(botElo)}
         icon={isStudent ? 'knight' : 'robot'}
         color={side}
-        captured={material.captured[side]}
-        advantage={side === 'white' ? material.diff : -material.diff}
+        captured={showMaterial ? material.captured[side] : []}
+        advantage={showMaterial ? (side === 'white' ? material.diff : -material.diff) : 0}
+        pocket={
+          pockets ? (
+            <PlayPocket color={side} pocket={pockets[side]} active={isStudent && canMove} armed={isStudent ? armedRole : null} onPick={pickFromPocket} />
+          ) : undefined
+        }
         toMove={Boolean(game) && !over && isLive && turn === side}
         thinking={!isStudent && botThinking}
         testId={isStudent ? 'play-bar-you' : 'play-bar-bot'}
@@ -468,7 +551,7 @@ export function PlayTab(): JSX.Element {
   }
 
   const outcome = game ? outcomeFor(game) : null
-  const startDisabled = setup.useOpening && !setupOpening
+  const startDisabled = (setup.useOpening && !setupOpening) || variantBlocked(setup.variant, fairyStatus)
 
   // ------------------------------------------------------------ side panel pieces
 
@@ -498,7 +581,7 @@ export function PlayTab(): JSX.Element {
       return (
         <div className="play-status thinking" data-testid="play-status">
           <Spinner size={16} />
-          <span className="grow">{botName()} is thinking...</span>
+          <span className="grow">{botLabel} is thinking...</span>
         </div>
       )
     }
@@ -534,7 +617,7 @@ export function PlayTab(): JSX.Element {
               {moveNumberPrefix(ply + plyOffsetFromFen(game.startFen))}
               {san}
             </strong>{' '}
-            <span className="muted">{mark === 'check' ? 'is book. Well played!' : byStudent ? '(book)' : `${botName()} follows the line.`}</span>
+            <span className="muted">{mark === 'check' ? 'is book. Well played!' : byStudent ? '(book)' : `${botLabel} follows the line.`}</span>
           </div>
           {why ? <div className="play-book-why">{why}</div> : null}
         </div>
@@ -624,6 +707,9 @@ export function PlayTab(): JSX.Element {
       className="workspace play-tab"
       data-testid="play-tab"
       data-game-id={game?.id ?? ''}
+      data-bot={bot}
+      data-bot-elo={botElo}
+      data-variant={variant}
       data-turn={turn}
       data-over={over ? 'true' : 'false'}
       data-thinking={botThinking ? 'true' : 'false'}
@@ -638,7 +724,11 @@ export function PlayTab(): JSX.Element {
             lastMove={lastMove}
             interactive={canMove}
             movableColor={game ? studentColor : 'none'}
+            rules={boardRules}
             onMove={handleMove}
+            dropPiece={armedRole ? { role: armedRole, color: studentColor } : null}
+            onDrop={handleDrop}
+            handleRef={boardHandleRef}
             shapes={shapes}
             coordinates={settings.coordinates}
             shake={shake}
@@ -650,18 +740,20 @@ export function PlayTab(): JSX.Element {
             <>
               <ToolbarButton icon="flag" label="Resign" title="Resign" onClick={() => setResignOpen(true)} />
               <ToolbarButton icon="undo" label="Takeback" title="Take back your last move (and the bot's reply)" onClick={takeback} disabled={takebackPly === null} />
-              <ToolbarButton
-                icon="hint"
-                label={hintLoading ? 'Thinking...' : 'Hint'}
-                title={`Show the engine's best move for ${HINT_DURATION_MS / 1000} s`}
-                onClick={requestHint}
-                disabled={!canMove || hintLoading}
-              />
+              {variant === 'standard' ? (
+                <ToolbarButton
+                  icon="hint"
+                  label={hintLoading ? 'Thinking...' : 'Hint'}
+                  title={`Show the engine's best move for ${HINT_DURATION_MS / 1000} s`}
+                  onClick={requestHint}
+                  disabled={!canMove || hintLoading}
+                />
+              ) : null}
             </>
           ) : null}
           {game && over ? (
             <>
-              <ToolbarButton icon="review" label="Review" title="Review this game" onClick={reviewGame} primary />
+              {reviewable ? <ToolbarButton icon="review" label="Review" title="Review this game" onClick={reviewGame} primary /> : null}
               <ToolbarButton icon="refresh" label="Rematch" title="Rematch" onClick={rematch} />
             </>
           ) : null}
@@ -675,9 +767,14 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">vs {botName()}</span>
-              <span className="badge badge-green" title={strengthDetail(strength, game.elo)}>
-                {game.elo}
+              <span className="panel-title">vs {botLabel}</span>
+              {variant !== 'standard' ? (
+                <span className="badge badge-blue" title={variantInfo(variant).rule} data-testid="play-variant-badge">
+                  {variantInfo(variant).name}
+                </span>
+              ) : null}
+              <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
+                {botElo}
               </span>
               <span className="badge" title="Bot move time">
                 {formatMovetime(game.movetimeMs)}
@@ -685,9 +782,14 @@ export function PlayTab(): JSX.Element {
             </div>
             <div className="play-panel-top">
               {renderStatus()}
-              <div className="play-strength muted small" title="Strength mode reported by the backend">
-                {strengthDetail(strength, game.elo)}
+              <div className="play-strength muted small" title="Strength mode reported by the backend" data-testid="play-strength">
+                {strengthDetail(game.bot, strength, botElo)}
               </div>
+              {threeCheck ? (
+                <div className="play-strength small" data-testid="play-checks">
+                  Checks given: White {threeCheck.white} of 3, Black {threeCheck.black} of 3
+                </div>
+              ) : null}
               {renderOpening()}
               {!isLive ? (
                 <div className="play-viewing">
@@ -718,10 +820,12 @@ export function PlayTab(): JSX.Element {
             />
             {over ? (
               <div className="panel-footer play-over-actions">
-                <button type="button" className="btn btn-primary grow" onClick={reviewGame} data-testid="play-review">
-                  <Icon name="review" size={16} /> Review this game
-                </button>
-                <button type="button" className="btn" onClick={rematch}>
+                {reviewable ? (
+                  <button type="button" className="btn btn-primary grow" onClick={reviewGame} data-testid="play-review">
+                    <Icon name="review" size={16} /> Review this game
+                  </button>
+                ) : null}
+                <button type="button" className={`btn${reviewable ? '' : ' grow'}`} onClick={rematch}>
                   <Icon name="refresh" size={16} /> Rematch
                 </button>
               </div>
@@ -734,11 +838,14 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">Play vs {botName()}</span>
+              <span className="panel-title">Play vs {botLabel}</span>
             </div>
             <div className="panel-body scroll grow">
               <PlaySetupForm
                 setup={setup}
+                maiaStatus={maiaStatus}
+                maiaRatings={maiaRatings}
+                fairyStatus={fairyStatus}
                 onChange={updateSetup}
                 openings={openings.list}
                 openingsError={openings.listError}
@@ -788,6 +895,9 @@ export function PlayTab(): JSX.Element {
         ) : null}
         <PlaySetupForm
           setup={setup}
+          maiaStatus={maiaStatus}
+          maiaRatings={maiaRatings}
+          fairyStatus={fairyStatus}
           onChange={updateSetup}
           openings={openings.list}
           openingsError={openings.listError}
@@ -813,7 +923,7 @@ export function PlayTab(): JSX.Element {
           </>
         }
       >
-        <p>Resign this game against {botName()} ({elo})?</p>
+        <p>Resign this game against {botTitle(bot, botElo, variant)}?</p>
       </Modal>
 
       <PlayGameOverModal

@@ -38,6 +38,7 @@ import {
   type PromotionPiece,
   type Square,
 } from '../../lib/chess'
+import { copyText, downloadPgn, pgnDate, pgnFileName } from '../../lib/pgnTransfer'
 import { playSound } from '../../lib/sounds'
 import { loadJson, saveJson } from '../../lib/storage'
 import { useAnalyzeEngine } from './useAnalyzeEngine'
@@ -46,10 +47,8 @@ import { AnalyzeOpeningLabel } from './AnalyzeOpeningLabel'
 import { AnalyzeImport, AnalyzeSetup } from './AnalyzeImportPanel'
 import {
   buildLine,
-  copyText,
   isInitialPosition,
   normalizeFen,
-  pgnDate,
   type AnalyzeLine,
   type ParsedGame,
 } from './analyzeHelpers'
@@ -452,7 +451,7 @@ export function AnalyzeTab(): JSX.Element {
             {(
               [
                 ['moves', 'Moves'],
-                ['import', 'Import'],
+                ['import', 'Import PGN'],
                 ['setup', 'Set up position'],
               ] as const
             ).map(([id, label]) => (
@@ -496,6 +495,15 @@ export function AnalyzeTab(): JSX.Element {
             </button>
             <button type="button" className="btn btn-sm" onClick={() => void copy('pgn')} data-testid="analyze-copy-pgn">
               <Icon name="copy" size={15} /> Copy PGN
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              title="Download this game as a .pgn file"
+              onClick={() => downloadPgn(buildPgn(), pgnFileName(`analysis ${pgnDate()}`))}
+              data-testid="analyze-download-pgn"
+            >
+              <Icon name="download" size={15} /> Download
             </button>
             <span className="spacer" />
             {copied ? (

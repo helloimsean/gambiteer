@@ -1,11 +1,16 @@
-"""EngineManager: a small pool of Stockfish processes driven by python-chess's asyncio API.
+"""EngineManager: a small pool of UCI engine processes driven by python-chess's asyncio API.
 
-Three engines, each started lazily on first use and guarded by its own ``asyncio.Lock``:
+The main instance runs Stockfish with three engines, each started lazily on first use and guarded
+by its own ``asyncio.Lock``:
 
 * ``analysis``: Threads 4, Hash 512, MultiPV per request (live WebSocket + one-shot analysis)
 * ``review``:   Threads 4, Hash 512 (game review jobs)
 * ``bot``:      Threads 2, Hash 128 (strength-limited play; UCI_LimitStrength never reaches the
   analysis process because it is a separate process)
+
+A second instance drives lc0 for the Maia bot (see ``maia.py``). ``label`` names the engine in
+logs and errors. A path ending in ``.py`` runs under this Python: that is how the tests' stand-in
+engine runs (``tests/fixtures/fake_lc0.py``).
 
 Event loops: the manager binds to the running loop in :meth:`EngineManager.start` (called from the
 FastAPI lifespan) and normally runs every engine coroutine on that loop. uvicorn's default loop on
@@ -38,7 +43,16 @@ Snapshot = list[dict[str, Any]]  # one python-chess info dict per MultiPV line
 
 
 class EngineUnavailable(RuntimeError):
-    """Stockfish is missing, failed to start, or the manager is shut down."""
+    """The engine is missing, failed to start, or the manager is shut down."""
+
+
+@dataclass(frozen=True)
+class VerboseSearch:
+    """What one search printed: its ``info string`` lines, last score and best move."""
+
+    strings: list[str]
+    score: chess.engine.PovScore | None
+    best_move: chess.Move | None
 
 
 def loop_can_spawn_subprocesses(loop: asyncio.AbstractEventLoop) -> bool:
@@ -51,9 +65,9 @@ def loop_can_spawn_subprocesses(loop: asyncio.AbstractEventLoop) -> bool:
 class _EngineLoopThread:
     """A private ProactorEventLoop running forever on a daemon thread (Windows fallback)."""
 
-    def __init__(self) -> None:
+    def __init__(self, thread_name: str) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.ProactorEventLoop()  # type: ignore[attr-defined]
-        self._thread = threading.Thread(target=self._main, name="stockfish-loop", daemon=True)
+        self._thread = threading.Thread(target=self._main, name=thread_name, daemon=True)
         self._thread.start()
 
     def _main(self) -> None:
@@ -85,8 +99,17 @@ class _Slot:
 
 
 class EngineManager:
-    def __init__(self, path: Path | str, options: Mapping[str, Mapping[str, Any]]) -> None:
+    def __init__(
+        self,
+        path: Path | str,
+        options: Mapping[str, Mapping[str, Any]],
+        *,
+        label: str = "Stockfish",
+        path_env: str = "STOCKFISH_PATH",
+    ) -> None:
         self.path = Path(path)
+        self.label = label
+        self.path_env = path_env
         self._slots: dict[str, _Slot] = {name: _Slot(name, dict(opts)) for name, opts in options.items()}
         self._app_loop: asyncio.AbstractEventLoop | None = None
         self._engine_loop: asyncio.AbstractEventLoop | None = None
@@ -121,11 +144,12 @@ class EngineManager:
             self._engine_loop = loop
         else:
             log.warning(
-                "the running event loop (%s) cannot spawn subprocesses; running Stockfish on a "
+                "the running event loop (%s) cannot spawn subprocesses; running %s on a "
                 "private ProactorEventLoop thread instead (this happens with uvicorn --reload on Windows)",
                 type(loop).__name__,
+                self.label,
             )
-            self._thread = _EngineLoopThread()
+            self._thread = _EngineLoopThread(f"{self.label.lower()}-loop")
             self._engine_loop = self._thread.loop
         return self._engine_loop
 
@@ -223,12 +247,12 @@ class EngineManager:
         if self._closed:
             raise EngineUnavailable("engine manager is shut down")
         if not self.path.is_file():
-            raise EngineUnavailable(f"Stockfish not found at {self.path} (set STOCKFISH_PATH)")
-        path = str(self.path)
+            raise EngineUnavailable(f"{self.label} not found at {self.path} (set {self.path_env})")
+        command = [sys.executable, str(self.path)] if self.path.suffix.lower() == ".py" else str(self.path)
         options = dict(slot.options)
 
         async def boot() -> tuple[asyncio.SubprocessTransport, chess.engine.UciProtocol]:
-            transport, protocol = await chess.engine.popen_uci(path)
+            transport, protocol = await chess.engine.popen_uci(command)
             try:
                 supported = {k: v for k, v in options.items() if k in protocol.options}
                 if supported:
@@ -241,10 +265,18 @@ class EngineManager:
         try:
             transport, protocol = await self._run(boot())
         except (OSError, NotImplementedError, chess.engine.EngineError) as exc:
-            raise EngineUnavailable(f"could not start Stockfish ({type(exc).__name__}: {exc})") from exc
-        self._engine_name = protocol.id.get("name", "Stockfish")
+            raise EngineUnavailable(f"could not start {self.label} ({type(exc).__name__}: {exc})") from exc
+        self._engine_name = protocol.id.get("name", self.label)
         log.info("started engine %s: %s %s", slot.name, self._engine_name, slot.options)
         return transport, protocol
+
+    async def discard(self, name: str) -> None:
+        """Kill the named engine (it hung); the next use starts a fresh process."""
+        slot = self._slots[name]
+        async with slot.start_lock:
+            transport, slot.transport, slot.protocol = slot.transport, None, None
+        if transport is not None:
+            self._call_soon(transport.close)
 
     @asynccontextmanager
     async def use(
@@ -290,7 +322,7 @@ class EngineProxy:
 
     @property
     def name(self) -> str:
-        return self._protocol.id.get("name", "Stockfish")
+        return self._protocol.id.get("name", self._mgr.label)
 
     async def configure(self, options: Mapping[str, Any]) -> None:
         supported = {k: v for k, v in options.items() if k in self._protocol.options}
@@ -314,6 +346,44 @@ class EngineProxy:
         info: chess.engine.Info = chess.engine.INFO_NONE,
     ) -> chess.engine.PlayResult:
         return await self._mgr._run(self._protocol.play(board.copy(), limit, info=info))
+
+    async def search_verbose(self, board: chess.Board, limit: chess.engine.Limit) -> VerboseSearch:
+        """One search, keeping every ``info string`` line (``analyse`` keeps only the last one).
+
+        The copy keeps the board's move stack, so the engine receives ``position ... moves ...``.
+        The iteration runs on the engine loop, so this also works on the private Proactor thread.
+
+        Every search counts as a new game (``game=object()`` makes python-chess send "ucinewgame").
+        lc0 keeps its search tree when the net changes, so without this a one-node search of the
+        position it searched last would repeat the previous net's policy. It also clears lc0's
+        evaluation cache, which ignores the move history. A one-node search has nothing to reuse.
+        """
+        position = board.copy()
+
+        async def run() -> VerboseSearch:
+            # python-chess never finishes analysis() if the engine dies during its own "isready".
+            starting = asyncio.ensure_future(
+                self._protocol.analysis(position, limit, game=object(), info=chess.engine.INFO_ALL)
+            )
+            try:
+                await asyncio.wait({starting, self._protocol.returncode}, return_when=asyncio.FIRST_COMPLETED)
+                if not starting.done():
+                    code = self._protocol.returncode.result()
+                    raise chess.engine.EngineTerminatedError(f"engine process died unexpectedly (exit code: {code})")
+                analysis = starting.result()
+            finally:
+                starting.cancel()  # does nothing once it has finished
+            strings: list[str] = []
+            score: chess.engine.PovScore | None = None
+            async for info in analysis:
+                if "string" in info:
+                    strings.append(info["string"])
+                if "score" in info:
+                    score = info["score"]
+            best = await analysis.wait()
+            return VerboseSearch(strings, score, best.move)
+
+        return await self._mgr._run(run())
 
     async def analysis_stream(
         self, board: chess.Board, *, multipv: int = 1, limit: chess.engine.Limit | None = None

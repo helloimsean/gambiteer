@@ -137,8 +137,9 @@ useEffect(() => {
 The request is still there when your tab mounts after `navigate` (it is set before the switch).
 
 `LastGame` is `{ sans, startFen?, players?, result?, reason?, playedAt }`. Play should call
-`setLastGame(...)` when a game ends, then `navigate('review', { sans, players })` for
-"Review this game". Review should fall back to `lastGame` when it has no request.
+`setLastGame(...)` when a game ends, then `navigate('review', game)` with that `LastGame` for
+"Review this game". Review opens its setup card on the game it was sent (or on `lastGame`) and
+starts only when the Game Review button is pressed, so the depth and model can be chosen first.
 
 Settings:
 
@@ -177,7 +178,7 @@ Behaviour you can rely on (all covered by `npm run check:board`):
   frame. If you validate asynchronously (e.g. wait for the server), the piece snaps back first and
   jumps forward when the new fen arrives. For a wrong move, call `playSound('illegal')` from
   `lib/sounds` (or bump `shake`).
-* Legal destinations come from chess.js (the `dests` prop overrides them). `movableColor="white"`
+* Legal destinations come from chess.js (the `dests` prop overrides them; `rules` replaces chess.js altogether for a variant position). `movableColor="white"`
   only allows moves when it is White's turn, which is what Play needs while the bot thinks.
 * Promotions open an overlay chooser. `onMove` is called once, with `'q' | 'r' | 'b' | 'n'`.
   Right-click picks a queen and Esc cancels.

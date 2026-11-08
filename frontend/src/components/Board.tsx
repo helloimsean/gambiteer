@@ -10,7 +10,8 @@
  *   only rebuilt when `coordinates` changes (chessground renders coordinates once).
  * - `fen` is only handed to chessground when it actually changed (or to undo a rejected move), so
  *   arrows the user drew with right-click survive unrelated prop updates such as engine arrows.
- * - Legal destinations come from chess.js unless `dests` is given. Promotions open an overlay
+ * - Legal destinations come from chess.js unless `dests` is given; `rules` supplies everything
+ *   chess.js would have worked out for a variant position it cannot read. Promotions open an overlay
  *   chooser (right-click anywhere = queen, Esc = cancel). Castling also works by dropping the king
  *   on its own rook; `onMove` always receives the normal form (e1g1).
  * - Never uses chessground's `viewOnly` (switching it after creation breaks drag handling);
@@ -21,17 +22,19 @@
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type JSX,
+  type Ref,
 } from 'react'
 import { Chessground } from 'chessground'
 import type { Api } from 'chessground/api'
 import type { Config } from 'chessground/config'
 import type { DrawShape } from 'chessground/draw'
-import type { Key } from 'chessground/types'
+import type { Key, Role } from 'chessground/types'
 import { Chess } from 'chess.js'
 import type { Side } from '../api/types'
 import {
@@ -44,6 +47,7 @@ import {
   type Square,
 } from '../lib/chess'
 import { playMoveSound, playSound } from '../lib/sounds'
+import type { BoardRules, PocketRole } from '../lib/variants'
 import './Board.css'
 
 /** chessground's built-in brushes. */
@@ -74,6 +78,12 @@ export interface BoardShape {
 
 export type MovableColor = Side | 'both' | 'none'
 
+/** What the Crazyhouse pocket needs from the board. */
+export interface BoardHandle {
+  /** Start dragging a pocket piece; call it from the mousedown that picked the piece up. */
+  dragNewPiece: (role: PocketRole, color: Side, event: MouseEvent | TouchEvent) => void
+}
+
 /** Last move as UCI ("e2e4", "e7e8q") or a [from, to] pair. */
 export type LastMove = string | readonly [Square, Square] | null | undefined
 
@@ -95,8 +105,15 @@ export interface BoardProps {
   movableColor?: MovableColor
   /** Legal destinations; computed from `fen` with chess.js when omitted. */
   dests?: Dests
+  /** For a variant position chess.js cannot read. */
+  rules?: BoardRules
   /** Called once the user completes a move (after choosing a promotion piece if needed). */
   onMove?: (from: Square, to: Square, promotion?: PromotionPiece) => void
+  /** Crazyhouse: the piece a click on a square will drop. */
+  dropPiece?: { role: PocketRole; color: Side } | null
+  /** Crazyhouse: the user dropped a piece (the parent decides whether it was legal). */
+  onDrop?: (role: PocketRole, square: Square) => void
+  handleRef?: Ref<BoardHandle>
   /** Arrows and circles drawn on top of the board (replaces the previous set). */
   shapes?: readonly BoardShape[]
   /** Show file/rank coordinates. Default true. */
@@ -126,6 +143,7 @@ const PROMO_PIECES: { piece: PromotionPiece; role: string }[] = [
   { piece: 'r', role: 'rook' },
   { piece: 'b', role: 'bishop' },
 ]
+const KING_PROMOTION: { piece: PromotionPiece; role: string } = { piece: 'k', role: 'king' }
 const DEFAULT_ANIMATION_MS = 200
 /** Fen changes closer together than this play only one sound (e.g. jumping through a game). */
 const SOUND_THROTTLE_MS = 70
@@ -174,7 +192,7 @@ function buildConfig(p: BoardProps): Config {
   return {
     orientation: p.orientation ?? 'white',
     turnColor: turn,
-    check: p.check ?? fenInCheck(p.fen),
+    check: p.check ?? p.rules?.check ?? fenInCheck(p.fen),
     lastMove: normalizeLastMove(p.lastMove),
     coordinates: p.coordinates ?? true,
     viewOnly: false,
@@ -185,7 +203,7 @@ function buildConfig(p: BoardProps): Config {
     movable: {
       free: false,
       color,
-      dests: color ? (p.dests ?? destsFromFen(p.fen, { rookCastle: true })) : new Map(),
+      dests: color ? (p.dests ?? p.rules?.dests ?? destsFromFen(p.fen, { rookCastle: true })) : new Map(),
       showDests: true,
       rookCastle: true,
     },
@@ -194,6 +212,11 @@ function buildConfig(p: BoardProps): Config {
     selectable: { enabled: interactive },
     drawable: { enabled: true, visible: true, eraseOnClick: true, autoShapes: toDrawShapes(p.shapes) },
   }
+}
+
+/** chessground has no config entry for this, and its setDropMode() would cancel a drag already under way. */
+function syncDropMode(api: Api, piece: BoardProps['dropPiece']): void {
+  api.state.dropmode = piece ? { active: true, piece } : { active: false }
 }
 
 /**
@@ -222,6 +245,9 @@ export function Board(props: BoardProps): JSX.Element {
     interactive = true,
     movableColor = 'both',
     dests,
+    rules,
+    dropPiece,
+    handleRef,
     shapes,
     coordinates = true,
     animation = DEFAULT_ANIMATION_MS,
@@ -266,6 +292,7 @@ export function Board(props: BoardProps): JSX.Element {
       dirtyRef.current = false
     }
     api.set(config)
+    syncDropMode(api, p.dropPiece)
   }, [])
 
   /** After a user move: re-sync on the next frame (snaps back if the parent kept the old fen). */
@@ -281,8 +308,8 @@ export function Board(props: BoardProps): JSX.Element {
     (orig: Key, dest: Key) => {
       const p = propsRef.current
       dirtyRef.current = true
-      const { from, to } = normalizeCastlingMove(p.fen, orig as Square, dest as Square)
-      if (isPromotion(p.fen, from, to)) {
+      const { from, to } = p.rules ? { from: orig as Square, to: dest as Square } : normalizeCastlingMove(p.fen, orig as Square, dest as Square)
+      if (p.rules ? p.rules.isPromotion(from, to) : isPromotion(p.fen, from, to)) {
         setPromo({ from, to, color: turnFromFen(p.fen), fen: p.fen })
         return
       }
@@ -292,6 +319,28 @@ export function Board(props: BoardProps): JSX.Element {
     [scheduleResync, setPromo],
   )
 
+  const handleUserDrop = useCallback(
+    (role: Role, key: Key) => {
+      dirtyRef.current = true
+      propsRef.current.onDrop?.(role as PocketRole, key as Square)
+      scheduleResync()
+    },
+    [scheduleResync],
+  )
+
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      dragNewPiece: (role, color, event) => {
+        const api = apiRef.current
+        if (!api) return
+        api.state.dom.bounds.clear()
+        api.dragNewPiece({ role, color }, event)
+      },
+    }),
+    [],
+  )
+
   // create / destroy (rebuilt only when coordinates change: chessground renders them once)
   useEffect(() => {
     const el = hostRef.current
@@ -299,7 +348,7 @@ export function Board(props: BoardProps): JSX.Element {
     const p = propsRef.current
     const config = buildConfig(p)
     config.fen = p.fen
-    config.movable = { ...config.movable, events: { after: handleUserMove } }
+    config.movable = { ...config.movable, events: { after: handleUserMove, afterNewPiece: handleUserDrop } }
     const api = Chessground(el, config)
     apiRef.current = api
     appliedFenRef.current = p.fen
@@ -312,7 +361,7 @@ export function Board(props: BoardProps): JSX.Element {
       el.innerHTML = ''
       el.className = 'board-cg'
     }
-  }, [coordinates, handleUserMove])
+  }, [coordinates, handleUserMove, handleUserDrop])
 
   // props -> board
   const lastMoveKey = normalizeLastMove(lastMove)?.join('') ?? ''
@@ -320,7 +369,7 @@ export function Board(props: BoardProps): JSX.Element {
   const animKey = String(animation)
   useEffect(() => {
     apply()
-  }, [fen, orientation, lastMoveKey, check, interactive, movableColor, dests, shapeKey, animKey, apply])
+  }, [fen, orientation, lastMoveKey, check, interactive, movableColor, dests, rules, dropPiece, shapeKey, animKey, apply])
 
   // sounds on fen change (programmatic moves included)
   const prevFenRef = useRef(fen)
@@ -332,7 +381,7 @@ export function Board(props: BoardProps): JSX.Element {
     const now = performance.now()
     if (now - lastSoundRef.current < SOUND_THROTTLE_MS) return
     lastSoundRef.current = now
-    playMoveSound(prev, fen, fenInCheck(fen))
+    playMoveSound(prev, fen, propsRef.current.rules?.check ?? fenInCheck(fen))
   }, [fen, sound])
 
   // shake: any change of the `shake` number after mount
@@ -413,7 +462,16 @@ export function Board(props: BoardProps): JSX.Element {
     .join(' ')
 
   return (
-    <div ref={rootRef} className={rootClass} style={style} data-fen={fen} data-orientation={orientation}>
+    <div
+      ref={rootRef}
+      className={rootClass}
+      style={style}
+      data-fen={fen}
+      data-orientation={orientation}
+      // chessground remembers where the board is and re-measures only on scroll and resize, so a
+      // layout change that moves it (the phone layout after Start) would send every press to the wrong square
+      onPointerDownCapture={() => apiRef.current?.state.dom.bounds.clear()}
+    >
       <div ref={hostRef} className="board-cg" />
       {activePromo ? (
         <>
@@ -440,7 +498,7 @@ export function Board(props: BoardProps): JSX.Element {
               choosePromotion('q')
             }}
           >
-            {PROMO_PIECES.map(({ piece, role }) => (
+            {(rules?.kingPromotion ? [...PROMO_PIECES, KING_PROMOTION] : PROMO_PIECES).map(({ piece, role }) => (
               <button
                 key={piece}
                 type="button"

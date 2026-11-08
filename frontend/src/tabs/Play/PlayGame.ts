@@ -1,15 +1,26 @@
 /**
  * Play tab: game model, persistence and pure helpers (no React in here).
  *
- * A game is stored as a SAN list from `startFen` (always the initial position today, kept for
- * future "start from FEN" support). Everything else (fens, last move, status) is derived by
- * replaying the list with chess.js, which also gives threefold-repetition detection for free.
+ * A game is stored as a SAN list from `startFen`. Everything else (fens, last move, status, and
+ * Panicfish's remaining Elo) is derived by replaying the list: with chess.js for standard chess,
+ * with chessops for the variants (see lib/variants.ts).
  */
 import { Chess } from 'chess.js'
-import type { BotStrength, LineMeta, OpeningFull, Players, Side } from '../../api/types'
-import type { LastGame, ReviewRequestPayload } from '../../state/AppContext'
-import { START_FEN, gameStatus, oppositeSide, turnFromFen, type Move } from '../../lib/chess'
+import type { BotKind, BotStrength, Health, LineMeta, OpeningFull, Players, Side, VariantId } from '../../api/types'
+import type { HistoryGame } from '../../lib/gameHistory'
+import type { LastGame } from '../../state/AppContext'
+import { START_FEN, gameStatus, moveToUci, oppositeSide, tryMove, turnFromFen, uciToSan, type PromotionPiece, type Square } from '../../lib/chess'
 import { loadJson, saveJson } from '../../lib/storage'
+import {
+  isVariantId,
+  replayVariant,
+  variantInfo,
+  variantMove,
+  variantStartFen,
+  variantUciToSan,
+  type PlayedMove,
+  type VariantWinReason,
+} from '../../lib/variants'
 
 // ---------------------------------------------------------------- constants
 
@@ -22,7 +33,15 @@ export const ELO_MIN = 400
 export const ELO_MAX = 3190
 /** From this Elo up the backend uses Stockfish's own UCI_LimitStrength/UCI_Elo. */
 export const UCI_ELO_MIN = 1320
+const FAIRY_UCI_ELO_MIN = 500
 export const ELO_PRESETS = [800, 1200, 1500, 2000, 2500, 3190] as const
+export const MAIA_ELO_MIN = 1100
+export const MAIA_ELO_MAX = 1900
+/** Maia has one trained net per 100 rating points. */
+export const MAIA_ELO_STEP = 100
+export const MAIA_ELO_PRESETS = [1100, 1300, 1500, 1700, 1900] as const
+export const PANICFISH_START_ELO = 3600
+export const PANICFISH_ELO_PER_CHECK = 300
 export const MOVETIME_OPTIONS = [300, 800, 2000] as const
 /** Delay before the bot plays a book move from the line (feels less robotic than instant). */
 export const BOOK_MOVE_DELAY_MS = 450
@@ -39,8 +58,13 @@ export type ColorChoice = Side | 'random'
 export type OpeningMode = 'end' | 'hints'
 
 export interface PlaySetup {
+  variant: VariantId
   color: ColorChoice
+  bot: BotKind
+  /** Stockfish's Elo. */
   elo: number
+  /** Maia's rating, kept apart from `elo` so switching bots loses neither. */
+  maiaElo: number
   movetimeMs: number
   useOpening: boolean
   openingId: string
@@ -50,8 +74,11 @@ export interface PlaySetup {
 }
 
 export const DEFAULT_SETUP: PlaySetup = {
+  variant: 'standard',
   color: 'white',
+  bot: 'stockfish',
   elo: 1200,
+  maiaElo: 1500,
   movetimeMs: 800,
   useOpening: false,
   openingId: '',
@@ -84,6 +111,7 @@ export type GameReason =
   | 'fifty-move'
   | 'draw'
   | 'resignation'
+  | VariantWinReason
 
 export interface GameResult {
   result: '1-0' | '0-1' | '1/2-1/2'
@@ -94,7 +122,10 @@ export interface PlayGame {
   version: 1
   /** Unique per game; async bot replies check it so they never land in a newer game. */
   id: string
+  variant: VariantId
   studentColor: Side
+  bot: BotKind
+  /** The bot's Elo (Stockfish), rating (Maia) or starting Elo (Panicfish: see {@link botEloNow}). */
   elo: number
   movetimeMs: number
   startFen: string
@@ -116,31 +147,38 @@ export interface PlayGame {
 export interface Replay {
   /** fens[i] = position after i moves (fens[0] = startFen). */
   fens: string[]
-  moves: Move[]
-  /** chess.js instance at the final position (with history, so repetition detection works). */
-  chess: Chess
+  moves: PlayedMove[]
+  /** The result by the rules, once the game is over. */
+  result: GameResult | undefined
 }
 
 /** Replay a SAN list. Stops at the first illegal move (the result then has fewer moves). */
-export function replayGame(startFen: string, sans: readonly string[]): Replay {
+export function replayGame(startFen: string, sans: readonly string[], variant: VariantId = 'standard'): Replay {
+  if (variant !== 'standard') return replayVariant(variant, startFen, sans)
   const chess = new Chess(startFen)
   const fens = [chess.fen()]
-  const moves: Move[] = []
+  const moves: PlayedMove[] = []
   for (const san of sans) {
     try {
-      moves.push(chess.move(san))
+      const m = chess.move(san)
+      moves.push({ from: m.from, to: m.to, san: m.san, uci: moveToUci(m), check: /[+#]$/.test(m.san) })
     } catch {
       break
     }
     fens.push(chess.fen())
   }
-  return { fens, moves, chess }
+  const st = gameStatus(chess)
+  return { fens, moves, result: st.over ? { result: st.result, reason: st.reason } : undefined }
 }
 
-/** Game result from the rules (mate, stalemate, insufficient material, 50-move, threefold), or undefined. */
-export function ruleResult(chess: Chess): GameResult | undefined {
-  const st = gameStatus(chess)
-  return st.over ? { result: st.result, reason: st.reason } : undefined
+/** The move as the student tried it, if legal. */
+export function legalMove(variant: VariantId, fen: string, from: Square, to: Square, promotion?: PromotionPiece): { san: string } | null {
+  return variant === 'standard' ? tryMove(fen, from, to, promotion) : variantMove(variant, fen, from, to, promotion)
+}
+
+/** SAN of the engine's move, or null if it is not legal here. */
+export function sanOfEngineMove(variant: VariantId, fen: string, uci: string): string | null {
+  return variant === 'standard' ? uciToSan(fen, uci) : variantUciToSan(variant, fen, uci)
 }
 
 /** Side that played ply `ply` (1-based) in a game starting at `startFen`. */
@@ -155,7 +193,7 @@ export function withMove(game: PlayGame, san: string, mark?: MoveMark, patch?: P
   const marks = { ...game.marks }
   if (mark) marks[sans.length] = mark
   const next: PlayGame = { ...game, ...patch, sans, marks }
-  const result = ruleResult(replayGame(game.startFen, sans).chess)
+  const { result } = replayGame(game.startFen, sans, game.variant)
   if (result) {
     next.result = result
     next.endedAt = Date.now()
@@ -241,13 +279,42 @@ export function alternativeBookLine(full: OpeningFull | null | undefined, sans: 
 
 // ---------------------------------------------------------------- labels
 
-export function botName(): string {
-  return 'Stockfish 19'
+export function botName(bot: BotKind, variant: VariantId = 'standard'): string {
+  if (bot === 'maia') return 'Maia'
+  if (bot === 'panicfish') return 'Panicfish'
+  return variantInfo(variant).engine === 'fairy' ? 'Fairy-Stockfish' : 'Stockfish 19'
+}
+
+/** "Stockfish 19 (1200)", "Maia (1500)". */
+export function botTitle(bot: BotKind, elo: number, variant: VariantId = 'standard'): string {
+  return `${botName(bot, variant)} (${elo})`
 }
 
 /** Caption under the Elo slider (contract wording from ARCHITECTURE.md). */
-export function strengthCaption(elo: number): string {
-  return elo >= UCI_ELO_MIN ? 'Stockfish 19, UCI_Elo' : 'approximate (Skill Level + mixing)'
+export function strengthCaption(bot: BotKind, elo: number, variant: VariantId = 'standard'): string {
+  if (bot === 'maia') return `Maia ${elo}, trained on Lichess players rated about ${elo}`
+  const lowestLimit = variantInfo(variant).engine === 'fairy' ? FAIRY_UCI_ELO_MIN : UCI_ELO_MIN
+  return `${botName(bot, variant)}, ${elo >= lowestLimit ? 'limited to' : 'roughly'} this Elo`
+}
+
+/** Panicfish loses Elo for every check the student has given it. */
+export function panicfishElo(checks: number): number {
+  return Math.max(0, PANICFISH_START_ELO - PANICFISH_ELO_PER_CHECK * checks)
+}
+
+/** The strength the bot has right now. Only Panicfish's changes during a game. */
+export function botEloNow(game: PlayGame, moves: readonly PlayedMove[]): number {
+  if (game.bot !== 'panicfish') return game.elo
+  return panicfishElo(moves.filter((m, i) => m.check && moverOfPly(game.startFen, i + 1) === game.studentColor).length)
+}
+
+export function currentElo(game: PlayGame): number {
+  return botEloNow(game, replayGame(game.startFen, game.sans, game.variant).moves)
+}
+
+export function panicfishMood(elo: number): string {
+  if (elo >= PANICFISH_START_ELO) return `Full strength. Every check costs it ${PANICFISH_ELO_PER_CHECK} Elo.`
+  return elo > 0 ? `Down to ${elo} Elo and losing its nerve.` : 'Out of Elo. It now plays random moves.'
 }
 
 /** Rough human description of an Elo. */
@@ -264,10 +331,12 @@ export function eloLevel(elo: number): string {
 }
 
 /** What the backend reported about the strength it used. */
-export function strengthDetail(s: BotStrength | null, elo: number): string {
-  if (!s) return elo >= UCI_ELO_MIN ? `UCI_Elo ${elo}` : `approx. ${elo} (Skill Level + mixing)`
-  if (s.mode === 'uci_elo') return `UCI_Elo ${s.elo}`
-  return `Skill Level ${s.skill ?? '?'} + mixing (approx. ${s.elo})`
+export function strengthDetail(bot: BotKind, s: BotStrength | null, elo: number): string {
+  if (bot === 'maia') return strengthCaption(bot, s?.elo ?? elo)
+  if (bot === 'panicfish') return panicfishMood(elo)
+  const shown = s?.elo ?? elo
+  const exact = s ? s.mode === 'uci_elo' : elo >= UCI_ELO_MIN
+  return exact ? `Limited to ${shown} Elo` : `About ${shown} Elo (approximate)`
 }
 
 export function formatMovetime(ms: number): string {
@@ -299,6 +368,20 @@ export function reasonText(reason: GameReason): string {
       return 'by the rules'
     case 'resignation':
       return 'by resignation'
+    case 'hill':
+      return 'by reaching the center'
+    case 'three-check':
+      return 'by giving three checks'
+    case 'explosion':
+      return 'by blowing up the king'
+    case 'no-pieces':
+      return 'by losing every piece'
+    case 'stalemated':
+      return 'by getting stalemated'
+    case 'horde-gone':
+      return 'by capturing the whole horde'
+    case 'race':
+      return 'by reaching the last rank'
   }
 }
 
@@ -308,11 +391,11 @@ export function resultHeadline(game: PlayGame): string {
   if (!o || !game.result) return ''
   const how = reasonText(game.result.reason)
   if (o === 'draw') return `Draw ${how}`
-  return o === 'win' ? `You won ${how}` : `${botName()} won ${how}`
+  return o === 'win' ? `You won ${how}` : `${botName(game.bot, game.variant)} won ${how}`
 }
 
 export function gamePlayers(game: PlayGame): Players {
-  const bot = `${botName()} (${game.elo})`
+  const bot = botTitle(game.bot, currentElo(game), game.variant)
   return game.studentColor === 'white' ? { white: 'You', black: bot } : { white: bot, black: 'You' }
 }
 
@@ -327,11 +410,16 @@ export function toLastGame(game: PlayGame): LastGame {
   }
 }
 
-export function toReviewRequest(game: PlayGame): ReviewRequestPayload {
+export function toHistoryGame(game: PlayGame): HistoryGame {
   return {
-    sans: [...game.sans],
+    ...toLastGame(game),
+    id: game.id,
+    bot: game.bot,
+    elo: currentElo(game),
+    studentColor: game.studentColor,
     players: gamePlayers(game),
-    ...(game.startFen !== START_FEN ? { startFen: game.startFen } : {}),
+    result: game.result?.result ?? '*',
+    ...(game.variant !== 'standard' ? { variant: game.variant } : {}),
   }
 }
 
@@ -350,7 +438,8 @@ export function resolveColor(choice: ColorChoice): Side {
  * Build a new game from the dialog values. `full` must be the loaded opening when
  * `setup.useOpening` is on. Throws a readable Error when the setup cannot be used.
  */
-export function createGame(setup: PlaySetup, full: OpeningFull | null): PlayGame {
+export function createGame(chosen: PlaySetup, full: OpeningFull | null): PlayGame {
+  const setup = fitToVariant(chosen)
   const studentColor = resolveColor(setup.color)
   let opening: PlayOpening | undefined
   let sans: string[] = []
@@ -385,10 +474,12 @@ export function createGame(setup: PlaySetup, full: OpeningFull | null): PlayGame
   const game: PlayGame = {
     version: 1,
     id: newGameId(),
+    variant: setup.variant,
     studentColor,
-    elo: clampElo(setup.elo),
+    bot: setup.bot,
+    elo: setupElo(setup),
     movetimeMs: setup.movetimeMs,
-    startFen: START_FEN,
+    startFen: variantStartFen(setup.variant),
     sans,
     basePly: sans.length,
     marks,
@@ -396,7 +487,7 @@ export function createGame(setup: PlaySetup, full: OpeningFull | null): PlayGame
     bookStats: { correct: 0, missed: 0 },
     startedAt: Date.now(),
   }
-  const result = ruleResult(replayGame(game.startFen, sans).chess)
+  const { result } = replayGame(game.startFen, sans, game.variant)
   if (result) {
     game.result = result
     game.endedAt = Date.now()
@@ -408,8 +499,10 @@ export function createGame(setup: PlaySetup, full: OpeningFull | null): PlayGame
 export function rematchSetup(game: PlayGame, current: PlaySetup): PlaySetup {
   return {
     ...current,
+    variant: game.variant,
     color: game.opening ? game.studentColor : oppositeSide(game.studentColor),
-    elo: game.elo,
+    bot: game.bot,
+    ...(game.bot === 'maia' ? { maiaElo: game.elo } : game.bot === 'stockfish' ? { elo: game.elo } : {}),
     movetimeMs: game.movetimeMs,
     useOpening: Boolean(game.opening),
     openingId: game.opening?.id ?? current.openingId,
@@ -423,14 +516,100 @@ export function clampElo(elo: number): number {
   return Math.min(ELO_MAX, Math.max(ELO_MIN, Math.round(elo)))
 }
 
+/** The nearest rating Maia has a net for. */
+export function clampMaiaElo(elo: number): number {
+  if (!Number.isFinite(elo)) return DEFAULT_SETUP.maiaElo
+  const stepped = Math.round(elo / MAIA_ELO_STEP) * MAIA_ELO_STEP
+  return Math.min(MAIA_ELO_MAX, Math.max(MAIA_ELO_MIN, stepped))
+}
+
+/** The strength a new game from this setup is played at. */
+export function setupElo(setup: PlaySetup): number {
+  if (setup.bot === 'panicfish') return PANICFISH_START_ELO
+  return setup.bot === 'maia' ? clampMaiaElo(setup.maiaElo) : clampElo(setup.elo)
+}
+
+// ---------------------------------------------------------------- variants and availability
+
+/** Only Black has a king in Horde, so Panicfish could only be checked if it plays Black. */
+export function colorIsLocked(setup: Pick<PlaySetup, 'variant' | 'bot'>): boolean {
+  return setup.variant === 'horde' && setup.bot === 'panicfish'
+}
+
+/**
+ * What a variant allows: opening lines and Maia are standard chess only, and Panicfish needs checks.
+ * The stored choices are left alone, so they come back when the variant is switched back.
+ */
+export function fitToVariant(setup: PlaySetup): PlaySetup {
+  const standard = setup.variant === 'standard'
+  const bot = (setup.bot === 'maia' && !standard) || (setup.bot === 'panicfish' && !variantInfo(setup.variant).hasChecks) ? 'stockfish' : setup.bot
+  const useOpening = standard && setup.useOpening
+  const color = colorIsLocked({ variant: setup.variant, bot }) ? 'white' : setup.color
+  return bot === setup.bot && useOpening === setup.useOpening && color === setup.color ? setup : { ...setup, bot, useOpening, color }
+}
+
+export type FairyStatus = 'unknown' | 'available' | 'missing'
+
+export function fairyStatusOf(health: Health | null): FairyStatus {
+  if (!health) return 'unknown'
+  return health.fairy?.available ? 'available' : 'missing'
+}
+
+/** The variant needs Fairy-Stockfish and it is not installed. */
+export function variantBlocked(variant: VariantId, status: FairyStatus): boolean {
+  return variantInfo(variant).engine === 'fairy' && status === 'missing'
+}
+
+// ---------------------------------------------------------------- Maia availability
+
+/** Can Maia be played? "unknown" until /api/health has answered, so nothing flashes "not installed". */
+export type MaiaStatus = 'unknown' | 'available' | 'missing'
+
+export function maiaStatusOf(health: Health | null): MaiaStatus {
+  if (!health) return 'unknown'
+  return health.maia?.available ? 'available' : 'missing' // an older backend does not report Maia
+}
+
+/** The ratings with an installed net, or null when that is not known (then all of them are offered). */
+export function maiaRatingsOf(health: Health | null): readonly number[] | null {
+  return health?.maia?.ratings ?? null
+}
+
+/** Whether a game at this strength can get replies on this install. */
+export function botCanPlay(bot: BotKind, elo: number, status: MaiaStatus, ratings: readonly number[] | null): boolean {
+  if (bot !== 'maia') return true
+  return status !== 'missing' && (ratings === null || ratings.includes(elo))
+}
+
+function nearestRating(elo: number, ratings: readonly number[]): number {
+  return ratings.reduce((best, r) => (Math.abs(r - elo) < Math.abs(best - elo) ? r : best))
+}
+
+/**
+ * The setup the form shows and a new game uses: a stored choice of Maia that cannot be played
+ * becomes Stockfish, and a rating whose net is missing becomes the nearest installed one. The
+ * stored values are not changed, so the choice returns once Maia is fully installed.
+ */
+export function playableSetup(chosen: PlaySetup, status: MaiaStatus, ratings: readonly number[] | null): PlaySetup {
+  const setup = fitToVariant(chosen)
+  if (setup.bot !== 'maia') return setup
+  if (status === 'missing') return { ...setup, bot: 'stockfish' }
+  const rating = clampMaiaElo(setup.maiaElo)
+  if (!ratings || ratings.length === 0 || ratings.includes(rating)) return setup
+  return { ...setup, maiaElo: nearestRating(rating, ratings) }
+}
+
 // ---------------------------------------------------------------- persistence
 
 export function loadSetup(): PlaySetup {
   const s = loadJson<Record<string, unknown> | null>(PLAY_SETUP_KEY, null)
   const out: PlaySetup = { ...DEFAULT_SETUP }
   if (!s || typeof s !== 'object') return out
+  if (isVariantId(s.variant)) out.variant = s.variant
   if (s.color === 'white' || s.color === 'black' || s.color === 'random') out.color = s.color
+  if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish') out.bot = s.bot
   if (typeof s.elo === 'number') out.elo = clampElo(s.elo)
+  if (typeof s.maiaElo === 'number') out.maiaElo = clampMaiaElo(s.maiaElo)
   if (typeof s.movetimeMs === 'number' && (MOVETIME_OPTIONS as readonly number[]).includes(s.movetimeMs)) out.movetimeMs = s.movetimeMs
   if (typeof s.useOpening === 'boolean') out.useOpening = s.useOpening
   if (typeof s.openingId === 'string') out.openingId = s.openingId
@@ -453,11 +632,13 @@ export function loadSavedGame(): PlayGame | null {
   if (!g || typeof g !== 'object' || g.version !== 1) return null
   if (typeof g.id !== 'string' || !isSide(g.studentColor) || !Array.isArray(g.sans)) return null
   const startFen = typeof g.startFen === 'string' ? g.startFen : START_FEN
+  const variant: VariantId = isVariantId(g.variant) ? g.variant : 'standard' // games saved before the variants have none
   let replay: Replay
   try {
     replay = replayGame(
       startFen,
       g.sans.filter((s): s is string => typeof s === 'string'),
+      variant,
     )
   } catch {
     return null // bad start fen
@@ -484,11 +665,15 @@ export function loadSavedGame(): PlayGame | null {
       mode: o.mode === 'end' ? 'end' : 'hints',
     }
   }
+  const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
+  const savedElo = typeof g.elo === 'number' ? g.elo : NaN
   const game: PlayGame = {
     version: 1,
     id: g.id,
+    variant,
     studentColor: g.studentColor,
-    elo: clampElo(typeof g.elo === 'number' ? g.elo : DEFAULT_SETUP.elo),
+    bot,
+    elo: bot === 'maia' ? clampMaiaElo(savedElo) : bot === 'panicfish' ? PANICFISH_START_ELO : clampElo(savedElo),
     movetimeMs: typeof g.movetimeMs === 'number' && g.movetimeMs > 0 ? g.movetimeMs : DEFAULT_SETUP.movetimeMs,
     startFen,
     sans,
@@ -502,8 +687,7 @@ export function loadSavedGame(): PlayGame | null {
     startedAt: typeof g.startedAt === 'number' ? g.startedAt : Date.now(),
   }
   // the result is re-derived from the rules; a resignation is kept as stored
-  const rules = ruleResult(replay.chess)
-  if (rules) game.result = rules
+  if (replay.result) game.result = replay.result
   else if (g.result && g.result.reason === 'resignation') game.result = g.result
   if (game.result) game.endedAt = typeof g.endedAt === 'number' ? g.endedAt : Date.now()
   return game

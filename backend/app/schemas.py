@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from typing import Literal, get_args
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 # --------------------------------------------------------------------------- shared
 
@@ -147,14 +148,39 @@ class WsAnalyzeInfo(BaseModel):
 # --------------------------------------------------------------------------- bot
 
 
+_STOCKFISH_ELO = (400, 3190)
+_PANICFISH_ELO = (0, 3600)  # it starts at 3600 and loses 300 per check
+_MOVETIME_MS = (50, 60_000)
+
+Variant = Literal["standard", "chess960", "crazyhouse", "kingofthehill", "3check", "antichess", "atomic", "horde", "racingkings"]
+
+
 class BotMoveRequest(BaseModel):
     fen: str
-    elo: int = Field(ge=400, le=3190)
-    movetime_ms: int = Field(default=800, ge=50, le=60_000)
+    variant: Variant = "standard"
+    bot: Literal["stockfish", "maia", "panicfish"] = "stockfish"  # before elo: its validator reads this field
+    elo: int
+    movetime_ms: int = 800  # the search time; ignored for Maia, which does not search
+    moves: list[str] | None = None  # Maia only: UCI moves from start_fen, oldest first
+    start_fen: str | None = None  # Maia only: the root of moves (default: the standard start)
+
+    @field_validator("elo", "movetime_ms")
+    @classmethod
+    def _engine_limits(cls, value: int, info: ValidationInfo) -> int:
+        """The engine's ranges, a 422 as always. Maia's rating is checked by the router (a 400)."""
+        bot = info.data.get("bot")
+        if bot == "maia":
+            return value
+        low, high = _MOVETIME_MS if info.field_name == "movetime_ms" else _PANICFISH_ELO if bot == "panicfish" else _STOCKFISH_ELO
+        if value < low:
+            raise PydanticCustomError("greater_than_equal", "Input should be greater than or equal to {ge}", {"ge": low})
+        if value > high:
+            raise PydanticCustomError("less_than_equal", "Input should be less than or equal to {le}", {"le": high})
+        return value
 
 
 class BotStrength(BaseModel):
-    mode: Literal["uci_elo", "skill"]
+    mode: Literal["uci_elo", "skill", "maia", "full", "random"]
     skill: int | None = None
     elo: int
 
@@ -358,8 +384,21 @@ class OllamaHealth(BaseModel):
     models: list[str]
 
 
+class MaiaHealth(BaseModel):
+    available: bool
+    ratings: list[int]  # the ratings whose weight file exists
+    path: str  # the lc0 executable
+
+
+class FairyHealth(BaseModel):
+    available: bool  # the file exists; it is not started to find out
+    path: str
+
+
 class HealthResponse(BaseModel):
     ok: bool
     stockfish: StockfishHealth
     ollama: OllamaHealth
     openings: int
+    maia: MaiaHealth
+    fairy: FairyHealth
