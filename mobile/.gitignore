@@ -1,0 +1,14 @@
+# Build outputs: scripts/build-apk.py and scripts/build-engines.py make all of these again.
+/Gambiteer.apk
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/build.log
+/android/local.properties
+/android/app/src/main/jniLibs/
+.kotlin/
+/third_party/wheels/
+/third_party/maia/
+/third_party/stockfish-baseline.marker
+/web/dist/
+/web/.vite/

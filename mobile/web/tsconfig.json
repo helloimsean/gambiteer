@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+    "typeRoots": ["../../frontend/node_modules/@types", "../../frontend/node_modules"],
+    "allowArbitraryExtensions": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@frontend/*": ["../../frontend/src/*"],
+      "vite/client": ["../../frontend/node_modules/vite/client.d.ts"],
+      "react": ["../../frontend/node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["../../frontend/node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom": ["../../frontend/node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/client": ["../../frontend/node_modules/@types/react-dom/client.d.ts"]
+    }
+  },
+  "include": ["src"]
+}

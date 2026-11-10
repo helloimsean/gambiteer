@@ -1,0 +1,178 @@
+/* Phone layout for this tab. Only this tab's selectors belong here. */
+
+/* ---------- gallery: one column, the cards get the full width ---------- */
+.learn-gallery {
+  padding: 14px 10px 24px;
+}
+.learn-gallery-header {
+  margin-bottom: 12px;
+}
+.learn-search {
+  width: 100%;
+}
+.learn-gallery .learn-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.learn-gallery .learn-card {
+  padding: 12px;
+}
+.learn-gallery .learn-card-name {
+  font-size: 16px;
+}
+
+/* ---------- opening view: board, then the move, coach and controls, then the panel ----------
+   The whole column scrolls. The board and the controls below it take most of a phone's height,
+   so the tree / lines / ideas panel gets its own fixed band underneath and is reached by scrolling. */
+.learn-view {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.learn-view .learn-below {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px 10px;
+  gap: 8px;
+}
+
+/* move head: the move, its badge, the ply count and the two icon buttons wrap rather than run off */
+.learn-view .learn-move-head {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.learn-view .learn-move-big {
+  font-size: 22px;
+}
+
+/* line chips wrap instead of being cut off (the "+N more" link must stay reachable) */
+.learn-view .learn-here,
+.learn-view .learn-here.expanded {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  max-height: none;
+  min-height: 24px;
+  overflow: visible;
+}
+.learn-view .learn-here .learn-chip {
+  max-width: 100%;
+}
+
+/* controls: nav buttons fixed to finger size, the row wraps if it still does not fit */
+.learn-view .learn-controls {
+  flex-wrap: wrap;
+  gap: 6px;
+  row-gap: 6px;
+}
+.learn-view .learn-controls .learn-nav {
+  gap: 4px;
+}
+.learn-view .learn-controls .learn-nav .btn {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+.learn-view .learn-controls .learn-action {
+  min-height: 40px;
+}
+.learn-view .learn-controls .learn-action.learn-analyze-action {
+  width: 40px;
+  padding: 0;
+}
+
+/* practice options: a bottom sheet above the tab bar, so it is never cut off by the scroll area */
+.learn-view .learn-practice-pop {
+  position: fixed;
+  top: auto;
+  right: 8px;
+  bottom: 62px;
+  left: 8px;
+  width: auto;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  z-index: 30;
+}
+
+/* the panel (Tree / Lines / Ideas): a fixed band the page scrolls to; its own list scrolls inside */
+.learn-view .workspace-side {
+  flex: 0 0 auto;
+  height: clamp(340px, 62vh, 560px);
+  overflow: hidden;
+}
+.learn-view .workspace-side > .learn-side {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+.learn-view .learn-side-title {
+  font-size: 14px;
+}
+
+/* finger-sized targets: the move-head icons, the line chips, the tree's moves and expanders */
+.learn-view .learn-arrows-toggle,
+.learn-view .learn-practice-gear {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+.learn-view .learn-here .learn-chip {
+  min-height: 30px;
+  line-height: 28px;
+}
+.learn-view .learn-tree-move {
+  padding: 3px 5px;
+}
+.learn-view .learn-tree-toggle {
+  width: 26px;
+  height: 26px;
+}
+
+/* the tree's moves were 26px tall and the expanders 26px: give them a finger-sized hit area */
+.learn-view .learn-tree-move {
+  min-height: 34px;
+  line-height: 28px;
+}
+.learn-view .learn-tree-toggle {
+  width: 34px;
+  height: 34px;
+}
+.learn-view .learn-tree .learn-chip {
+  min-height: 30px;
+  line-height: 28px;
+}
+
+/* line-chip and "+N more" / "Ask the coach" links are text links: pad them to a finger-sized row */
+.learn-view .learn-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+/* the keyboard hint (arrow keys) is hidden on a phone by the shell, which left the sentence broken
+   ("step through with , Autoplay"): keep the key glyph in the intro text */
+.learn-view .learn-coach-intro .kbd {
+  display: inline;
+}
+
+/* lines panel: each line header is a finger-sized row; the move chips in it are too */
+.learn-view .learn-line-head {
+  min-height: 40px;
+  align-items: center;
+  padding: 9px 10px;
+}
+.learn-view .learn-line-move {
+  min-height: 28px;
+  line-height: 24px;
+}
+
+/* ideas: the source links are text rows; give each a 36px tap row */
+.learn-view .learn-sources a {
+  min-height: 36px;
+  padding: 6px 0;
+}
+
+/* practice options: each switch's row is a 40px tap target (the track itself stays small) */
+.learn-view .learn-practice-pop .ui-toggle {
+  min-height: 40px;
+}

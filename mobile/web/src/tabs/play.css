@@ -1,0 +1,158 @@
+/* Phone layout for the Play tab. Every selector starts with .play-tab or a play- class, so nothing here reaches other tabs. */
+
+/* Let the whole tab be one column of board and side, with no outer padding (mobile.css gives the side its own gutter). */
+.play-tab.workspace {
+  padding: 0;
+  gap: 6px;
+}
+
+/* ---------- setup: no game yet, so the board is only decoration ---------- */
+/* The form gets the whole screen. The form's own panel body is the scroller, not the side: the panel is
+   unmounted when a game starts, so a game never inherits the setup's scroll offset (which hid its status row). */
+.play-tab[data-game-id=''] .play-board-col {
+  display: none;
+}
+.play-tab[data-game-id=''] .workspace-side {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 3px 3px;
+  overflow: hidden;
+}
+.play-tab[data-game-id=''] .workspace-side > .panel {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.play-tab[data-game-id=''] .play-panel > .panel-body.scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.play-tab[data-game-id=''] .play-start-footer .btn {
+  min-height: 46px;
+}
+/* The opening-line switch: the whole row is the tap target, not just the 22 px track. */
+.play-tab[data-game-id=''] label.ui-toggle {
+  min-height: 40px;
+}
+.play-tab[data-game-id=''] .play-setup {
+  gap: 16px;
+}
+.play-tab[data-game-id=''] .play-setup-section .btn-group .btn {
+  min-height: 40px;
+}
+/* The slider's own box is 6 px tall; the 40 px box gives a finger a real target, and the thumb stays centred on the track. */
+.play-tab[data-game-id=''] .play-elo-slider {
+  height: 40px;
+}
+.play-tab[data-game-id=''] .play-elo-presets .btn {
+  min-height: 40px;
+  min-width: 52px;
+}
+.play-tab[data-game-id=''] .play-mode {
+  padding: 10px 12px;
+}
+
+/* ---------- game: board on top, compact bars and controls, the side scrolls underneath ---------- */
+.play-tab .play-board-col {
+  gap: 4px;
+}
+.play-tab .play-board-col .play-bar-slot,
+.play-tab .play-board-col .play-toolbar {
+  width: 100%;
+  min-width: 0;
+  padding: 0 8px;
+}
+.play-tab .play-bar {
+  height: auto;
+  min-height: 36px;
+  gap: 8px;
+  padding: 0 2px;
+}
+.play-tab .play-avatar {
+  width: 28px;
+  height: 28px;
+}
+.play-tab .play-bar-name {
+  font-size: 13px;
+}
+.play-tab .play-pocket {
+  min-height: 36px;
+}
+/* An empty pocket reserves no row, so a bar without captured pieces stays as short as on the desktop. */
+.play-tab .play-pocket:empty {
+  min-height: 0;
+}
+/* Pocket pieces are the drop targets, so each one gets a finger-sized box with the piece centred in it. */
+.play-tab .play-pocket-piece {
+  min-width: 36px;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Text gutter: the side keeps 3px, the panel border is 1px and the panel padding is 8px, so text sits about 12px from the edge. */
+.play-tab .workspace-side {
+  padding: 0 3px 3px;
+}
+.play-tab .play-panel .panel-header,
+.play-tab .play-panel .panel-body,
+.play-tab .play-panel .panel-footer,
+.play-tab .play-panel .play-nav {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* On a short phone the full-width board would leave the side panel about 35 px, so the board keeps its
+   full width while the screen is tall enough (the 780 px app area) and gives up width only below that.
+   The bars and controls stay full width, so the controls keep their room. */
+.play-tab .play-board-col .board-frame {
+  width: min(100%, calc(100vh - 360px));
+  margin: 0 auto;
+  width: min(100%, calc(100dvh - 360px));
+}
+
+/* One row of controls: the flip button stays a fixed square and the labelled ones share what is left. */
+.play-tab .play-toolbar {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.play-tab .play-toolbar .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.play-tab .play-toolbar .btn.btn-icon {
+  flex: 0 0 42px;
+  padding: 0;
+}
+
+/* The move list grows with its content; the side panel is the one scroller. */
+.play-tab .play-moves {
+  flex: 0 0 auto;
+  max-height: none;
+  min-height: 0;
+  padding: 0 5px;
+}
+/* Finger-sized move rows (the desktop row is 28 px). */
+.play-tab .play-moves .move-row {
+  min-height: 40px;
+}
+.play-tab .play-panel-top {
+  padding: 8px 10px;
+}
+.play-tab .play-panel .panel-header {
+  padding: 8px 10px;
+}
+
+/* Game-over dialog: the three actions share the width instead of leaving gaps. */
+.play-over-modal .ui-modal-footer {
+  flex-wrap: wrap;
+}
+.play-over-modal .ui-modal-footer .btn {
+  flex: 1 1 130px;
+  justify-content: center;
+}

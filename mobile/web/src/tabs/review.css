@@ -1,0 +1,130 @@
+/* Phone layout for the Review tab. Every selector is scoped to .review-tab, so nothing here reaches
+   other tabs. Colours come from the existing theme variables; no new ones are added. */
+
+/* Setup and the progress screen are forms, not games: the decorative board goes, and the form gets
+   the whole page. */
+.review-tab[data-phase='setup'] > .workspace-board,
+.review-tab[data-phase='running'] > .workspace-board {
+  display: none;
+}
+
+/* Board column: the board is full width, so drop the desktop minimums that would overflow 412px. */
+.review-tab .workspace-board .board-frame .review-board-wrap {
+  min-width: 0;
+}
+.review-tab .review-below {
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 var(--m-gutter);
+}
+.review-tab .review-graph {
+  width: 100%;
+}
+.review-tab .review-explain-actions {
+  margin: 0 calc(-1 * var(--m-gutter)) -10px;
+  padding: 8px var(--m-gutter) 10px;
+}
+
+/* Finished review: the board and its controls sit at the top, and the whole tab scrolls underneath.
+   A shared scroll box of ~150px under a 480px board would hide the accuracy and the move list. */
+.review-tab[data-phase='done'].workspace {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.review-tab[data-phase='done'] > .workspace-side {
+  flex: 0 0 auto;
+  overflow: visible;
+  padding-bottom: 12px;
+}
+.review-tab[data-phase='done'] .review-moves-pane,
+.review-tab[data-phase='done'] .review-main,
+.review-tab[data-phase='done'] .review-main > .panel-body {
+  overflow: visible;
+}
+.review-tab[data-phase='done'] .review-details {
+  overflow: visible;
+}
+.review-tab[data-phase='done'] .review-movelist {
+  flex: 0 0 auto;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+.review-tab[data-phase='done'] .review-main .panel-footer {
+  position: static;
+}
+
+/* Setup form: the panel fills the side column and scrolls inside it. */
+.review-tab[data-phase='setup'] .review-setup,
+.review-tab[data-phase='running'] .review-setup {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.review-tab .review-setup .panel-body {
+  padding: 12px var(--m-gutter);
+}
+.review-tab .review-setup .panel-header,
+.review-tab .review-setup .panel-footer {
+  padding-left: var(--m-gutter);
+  padding-right: var(--m-gutter);
+}
+.review-tab .review-setup .btn-lg {
+  min-height: 48px;
+}
+.review-tab .review-depths {
+  flex-wrap: wrap;
+}
+.review-tab .review-depths .btn {
+  min-height: 40px;
+}
+.review-tab .review-depth-custom input {
+  min-height: 40px;
+}
+
+/* The start hint names the ←/→ keys, which a phone has no use for. The keys are hidden, so the
+   sentence reads "with the buttons below" instead of leaving a gap and a stray comma. */
+.review-tab .review-start-hint .kbd {
+  display: inline;
+  font-family: inherit;
+  font-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+}
+.review-tab .review-start-hint .kbd:first-of-type {
+  margin-right: -4px;
+}
+.review-tab .review-start-hint .kbd:first-of-type::after {
+  content: 'the buttons below';
+  font-size: 13px;
+}
+.review-tab .review-start-hint .kbd:last-of-type {
+  display: none;
+}
+
+/* The summary counts are the taps that jump to a class of moves. The desktop cell is 30px tall, and
+   the button 28px, which is too small for a finger. */
+.review-tab .review-counts td:not(.review-count-label):not(.review-count-badge) {
+  height: 42px;
+  padding: 0 4px;
+}
+.review-tab .review-counts .review-count {
+  height: 40px;
+  padding: 0;
+}
+
+/* A key moment is a row you tap to jump to it; 32px was short of a finger's target. */
+.review-tab .review-moment {
+  min-height: 42px;
+}
+
+/* The coach's model picker in the move details is sized for the desktop (26px). Its rule is more
+   specific than the phone select height, so it is set here. */
+.review-tab .review-model-select.compact select {
+  min-height: 40px;
+  font-size: 14px;
+  padding: 6px 28px 6px 10px;
+}

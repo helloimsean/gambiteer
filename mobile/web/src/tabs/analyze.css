@@ -1,0 +1,164 @@
+/* Phone layout for this tab. Only this tab's selectors belong here. */
+
+/* ---------- Analyze ---------- */
+
+/* The side column is one page that scrolls. Every block keeps its natural height, so nothing
+   is squeezed into a small box with its own scrollbar inside the page. */
+.analyze-tab .analyze-side > * {
+  flex: 0 0 auto;
+}
+
+.analyze-tab .analyze-engine {
+  min-height: 0;
+}
+/* Lines select: the desktop rule makes it 28px tall, too small for a finger */
+.analyze-tab .analyze-engine .analyze-multipv select {
+  min-height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  width: 66px;
+}
+/* Each move in an engine line is a finger target, not a 21px text link */
+.analyze-tab .analyze-engine-lines .engine-pv .pv-move {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+}
+.analyze-tab .analyze-engine .analyze-engine-lines {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.analyze-tab .analyze-opening {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.analyze-tab .analyze-main-panel {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.analyze-tab .analyze-main-panel .panel-tabs button {
+  min-height: 40px;
+  padding: 8px 4px;
+  font-size: 13.5px;
+}
+.analyze-tab .analyze-panel-body {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.analyze-tab .analyze-movelist {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+/* each move in the list is a tap target to jump to that ply */
+.analyze-tab .analyze-movelist .move-cell {
+  min-height: 40px;
+}
+.analyze-tab .analyze-opening-learn {
+  min-height: 40px;
+}
+.analyze-tab .analyze-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Copy FEN / Copy PGN / Download wrap onto a second row rather than being cut off */
+.analyze-tab .analyze-footer {
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+}
+.analyze-tab .analyze-footer > .spacer {
+  display: none;
+}
+.analyze-tab .analyze-footer .btn {
+  min-height: 40px;
+}
+.analyze-tab .analyze-footer > .dim,
+.analyze-tab .analyze-footer > .analyze-copied {
+  margin-left: auto;
+  align-self: center;
+}
+
+/* Import and set-up forms: full width, tappable */
+.analyze-tab .analyze-form {
+  padding: 10px;
+  gap: 10px;
+}
+.analyze-tab .analyze-form .btn {
+  min-height: 42px;
+}
+.analyze-tab .analyze-import-text {
+  min-height: 130px;
+}
+.analyze-tab .analyze-setup-fen {
+  min-height: 80px;
+}
+.analyze-tab .analyze-form .btn-group .btn {
+  min-height: 40px;
+}
+.analyze-tab .analyze-form .row {
+  gap: 8px;
+}
+
+/* ---------- History ---------- */
+
+/* Full width like the other tabs: the table runs edge to edge, text sits 12px from the screen */
+/* The whole tab scrolls. The desktop panel forced min-height: 100% and its table had its own box,
+   so on a short phone the last rows ran under the tab bar and could not be reached. */
+.history-tab {
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.history-tab .history-panel {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+.history-tab .history-scroll {
+  overflow: visible;
+  flex: 0 0 auto;
+}
+.history-tab .history-header {
+  padding: 12px;
+  font-size: 17px;
+}
+.history-tab .history-table th,
+.history-tab .history-table td {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.history-tab .history-table th.history-left,
+.history-tab .history-table td:nth-child(2) {
+  padding-left: 12px;
+}
+.history-tab .history-table td:last-child,
+.history-tab .history-table th:last-child {
+  padding-right: 8px;
+}
+.history-tab .history-table .btn {
+  min-height: 40px;
+}
+.history-tab .history-table td.history-center .btn-icon {
+  width: 40px;
+  min-height: 40px;
+}
+.history-tab .history-accuracy {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.history-tab .history-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
