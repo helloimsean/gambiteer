@@ -444,6 +444,7 @@ export function PlayTab(): JSX.Element {
     setDialogOpen(false)
     setStartError(null)
     setGame(g)
+    playSound('gameStart')
   }
 
   const openNewGame = () => {

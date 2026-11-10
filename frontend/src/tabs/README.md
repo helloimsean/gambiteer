@@ -186,7 +186,7 @@ Behaviour you can rely on (all covered by `npm run check:board`):
   receives the standard form (`e1g1`, `e1c1`), so `chess.move({ from, to })` just works.
 * En passant and castling are drawn correctly as soon as you pass the new fen.
 * Check highlighting is automatic (from the fen). Pass `check={false}` to suppress it.
-* Sounds play on `fen` changes (move / capture / check), so programmatic moves (bot replies,
+* Sounds play on `fen` changes (your move / the other side's move / capture / castling / check), so programmatic moves (bot replies,
   autoplay, stepping through a game) sound right without extra code. Changes closer together than
   70 ms play one sound.
 * Rapid `fen` changes (e.g. 25 ms apart) are fine: the board animates and always ends on the last
@@ -238,7 +238,7 @@ display order).
   * whole-tree: `mainLinePath`, `flattenLines`, `leaves`, `collectNodes`, `walkTree`, `subtreeSize`, `subtreeDepth`
   * lines: `linesEndingAt`, `linesThrough`
   * ids: `nodeIdFromSans`, `sansFromNodeId`
-* `sounds.ts`: `playSound('move'|'capture'|'check'|'illegal'|'promote'|'gameEnd')`, `playMoveSound(fenBefore, fenAfter, inCheck)`, `setMuted`/`isMuted` (the shell owns the mute flag).
+* `sounds.ts`: `playSound('move'|'moveOpponent'|'capture'|'castle'|'check'|'illegal'|'promote'|'gameStart'|'gameEnd')`, `playMoveSound(fenBefore, fenAfter, inCheck, player)`, `setMuted`/`isMuted` (the shell owns the mute flag). Plays `public/sounds/*.mp3` (git-ignored) when present, else synthesised tones.
 * `storage.ts`: `loadJson(key, fallback)`, `saveJson(key, value)`, `updateJson(key, fallback, fn)`, `removeKey`. All are wrapped in try/catch.
 * `dom.ts`: `scrollIntoViewWithin(el, container)` (scrolls only that container, never the page).
 

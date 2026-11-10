@@ -381,7 +381,9 @@ export function Board(props: BoardProps): JSX.Element {
     const now = performance.now()
     if (now - lastSoundRef.current < SOUND_THROTTLE_MS) return
     lastSoundRef.current = now
-    playMoveSound(prev, fen, propsRef.current.rules?.check ?? fenInCheck(fen))
+    const { rules, movableColor: mover, orientation: bottom = 'white' } = propsRef.current
+    const player = mover === 'white' || mover === 'black' ? mover : bottom
+    playMoveSound(prev, fen, rules?.check ?? fenInCheck(fen), player)
   }, [fen, sound])
 
   // shake: any change of the `shake` number after mount

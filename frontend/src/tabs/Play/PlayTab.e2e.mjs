@@ -197,6 +197,12 @@ await context.addInitScript(() => {
       return orig.apply(this, args)
     }
   }
+  // with public/sounds/*.mp3 installed the sounds are files, not oscillators
+  const playFile = HTMLMediaElement.prototype.play
+  HTMLMediaElement.prototype.play = function (...args) {
+    window.__sounds += 1
+    return playFile.apply(this, args)
+  }
 })
 const page = await context.newPage()
 const consoleErrors = []
@@ -267,10 +273,10 @@ try {
   })
   await shot(page, '02-elo800')
 
-  await check('move / capture / check sounds are synthesized (WebAudio oscillators created)', async () => {
+  await check('move / capture / check sounds play (files, or WebAudio oscillators without them)', async () => {
     const n = await page.evaluate(() => window.__sounds)
-    assert(n > 0, 'no oscillator was created')
-    return `${n} oscillators so far`
+    assert(n > 0, 'no sound was played')
+    return `${n} sounds so far`
   })
 
   await check('captured pieces / material shown when material is off balance', async () => {
