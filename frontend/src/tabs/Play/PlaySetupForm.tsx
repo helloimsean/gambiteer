@@ -12,6 +12,7 @@ import {
   ELO_MAX,
   ELO_MIN,
   ELO_PRESETS,
+  NAME_MAX,
   MAIA_ELO_MAX,
   MAIA_ELO_MIN,
   MAIA_ELO_PRESETS,
@@ -71,6 +72,8 @@ const PANICFISH_CHECKS_TO_ZERO = PANICFISH_START_ELO / PANICFISH_ELO_PER_CHECK
 const FAIRY_NOTE = t('Stockfish 19 only plays standard chess and Chess960, so Fairy-Stockfish plays this variant. Elo is only a rough guide here.')
 const ELO_EXPLAINER = t('Elo is a chess rating: higher means stronger. Beginners are around 800, club players around 1500, masters 2200 and up. Lichess ratings run higher than chess.com ones.')
 const MAIA_RATING_COUNT = (MAIA_ELO_MAX - MAIA_ELO_MIN) / MAIA_ELO_STEP + 1
+const OTB_BLURB = t('Play a friend on this device. The board turns to face whoever is to move.')
+const OTB_NOTE = t('Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.')
 
 /** Arrow keys move through a radio group and select, as native radio buttons do. */
 function moveInRadioGroup(e: KeyboardEvent<HTMLElement>): void {
@@ -99,9 +102,10 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
   }, [opening])
 
   const selectedLine = opening && setup.lineId !== RANDOM_LINE ? opening.lines.find((l) => l.id === setup.lineId) ?? null : null
-  const isMaia = setup.bot === 'maia'
-  const isPanicfish = setup.bot === 'panicfish'
-  const isStockfish = setup.bot === 'stockfish'
+  const isOtb = setup.mode === 'otb'
+  const isMaia = !isOtb && setup.bot === 'maia'
+  const isPanicfish = !isOtb && setup.bot === 'panicfish'
+  const isStockfish = !isOtb && setup.bot === 'stockfish'
   const variant = variantInfo(setup.variant)
   const isStandard = setup.variant === 'standard'
   const usesFairy = variant.engine === 'fairy'
@@ -177,13 +181,14 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
         <p className="play-setup-note" data-testid="play-variant-rule">
           {variant.rule}
         </p>
-        {variantBlocked(setup.variant, fairyStatus) ? (
+        {variantBlocked(setup.variant, fairyStatus) && !isOtb ? (
           <p className="play-setup-note play-bot-install" data-testid="play-fairy-install">
             {t('{variant} needs the Fairy-Stockfish engine. To add it, run', { variant: variant.name })} <code>{FAIRY_INSTALL_COMMAND}</code>{t(', then restart.')}
           </p>
         ) : null}
       </section>
 
+      {isOtb ? null : (
       <section className="play-setup-section">
         <div className="play-setup-label">{t('I play as')}</div>
         <div className="btn-group play-color-group" role="radiogroup" aria-label={t('Colour')} onKeyDown={moveInRadioGroup}>
@@ -214,6 +219,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           </p>
         ) : null}
       </section>
+      )}
 
       <section className="play-setup-section">
         <div className="play-setup-label">{t('Opponent')}</div>
@@ -225,7 +231,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
             tabIndex={isStockfish ? 0 : -1}
             className={`play-mode${isStockfish ? ' active' : ''}`}
             data-bot="stockfish"
-            onClick={() => onChange({ bot: 'stockfish' })}
+            onClick={() => onChange({ mode: 'bot', bot: 'stockfish' })}
           >
             <span className="play-mode-radio" />
             <span className="play-mode-text">
@@ -246,7 +252,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
               tabIndex={isMaia ? 0 : -1}
               className={`play-mode${isMaia ? ' active' : ''}`}
               data-bot="maia"
-              onClick={() => onChange({ bot: 'maia' })}
+              onClick={() => onChange({ mode: 'bot', bot: 'maia' })}
             >
               {maiaCardBody}
             </button>
@@ -259,7 +265,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
               tabIndex={isPanicfish ? 0 : -1}
               className={`play-mode${isPanicfish ? ' active' : ''}`}
               data-bot="panicfish"
-              onClick={() => onChange({ bot: 'panicfish' })}
+              onClick={() => onChange({ mode: 'bot', bot: 'panicfish' })}
             >
               {panicfishCardBody}
             </button>
@@ -268,10 +274,47 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
               {panicfishCardBody}
             </div>
           )}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={isOtb}
+            tabIndex={isOtb ? 0 : -1}
+            className={`play-mode${isOtb ? ' active' : ''}`}
+            data-bot="otb"
+            onClick={() => onChange({ mode: 'otb' })}
+          >
+            <span className="play-mode-radio" />
+            <span className="play-mode-text">
+              <strong>{t('Over the board')}</strong>
+              <span>{OTB_BLURB}</span>
+            </span>
+          </button>
         </div>
       </section>
 
-      {isPanicfish ? (
+      {isOtb ? (
+        <section className="play-setup-section" data-testid="play-otb">
+          <div className="play-setup-label">{t('Players')}</div>
+          <div className="play-otb-names">
+            {(['white', 'black'] as const).map((side) => (
+              <label key={side} className="play-otb-name">
+                <PlayPieceIcon piece="k" color={side} />
+                <input
+                  type="text"
+                  value={side === 'white' ? setup.whiteName : setup.blackName}
+                  placeholder={side === 'white' ? t('White') : t('Black')}
+                  maxLength={NAME_MAX}
+                  aria-label={side === 'white' ? t('White player name') : t('Black player name')}
+                  onChange={(e) => onChange(side === 'white' ? { whiteName: e.target.value } : { blackName: e.target.value })}
+                  data-testid={`play-otb-name-${side}`}
+                />
+              </label>
+            ))}
+          </div>
+          <Toggle checked={setup.autoFlip} onChange={(v) => onChange({ autoFlip: v })} label={t('Turn the board after every move')} />
+          <p className="play-setup-note">{OTB_NOTE}</p>
+        </section>
+      ) : isPanicfish ? (
         <section className="play-setup-section">
           <div className="play-setup-label">{t('Bot strength (Elo)')}</div>
           <p className="play-setup-note" data-testid="play-panicfish-note">
@@ -343,6 +386,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
       </section>
       )}
 
+      {isOtb ? null : (
       <section className="play-setup-section">
         <div className="play-setup-label">{t('Bot move time')}</div>
         <div className="btn-group" role="radiogroup" aria-label={t('Bot move time')} onKeyDown={moveInRadioGroup}>
@@ -367,8 +411,9 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           </p>
         ) : null}
       </section>
+      )}
 
-      {isStandard ? (
+      {isStandard && !isOtb ? (
       <section className="play-setup-section">
         <Toggle checked={setup.useOpening} onChange={toggleOpening} label={t('Start from an opening line')} disabled={!openings || openings.length === 0} />
         {openingsError ? (

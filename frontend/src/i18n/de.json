@@ -716,5 +716,22 @@
   "{seconds} s": "{seconds} s",
   "{speed} n/s": "{speed} N/s",
   "{variant} has no checks, so it would never lose any Elo.": "{variant} hat keine Schachgebote, daher verliert er nie Elo.",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} braucht die Engine Fairy-Stockfish. Zum Hinzufügen führe aus"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} braucht die Engine Fairy-Stockfish. Zum Hinzufügen führe aus",
+  "{name} resigns": "{name} gibt auf",
+  "{name} to move": "{name} am Zug",
+  "{name} wins!": "{name} gewinnt!",
+  "{name} won {how}": "{name} hat gewonnen {how}",
+  "{white} vs {black}": "{white} gegen {black}",
+  "Agree to a draw": "Remis vereinbaren",
+  "Agree to a draw?": "Remis vereinbaren?",
+  "Black player name": "Name von Schwarz",
+  "Both players agree to end the game as a draw.": "Beide Spieler einigen sich, die Partie remis zu beenden.",
+  "by agreement": "durch Einigung",
+  "Over the board": "Am Brett",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "Gib das Gerät nach jedem Zug weiter. Engine-Hinweise sind aus; du kannst Züge zurücknehmen und Remis vereinbaren.",
+  "Play a friend on this device. The board turns to face whoever is to move.": "Spiel mit einem Freund an einem Gerät. Das Brett dreht sich zu dem, der am Zug ist.",
+  "Take back the last move": "Letzten Zug zurücknehmen",
+  "Turn the board after every move": "Brett nach jedem Zug drehen",
+  "White player name": "Name von Weiß",
+  "Who resigns?": "Wer gibt auf?"
 }

@@ -28,6 +28,8 @@ export interface HistoryGame extends LastGame {
   accuracy?: GameAccuracy
   /** Missing for standard chess. Review and Analyze cannot open the other variants. */
   variant?: VariantId
+  /** Over the board: two people on one device, named in `players`; `bot` and `elo` mean nothing. */
+  otb?: boolean
 }
 
 type GameMoves = Pick<LastGame, 'sans' | 'startFen'>

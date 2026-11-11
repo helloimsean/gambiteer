@@ -47,6 +47,7 @@ export type IconName =
   | 'upload'
   | 'star'
   | 'swords'
+  | 'people'
 
 const PATHS: Record<IconName, JSX.Element> = {
   // navigation
@@ -276,6 +277,13 @@ const PATHS: Record<IconName, JSX.Element> = {
     </>
   ),
   star: <path d="m12 3 2.7 5.8 6.3.8-4.6 4.4 1.2 6.3L12 17.3 6.4 20.3l1.2-6.3L3 9.6l6.3-.8z" />,
+  people: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.5-3.6 3.1-6 6.5-6s6 2.4 6.5 6" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.5c2 .8 3.2 2.8 3.5 5.5" />
+    </>
+  ),
   swords: (
     <>
       <path d="m4 4 12 12M20 4 8 16" />

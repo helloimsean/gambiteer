@@ -699,5 +699,22 @@
   "{seconds} s": "{seconds} 秒",
   "{speed} n/s": "{speed} 节点/秒",
   "{variant} has no checks, so it would never lose any Elo.": "{variant}没有将军规则，因此它永远不会损失 Elo。",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant}需要 Fairy-Stockfish 引擎。要添加它，请运行"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant}需要 Fairy-Stockfish 引擎。要添加它，请运行",
+  "{name} resigns": "{name}认输",
+  "{name} to move": "轮到{name}",
+  "{name} wins!": "{name}获胜！",
+  "{name} won {how}": "{name}以{how}获胜",
+  "{white} vs {black}": "{white} 对 {black}",
+  "Agree to a draw": "同意和棋",
+  "Agree to a draw?": "同意和棋？",
+  "Black player name": "黑方玩家名称",
+  "Both players agree to end the game as a draw.": "双方同意和棋，结束对局。",
+  "by agreement": "双方同意",
+  "Over the board": "面对面对弈",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "每走一步后把设备交给对方。引擎提示已关闭；可以悔棋，也可以同意和棋。",
+  "Play a friend on this device. The board turns to face whoever is to move.": "与朋友在同一设备上对弈。棋盘会转向轮到走棋的一方。",
+  "Take back the last move": "悔上一步棋",
+  "Turn the board after every move": "每走一步后转动棋盘",
+  "White player name": "白方玩家名称",
+  "Who resigns?": "谁认输？"
 }

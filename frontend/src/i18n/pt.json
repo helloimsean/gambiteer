@@ -716,5 +716,22 @@
   "{seconds} s": "{seconds} s",
   "{speed} n/s": "{speed} nós/s",
   "{variant} has no checks, so it would never lose any Elo.": "{variant} não tem xeque, então nunca perderia Elo.",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} precisa do motor Fairy-Stockfish. Para adicioná-lo, execute"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} precisa do motor Fairy-Stockfish. Para adicioná-lo, execute",
+  "{name} resigns": "{name} desiste",
+  "{name} to move": "Vez de {name}",
+  "{name} wins!": "{name} vence!",
+  "{name} won {how}": "{name} venceu {how}",
+  "{white} vs {black}": "{white} vs {black}",
+  "Agree to a draw": "Acordar empate",
+  "Agree to a draw?": "Acordar empate?",
+  "Black player name": "Nome do jogador das Pretas",
+  "Both players agree to end the game as a draw.": "Os dois jogadores concordam em encerrar a partida em empate.",
+  "by agreement": "por acordo",
+  "Over the board": "Presencial",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "Passe o aparelho após cada lance. As dicas do motor estão desligadas; você pode desfazer lances e acordar empate.",
+  "Play a friend on this device. The board turns to face whoever is to move.": "Jogue com um amigo neste aparelho. O tabuleiro gira para quem vai jogar.",
+  "Take back the last move": "Desfazer o último lance",
+  "Turn the board after every move": "Girar o tabuleiro após cada lance",
+  "White player name": "Nome do jogador das Brancas",
+  "Who resigns?": "Quem desiste?"
 }

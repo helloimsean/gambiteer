@@ -27,7 +27,7 @@ const OUTCOMES = {
 
 function outcomeOf(game: HistoryGame): keyof typeof OUTCOMES | null {
   if (game.result === '1/2-1/2') return 'draw'
-  if (game.result !== '1-0' && game.result !== '0-1') return null
+  if (game.otb || (game.result !== '1-0' && game.result !== '0-1')) return null // over the board nobody is "you"
   return (game.result === '1-0') === (game.studentColor === 'white') ? 'win' : 'loss'
 }
 
@@ -36,6 +36,14 @@ function formatDate(timestamp: number): string {
 }
 
 function Player({ game, side }: { game: HistoryGame; side: Side }): JSX.Element {
+  if (game.otb) {
+    return (
+      <div className="history-player">
+        <span className={`history-side ${side}`} />
+        <span className="history-name">{game.players[side]}</span>
+      </div>
+    )
+  }
   const isStudent = side === game.studentColor
   return (
     <div className="history-player">
@@ -66,10 +74,10 @@ function HistoryRow({ game, onOpen, onAnalyze }: HistoryRowProps): JSX.Element {
   const outcome = outcomeOf(game)
   return (
     // Review and Analyze only understand standard chess, so a variant game has nowhere to open
-    <tr className={`history-row${game.variant ? ' static' : ''}`} onClick={game.variant ? undefined : onOpen} data-testid="history-row" data-bot={game.bot} data-variant={game.variant ?? 'standard'}>
+    <tr className={`history-row${game.variant ? ' static' : ''}`} onClick={game.variant ? undefined : onOpen} data-testid="history-row" data-bot={game.otb ? 'otb' : game.bot} data-variant={game.variant ?? 'standard'}>
       <td className="history-bot">
-        <Icon name={BOT_ICONS[game.bot]} size={24} />
-        <span>{botName(game.bot, game.variant).replace(' 19', '')}</span>
+        <Icon name={game.otb ? 'people' : BOT_ICONS[game.bot]} size={24} />
+        <span>{game.otb ? t('Over the board') : botName(game.bot, game.variant).replace(' 19', '')}</span>
         {game.variant ? <span className="history-variant">{variantInfo(game.variant).name}</span> : null}
       </td>
       <td>

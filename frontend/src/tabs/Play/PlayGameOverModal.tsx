@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { Icon } from '../../components/Icon'
 import { Modal } from '../../components/Modal'
 import { t, tn } from '../../lib/i18n'
-import { botName, botTitle, currentElo, outcomeFor, reasonText, type PlayGame } from './PlayGame'
+import { botName, botTitle, currentElo, otbName, outcomeFor, reasonText, winnerOf, type PlayGame } from './PlayGame'
 
 export interface PlayGameOverModalProps {
   open: boolean
@@ -17,7 +17,16 @@ export interface PlayGameOverModalProps {
 export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, onNewGame }: PlayGameOverModalProps): JSX.Element | null {
   if (!game || !game.result) return null
   const outcome = outcomeFor(game)
-  const title = outcome === 'win' ? t('You won!') : outcome === 'loss' ? t('{bot} won', { bot: botName(game.bot, game.variant) }) : t('Draw')
+  const winner = winnerOf(game)
+  const title = game.otb
+    ? winner
+      ? t('{name} wins!', { name: otbName(game.otb, winner) })
+      : t('Draw')
+    : outcome === 'win'
+      ? t('You won!')
+      : outcome === 'loss'
+        ? t('{bot} won', { bot: botName(game.bot, game.variant) })
+        : t('Draw')
   const moves = Math.ceil(game.sans.length / 2)
   const o = game.opening
   return (
@@ -52,7 +61,9 @@ export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, on
         <div className="play-over-score mono">{game.result.result}</div>
         <div className="play-over-meta">
           <span>
-            {t('You played {color} vs {bot}', { color: game.studentColor === 'white' ? t('white') : t('black'), bot: botTitle(game.bot, currentElo(game), game.variant) })}
+            {game.otb
+              ? t('{white} vs {black}', { white: otbName(game.otb, 'white'), black: otbName(game.otb, 'black') })
+              : t('You played {color} vs {bot}', { color: game.studentColor === 'white' ? t('white') : t('black'), bot: botTitle(game.bot, currentElo(game), game.variant) })}
           </span>
           <span>{tn(moves, '{n} move', '{n} moves')}</span>
           {o ? (

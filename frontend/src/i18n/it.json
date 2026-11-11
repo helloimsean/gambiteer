@@ -716,5 +716,22 @@
   "{seconds} s": "{seconds} s",
   "{speed} n/s": "{speed} n/s",
   "{variant} has no checks, so it would never lose any Elo.": "{variant} non prevede scacchi, quindi non perderebbe mai Elo.",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} richiede il motore Fairy-Stockfish. Per aggiungerlo, esegui"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} richiede il motore Fairy-Stockfish. Per aggiungerlo, esegui",
+  "{name} resigns": "{name} abbandona",
+  "{name} to move": "Tocca a {name}",
+  "{name} wins!": "{name} vince!",
+  "{name} won {how}": "{name} ha vinto {how}",
+  "{white} vs {black}": "{white} vs {black}",
+  "Agree to a draw": "Accordarsi per la patta",
+  "Agree to a draw?": "Accordarsi per la patta?",
+  "Black player name": "Nome del Nero",
+  "Both players agree to end the game as a draw.": "Entrambi i giocatori accettano di concludere la partita in patta.",
+  "by agreement": "per accordo",
+  "Over the board": "Dal vivo",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "Passa il dispositivo dopo ogni mossa. I suggerimenti del motore sono disattivati; puoi annullare mosse e accordarti per la patta.",
+  "Play a friend on this device. The board turns to face whoever is to move.": "Gioca con un amico su questo dispositivo. La scacchiera si gira verso chi deve muovere.",
+  "Take back the last move": "Annulla l'ultima mossa",
+  "Turn the board after every move": "Gira la scacchiera dopo ogni mossa",
+  "White player name": "Nome del Bianco",
+  "Who resigns?": "Chi abbandona?"
 }
