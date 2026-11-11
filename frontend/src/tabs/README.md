@@ -238,7 +238,7 @@ display order).
   * whole-tree: `mainLinePath`, `flattenLines`, `leaves`, `collectNodes`, `walkTree`, `subtreeSize`, `subtreeDepth`
   * lines: `linesEndingAt`, `linesThrough`
   * ids: `nodeIdFromSans`, `sansFromNodeId`
-* `sounds.ts`: `playSound('move'|'moveOpponent'|'capture'|'castle'|'check'|'illegal'|'promote'|'gameStart'|'gameEnd')`, `playMoveSound(fenBefore, fenAfter, inCheck, player)`, `setMuted`/`isMuted` (the shell owns the mute flag). Plays `public/sounds/*.mp3` (git-ignored) when present, else synthesised tones.
+* `sounds.ts`: `playSound('move'|'moveOpponent'|'capture'|'castle'|'check'|'illegal'|'promote'|'gameStart'|'gameEnd'|'sacrificeQueen'|'sacrificeRook')`, `playMoveSound(fenBefore, fenAfter, inCheck, player)`, `setMuted`/`isMuted` (the shell owns the mute flag). Plays `public/sounds/*.mp3` (git-ignored) when present, else synthesised tones.
 * `storage.ts`: `loadJson(key, fallback)`, `saveJson(key, value)`, `updateJson(key, fallback, fn)`, `removeKey`. All are wrapped in try/catch.
 * `dom.ts`: `scrollIntoViewWithin(el, container)` (scrolls only that container, never the page).
 
