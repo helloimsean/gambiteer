@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { Icon } from '../../components/Icon'
 import { Select, type SelectOption } from '../../components/Select'
 import { Spinner } from '../../components/Spinner'
+import { t } from '../../lib/i18n'
 import type { ReviewModelsState } from './useReviewModels'
 
 export interface ReviewModelPickerProps {
@@ -25,7 +26,7 @@ export function ReviewModelPicker({ models, value, onChange, label, compact, dis
   if (models.status === 'loading') {
     return (
       <div className="review-model-loading muted small">
-        <Spinner size={14} /> Checking Ollama…
+        <Spinner size={14} /> {t('Checking Ollama…')}
       </div>
     )
   }
@@ -37,10 +38,10 @@ export function ReviewModelPicker({ models, value, onChange, label, compact, dis
   const options: SelectOption<string>[] = models.models.map((m) => ({
     value: m.name,
     label: compact
-      ? `${m.name}${m.name === models.defaultModel ? ' (default)' : ''}`
-      : `${m.name}${m.parameter_size ? ` · ${m.parameter_size}` : ''}${m.size ? ` · ${prettySize(m.size)}` : ''}${m.name === models.defaultModel ? ' (default)' : ''}`,
+      ? `${m.name}${m.name === models.defaultModel ? t(' (default)') : ''}`
+      : `${m.name}${m.parameter_size ? ` · ${m.parameter_size}` : ''}${m.size ? ` · ${prettySize(m.size)}` : ''}${m.name === models.defaultModel ? t(' (default)') : ''}`,
   }))
-  if (effective && !names.includes(effective)) options.push({ value: effective, label: `${effective} (not installed)` })
+  if (effective && !names.includes(effective)) options.push({ value: effective, label: t('{name} (not installed)', { name: effective }) })
   return (
     <Select
       className={`review-model-select${compact ? ' compact' : ''}`}
@@ -49,7 +50,7 @@ export function ReviewModelPicker({ models, value, onChange, label, compact, dis
       options={options}
       onChange={onChange}
       disabled={disabled}
-      title="Ollama model used for explanations"
+      title={t('Ollama model used for explanations')}
     />
   )
 }
@@ -65,21 +66,24 @@ export function ReviewOllamaDown({ onRetry, compact, detail }: ReviewOllamaDownP
     <div className={`review-ollama-down${compact ? ' compact' : ''}`} role="status" data-testid="review-ollama-down">
       <Icon name="info" size={18} />
       <div className="grow">
-        <div className="bold">Explanations need Ollama</div>
+        <div className="bold">{t('Explanations need Ollama')}</div>
         {compact ? (
           <div className="small muted">
-            Ollama is not running (or has no models), so the coach is offline. Start Ollama, then retry.
+            {t('Ollama is not running (or has no models), so the coach is offline. Start Ollama, then retry.')}
           </div>
         ) : (
           <div className="small muted">
-            Ollama is not running on this PC (or has no models), so the coach cannot explain moves. The review itself
-            still works. Start Ollama and pull a small model, e.g. <code>ollama pull llama3.2:3b</code>, then retry.
+            {t(
+              'Ollama is not running on this PC (or has no models), so the coach cannot explain moves. The review itself still works. Start Ollama and pull a small model, e.g.',
+            )}{' '}
+            <code>ollama pull llama3.2:3b</code>
+            {t(', then retry.')}
           </div>
         )}
         {detail && !compact ? <div className="small dim review-ollama-detail">{detail}</div> : null}
       </div>
       <button type="button" className="btn btn-sm" onClick={onRetry}>
-        <Icon name="refresh" size={14} /> Retry
+        <Icon name="refresh" size={14} /> {t('Retry')}
       </button>
     </div>
   )

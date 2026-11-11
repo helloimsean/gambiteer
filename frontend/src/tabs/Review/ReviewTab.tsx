@@ -24,6 +24,7 @@ import { START_FEN, sanPathToFens, type PromotionPiece, type Square } from '../.
 import { recordAccuracy, sameMoves } from '../../lib/gameHistory'
 import { pgnDate } from '../../lib/pgnTransfer'
 import { playSound } from '../../lib/sounds'
+import { t } from '../../lib/i18n'
 import { loadJson, removeKey, saveJson } from '../../lib/storage'
 import { useApp, type LastGame, type ReviewRequestPayload } from '../../state/AppContext'
 import { ReviewBoardOverlay } from './ReviewBoardOverlay'
@@ -185,7 +186,7 @@ export function ReviewTab(): JSX.Element {
       setJob({ jobId: id, status: 'queued', progress: 0 })
     } catch (err) {
       if (startTokenRef.current !== token) return
-      setError(`Could not start the review: ${errorText(err)}`)
+      setError(t('Could not start the review: {error}', { error: errorText(err) }))
     } finally {
       if (startTokenRef.current === token) setStarting(false)
     }
@@ -216,7 +217,7 @@ export function ReviewTab(): JSX.Element {
       const parsed = await parsePgn(text)
       if (startTokenRef.current !== token) return
       if (parsed.moves.length === 0) {
-        setError('That PGN has no moves to review.')
+        setError(t('That PGN has no moves to review.'))
         setStarting(false)
         return
       }
@@ -233,7 +234,7 @@ export function ReviewTab(): JSX.Element {
       )
     } catch (err) {
       if (startTokenRef.current !== token) return
-      setError(`Could not read the PGN: ${errorText(err)}`)
+      setError(t('Could not read the PGN: {error}', { error: errorText(err) }))
       setStarting(false)
     }
   }, [source, selectedGame, pgnText, depth, runReview])
@@ -276,7 +277,7 @@ export function ReviewTab(): JSX.Element {
   const applySnapshot = useCallback((snap: ReviewJob) => {
     if (snap.status === 'error') {
       statusRef.current = undefined
-      setError(`The review failed: ${snap.message ?? 'unknown error'}`)
+      setError(t('The review failed: {message}', { message: snap.message ?? t('unknown error') }))
       setJob(null)
       removeKey(REVIEW_STATE_KEY)
       return
@@ -314,7 +315,7 @@ export function ReviewTab(): JSX.Element {
             if (err instanceof ApiError && err.status === 404) {
               setJob(null)
               removeKey(REVIEW_STATE_KEY)
-              setError('That review is no longer on the server (the backend was restarted). Please start it again.')
+              setError(t('That review is no longer on the server (the backend was restarted). Please start it again.'))
             } else {
               timer = setTimeout(() => setResubscribe((n) => n + 1), 2000)
             }
@@ -496,13 +497,13 @@ export function ReviewTab(): JSX.Element {
             <>
               <ReviewEvalGraph result={result} ply={ply} onSelect={goTo} />
               <MoveNav ply={navPly} maxPly={navMax} onChange={navTo} keyboard>
-                <ToolbarButton icon="flip" title="Flip board" onClick={flip} />
-                <ToolbarButton icon="analyze" title="Open this position in Analyze" onClick={() => navigate('analyze', { fen })} />
+                <ToolbarButton icon="flip" title={t('Flip board')} onClick={flip} />
+                <ToolbarButton icon="analyze" title={t('Open this position in Analyze')} onClick={() => navigate('analyze', { fen })} />
               </MoveNav>
             </>
           ) : (
             <Toolbar>
-              <ToolbarButton icon="flip" title="Flip board" onClick={flip} />
+              <ToolbarButton icon="flip" title={t('Flip board')} onClick={flip} />
             </Toolbar>
           )}
         </div>
@@ -521,10 +522,10 @@ export function ReviewTab(): JSX.Element {
             <div className="panel grow review-main">
               <div className="panel-tabs">
                 <button type="button" className={panelTab === 'summary' ? 'active' : ''} onClick={() => setPanelTab('summary')} data-testid="review-tab-summary">
-                  Summary
+                  {t('Summary')}
                 </button>
                 <button type="button" className={panelTab === 'moves' ? 'active' : ''} onClick={() => setPanelTab('moves')} data-testid="review-tab-moves">
-                  Moves
+                  {t('Moves')}
                 </button>
               </div>
               {panelTab === 'summary' ? (
@@ -534,7 +535,7 @@ export function ReviewTab(): JSX.Element {
                   </div>
                   <div className="panel-footer">
                     <button type="button" className="btn btn-primary btn-block btn-lg" onClick={() => goTo(Math.max(1, ply))} data-testid="review-start-moves">
-                      <Icon name="next" size={18} /> {ply > 0 ? 'Back to the moves' : 'Step through the moves'}
+                      <Icon name="next" size={18} /> {ply > 0 ? t('Back to the moves') : t('Step through the moves')}
                     </button>
                   </div>
                 </>
@@ -584,7 +585,7 @@ export function ReviewTab(): JSX.Element {
             source={source}
             onSource={setSource}
             selectedGame={selectedGame}
-            selectedLabel={fromHistory ? 'History game' : 'Last game'}
+            selectedLabel={fromHistory ? t('History game') : t('Last game')}
             pgnText={pgnText}
             onPgnText={setPgnText}
             depth={depth}

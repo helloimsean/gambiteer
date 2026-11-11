@@ -3,6 +3,7 @@
  */
 import { LINE_CATEGORIES, type LineCategory, type LineMeta, type OpeningNode, type OpeningSummary } from '../../api/types'
 import { sanPathToMoves, START_FEN } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 import { pathToNode } from '../../lib/tree'
 
 /** Autoplay speed (one move every 1.5 s). */
@@ -231,12 +232,12 @@ export function learnMoveLabel(node: Pick<OpeningNode, 'ply' | 'san'>): string {
 }
 
 const NAG_MEANINGS: Record<string, string> = {
-  '!': 'good move',
-  '!!': 'brilliant move',
-  '!?': 'interesting move',
-  '?!': 'dubious move',
-  '?': 'mistake',
-  '??': 'blunder',
+  '!': t('good move'),
+  '!!': t('brilliant move'),
+  '!?': t('interesting move'),
+  '?!': t('dubious move'),
+  '?': t('mistake'),
+  '??': t('blunder'),
 }
 
 export function learnNagMeaning(nag: string): string {

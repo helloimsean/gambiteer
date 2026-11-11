@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import type { Side } from '../../api/types'
 import type { PieceSymbol } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 import type { Pocket, PocketRole } from '../../lib/variants'
 import { PlayPieceIcon } from './PlayPlayerBar'
 
@@ -11,6 +12,16 @@ const ROLES: readonly { role: PocketRole; piece: PieceSymbol }[] = [
   { role: 'rook', piece: 'r' },
   { role: 'queen', piece: 'q' },
 ]
+
+
+const PIECE_NAMES: Record<string, string> = {
+  pawn: t('pawn'),
+  knight: t('knight'),
+  bishop: t('bishop'),
+  rook: t('rook'),
+  queen: t('queen'),
+  king: t('king'),
+}
 
 export interface PlayPocketProps {
   color: Side
@@ -32,7 +43,7 @@ export function PlayPocket({ color, pocket, active, armed, onPick }: PlayPocketP
           type="button"
           className={`play-pocket-piece${armed === role ? ' armed' : ''}`}
           disabled={!active}
-          title={active ? `Drop a ${role}` : undefined}
+          title={active ? t('Drop a {piece}', { piece: PIECE_NAMES[role] ?? role }) : undefined}
           aria-pressed={armed === role}
           data-role={role}
           data-count={pocket[role]}

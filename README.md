@@ -64,6 +64,9 @@ model turns the engine's facts into plain-language explanations.
   result and, once you have reviewed the game, both players' accuracy. It is saved in your browser.
 * **PGN import and export**: paste a PGN or open a `.pgn` file in Analyze and Review, and copy or
   download a game as PGN from either tab.
+* **Languages**: Settings > *Language* switches the app and the coach's explanations to English,
+  Russian, Spanish, German, French, Portuguese, Italian or Chinese. Opening names and repertoire
+  notes stay in English, and how well the coach writes in a language depends on the model.
 
 ### Openings included
 
@@ -260,6 +263,7 @@ Checks:
 ```powershell
 cd backend;  python -m pytest -q        # backend unit + API tests (no Ollama needed)
 cd frontend; npm run build              # type-check + production build (must be clean)
+cd frontend; npm run check:i18n         # every translation present, placeholders intact
 cd frontend; npx playwright install chromium   # once, for the browser checks below
 cd frontend; npm run e2e                # full Playwright journey against http://localhost:8000
 ```

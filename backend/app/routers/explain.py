@@ -34,7 +34,7 @@ def _prepare(svc: Services, req: ExplainRequest) -> list[dict[str, str]]:
     if not 1 <= req.ply <= len(moves):
         raise ExplainProblem(400, f"ply must be between 1 and {len(moves)}")
     opening = job.result.opening.name if job.result.opening else None
-    return build_explain_messages(moves[req.ply - 1], opening)
+    return build_explain_messages(moves[req.ply - 1], opening, req.language)
 
 
 async def _stream(svc: Services, req: ExplainRequest) -> AsyncIterator[str]:

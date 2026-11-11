@@ -4,6 +4,7 @@
  * All paths are relative so they work both through the Vite dev proxy and when
  * the backend serves the built frontend itself.
  */
+import { getLanguage, t } from '../lib/i18n'
 import type {
   AnalysisCommand,
   AnalysisInfo,
@@ -71,7 +72,7 @@ async function request<T>(path: string, init?: RequestInit & { signal?: AbortSig
     })
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err
-    throw new ApiError(0, 'Backend unreachable (is uvicorn running on port 8000?)', err)
+    throw new ApiError(0, t('Backend unreachable (is uvicorn running on port 8000?)'), err)
   }
   if (!res.ok) {
     let body: unknown = undefined
@@ -141,7 +142,7 @@ export function listOllamaModels(signal?: AbortSignal): Promise<OllamaModelsResp
 
 /** Non-streaming explanation. For a live token stream use {@link streamExplanation}. */
 export function explainOnce(req: ExplainRequest, signal?: AbortSignal): Promise<ExplainResponse> {
-  return post<ExplainResponse>('/explain', req, signal)
+  return post<ExplainResponse>('/explain', { language: getLanguage(), ...req }, signal)
 }
 
 /**
@@ -150,7 +151,7 @@ export function explainOnce(req: ExplainRequest, signal?: AbortSignal): Promise<
  * 503 = no Stockfish; an Ollama failure is still a 200 with `text: ""` and `coachError`.
  */
 export function requestCoach(req: CoachRequest, signal?: AbortSignal): Promise<CoachResponse> {
-  return post<CoachResponse>('/coach/move', req, signal)
+  return post<CoachResponse>('/coach/move', { language: getLanguage(), ...req }, signal)
 }
 
 // ---------------------------------------------------------------- WebSockets
@@ -384,7 +385,7 @@ export function openCoachSocket(handlers: CoachSocketHandlers): CoachSocket {
         handlers.onDone(id, data.text ?? '')
         break
       case 'error':
-        handlers.onError(id, data.stage === 'explain' ? 'explain' : 'analysis', data.message ?? 'error')
+        handlers.onError(id, data.stage === 'explain' ? 'explain' : 'analysis', data.message ?? t('error'))
         break
     }
   }
@@ -398,7 +399,7 @@ export function openCoachSocket(handlers: CoachSocketHandlers): CoachSocket {
   return {
     send(req) {
       if (closed) return
-      const msg = JSON.stringify(req)
+      const msg = JSON.stringify({ language: getLanguage(), ...req })
       if (sock.readyState === WebSocket.OPEN) sock.send(msg)
       else queue.push(msg)
     },
@@ -451,7 +452,7 @@ export function streamExplanation(req: ExplainRequest, handlers: ExplanationHand
     }
   }
 
-  sock.onopen = () => sock.send(JSON.stringify(req))
+  sock.onopen = () => sock.send(JSON.stringify({ language: getLanguage(), ...req }))
   sock.onmessage = (ev) => {
     if (finished) return
     let data: ExplainEvent
@@ -473,9 +474,9 @@ export function streamExplanation(req: ExplainRequest, handlers: ExplanationHand
         break
     }
   }
-  sock.onerror = () => finish(() => handlers.onError('Explanation socket error'))
+  sock.onerror = () => finish(() => handlers.onError(t('Explanation socket error')))
   sock.onclose = () => {
-    if (!finished) finish(() => (acc ? handlers.onDone(acc) : handlers.onError('Explanation socket closed')))
+    if (!finished) finish(() => (acc ? handlers.onDone(acc) : handlers.onError(t('Explanation socket closed'))))
   }
   return {
     cancel() {

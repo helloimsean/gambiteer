@@ -1,5 +1,6 @@
 import type { CSSProperties, JSX } from 'react'
 import type { Classification } from '../api/types'
+import { t } from '../lib/i18n'
 import './ClassificationBadge.css'
 
 /** chess.com palette (see ARCHITECTURE.md). Also exposed as CSS variables `--cls-<name>`. */
@@ -17,16 +18,16 @@ export const CLASSIFICATION_COLORS: Record<Classification, string> = {
 }
 
 export const CLASSIFICATION_LABELS: Record<Classification, string> = {
-  brilliant: 'Brilliant',
-  great: 'Great',
-  best: 'Best',
-  excellent: 'Excellent',
-  good: 'Good',
-  book: 'Book',
-  inaccuracy: 'Inaccuracy',
-  mistake: 'Mistake',
-  blunder: 'Blunder',
-  miss: 'Miss',
+  brilliant: t('Brilliant'),
+  great: t('Great'),
+  best: t('Best'),
+  excellent: t('Excellent'),
+  good: t('Good'),
+  book: t('Book'),
+  inaccuracy: t('Inaccuracy'),
+  mistake: t('Mistake'),
+  blunder: t('Blunder'),
+  miss: t('Miss'),
 }
 
 /** Glyph shown inside the circle; empty for icon-based ones. */

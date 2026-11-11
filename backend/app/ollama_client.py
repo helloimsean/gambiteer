@@ -335,8 +335,36 @@ def _fact_sheet(
     )
 
 
-def build_explain_messages(move: ReviewMove, opening_name: str | None = None) -> list[dict[str, str]]:
-    """System + user messages for one reviewed move."""
+# The app's languages besides English, as the coach is told to write them.
+COACH_LANGUAGES = {
+    "ru": "Russian",
+    "es": "Spanish",
+    "de": "German",
+    "fr": "French",
+    "pt": "Portuguese",
+    "it": "Italian",
+    "zh": "Simplified Chinese",
+}
+
+
+def _with_language(system: str, user: str, language: str | None) -> tuple[str, str]:
+    """Adds the instruction to answer in the app's language (no change for English or unknown codes).
+
+    The facts stay in English, which every model reads best; the answer is what the student sees."""
+    name = COACH_LANGUAGES.get((language or "").lower())
+    if not name:
+        return system, user
+    system += (
+        f" Write your whole answer in {name}. Keep chess moves in standard algebraic notation exactly as "
+        "the facts give them (for example Nf3, exd5, O-O)."
+    )
+    return system, user + f" Answer in {name}."
+
+
+def build_explain_messages(
+    move: ReviewMove, opening_name: str | None = None, language: str | None = None
+) -> list[dict[str, str]]:
+    """System + user messages for one reviewed move, answered in ``language`` (an app language code)."""
     sheet = _fact_sheet(
         fen_before=move.fenBefore,
         fen_after=move.fenAfter,
@@ -372,6 +400,7 @@ def build_explain_messages(move: ReviewMove, opening_name: str | None = None) ->
         "If the move was best, say what it achieves; otherwise say what the engine's move achieves instead."
     )
     user = "Facts about the move:\n- " + "\n- ".join(facts) + f"\n\nExplain why {number}{move.san} is {phrase}."
+    system, user = _with_language(system, user, language)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
@@ -558,8 +587,9 @@ def build_coach_messages(
     context: CoachContext | None = None,
     *,
     book_eval: dict[str, int] | None = None,
+    language: str | None = None,
 ) -> list[dict[str, str]]:
-    """System + user messages for one practice move (Learn tab).
+    """System + user messages for one practice move (Learn tab), answered in ``language``.
 
     Facts are the same as for a reviewed move (``_fact_sheet``) plus the training context:
 
@@ -795,6 +825,7 @@ def build_coach_messages(
             f"the student plays {student}."
         )
     user = "Facts about the move:\n- " + "\n- ".join(facts) + f"\n\nTask: {task} Answer in 2-4 short sentences."
+    system, user = _with_language(system, user, language)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 

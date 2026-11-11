@@ -4,6 +4,7 @@
 import type { JSX } from 'react'
 import type { LineMeta, OpeningFull } from '../../api/types'
 import { Icon } from '../../components/Icon'
+import { t, tn } from '../../lib/i18n'
 import { LearnDeclinedBox } from './LearnLinesPanel'
 import { learnIsGambit, learnSourceLabel } from './learnUtils'
 
@@ -32,20 +33,22 @@ export function LearnIdeasPanel({ opening, activeLineId, onSelectLine }: LearnId
     <div className="learn-ideas">
       <section className="learn-ideas-section">
         <div className="row wrap gap-4 learn-ideas-badges">
-          <span className={`badge badge-${opening.side}`}>You play {opening.side === 'white' ? 'White' : 'Black'}</span>
-          {opening.eco ? <span className="badge badge-eco">ECO {opening.eco}</span> : null}
-          <span className="badge">{opening.lineCount} lines</span>
+          <span className={`badge badge-${opening.side}`}>
+            {t('You play {side}', { side: opening.side === 'white' ? t('White') : t('Black') })}
+          </span>
+          {opening.eco ? <span className="badge badge-eco">{t('ECO {eco}', { eco: opening.eco })}</span> : null}
+          <span className="badge">{tn(opening.lineCount, '{n} line', '{n} lines')}</span>
         </div>
         {opening.family ? <p className="learn-ideas-family">{opening.family}</p> : null}
         <p className="learn-ideas-summary">{opening.summary}</p>
       </section>
       {learnIsGambit(opening.name) ? <LearnDeclinedBox lines={opening.lines} activeLineId={activeLineId} onSelectLine={onSelectLine} /> : null}
-      <Bullets title="Key ideas" items={opening.keyIdeas} kind="ideas" />
-      <Bullets title="Typical plans" items={opening.typicalPlans} kind="plans" />
-      <Bullets title="Common mistakes" items={opening.commonMistakes} kind="mistakes" />
+      <Bullets title={t('Key ideas')} items={opening.keyIdeas} kind="ideas" />
+      <Bullets title={t('Typical plans')} items={opening.typicalPlans} kind="plans" />
+      <Bullets title={t('Common mistakes')} items={opening.commonMistakes} kind="mistakes" />
       {opening.sources.length ? (
         <section className="learn-ideas-section">
-          <h4>Sources</h4>
+          <h4>{t('Sources')}</h4>
           <ul className="learn-sources">
             {opening.sources.map((s, i) => {
               const { href, label } = learnSourceLabel(s)

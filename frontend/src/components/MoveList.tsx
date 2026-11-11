@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, type JSX, type ReactNode } from 'react'
 import { scrollIntoViewWithin } from '../lib/dom'
+import { t } from '../lib/i18n'
 import './MoveList.css'
 
 export interface MoveListProps {
@@ -38,7 +39,7 @@ export function MoveList({
   renderBadge,
   insert,
   autoScroll = true,
-  emptyText = 'No moves yet',
+  emptyText = t('No moves yet'),
   className,
 }: MoveListProps): JSX.Element {
   const currentRef = useRef<HTMLButtonElement>(null)

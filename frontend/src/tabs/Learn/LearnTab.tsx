@@ -5,6 +5,7 @@ import type { OpeningFull } from '../../api/types'
 import { EmptyState } from '../../components/EmptyState'
 import { Icon } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
+import { t } from '../../lib/i18n'
 import { loadJson, removeKey } from '../../lib/storage'
 import { useApp } from '../../state/AppContext'
 import { LearnGallery } from './LearnGallery'
@@ -84,7 +85,7 @@ export function LearnTab(): JSX.Element {
         }
         const message =
           err instanceof ApiError && err.status === 404
-            ? `Unknown opening "${openingId}".`
+            ? t('Unknown opening "{id}".', { id: openingId })
             : err instanceof Error
               ? err.message
               : String(err)
@@ -112,15 +113,15 @@ export function LearnTab(): JSX.Element {
       <div className="learn-center">
         <EmptyState
           icon="warning"
-          title="Could not open this opening"
+          title={t('Could not open this opening')}
           description={error.message}
           action={
             <div className="row">
               <button type="button" className="btn" onClick={backToGallery}>
-                <Icon name="prev" size={16} /> All openings
+                <Icon name="prev" size={16} /> {t('All openings')}
               </button>
               <button type="button" className="btn btn-primary" onClick={() => setReload((n) => n + 1)}>
-                <Icon name="refresh" size={16} /> Retry
+                <Icon name="refresh" size={16} /> {t('Retry')}
               </button>
             </div>
           }
@@ -131,7 +132,7 @@ export function LearnTab(): JSX.Element {
     content = (
       <div className="learn-center learn-loading">
         <Spinner size={28} />
-        <span className="muted">Loading opening…</span>
+        <span className="muted">{t('Loading opening…')}</span>
       </div>
     )
   } else {

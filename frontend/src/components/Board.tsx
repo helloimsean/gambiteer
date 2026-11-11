@@ -46,6 +46,7 @@ import {
   type PromotionPiece,
   type Square,
 } from '../lib/chess'
+import { t } from '../lib/i18n'
 import { playMoveSound, playSound } from '../lib/sounds'
 import type { BoardRules, PocketRole } from '../lib/variants'
 import './Board.css'
@@ -144,6 +145,14 @@ const PROMO_PIECES: { piece: PromotionPiece; role: string }[] = [
   { piece: 'b', role: 'bishop' },
 ]
 const KING_PROMOTION: { piece: PromotionPiece; role: string } = { piece: 'k', role: 'king' }
+/** Piece names for the promotion buttons' tooltips, keyed by `role`. */
+const PROMO_NAMES: Record<string, string> = {
+  queen: t('queen'),
+  knight: t('knight'),
+  rook: t('rook'),
+  bishop: t('bishop'),
+  king: t('king'),
+}
 const DEFAULT_ANIMATION_MS = 200
 /** Fen changes closer together than this play only one sound (e.g. jumping through a game). */
 const SOUND_THROTTLE_MS = 70
@@ -494,7 +503,7 @@ export function Board(props: BoardProps): JSX.Element {
             className={`board-promo cg-wrap ${promoAtTop ? 'top' : 'bottom'}`}
             style={promoStyle}
             role="dialog"
-            aria-label="Choose promotion piece"
+            aria-label={t('Choose promotion piece')}
             onContextMenu={(e) => {
               e.preventDefault()
               choosePromotion('q')
@@ -504,7 +513,7 @@ export function Board(props: BoardProps): JSX.Element {
               <button
                 key={piece}
                 type="button"
-                title={`Promote to ${role}`}
+                title={t('Promote to {piece}', { piece: PROMO_NAMES[role] })}
                 data-piece={piece}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choosePromotion(piece)}

@@ -11,6 +11,7 @@ import type { HistoryGame } from '../../lib/gameHistory'
 import type { LastGame } from '../../state/AppContext'
 import { START_FEN, gameStatus, moveToUci, oppositeSide, tryMove, turnFromFen, uciToSan, type PromotionPiece, type Square } from '../../lib/chess'
 import { loadJson, saveJson } from '../../lib/storage'
+import { t } from '../../lib/i18n'
 import {
   isVariantId,
   replayVariant,
@@ -292,9 +293,11 @@ export function botTitle(bot: BotKind, elo: number, variant: VariantId = 'standa
 
 /** Caption under the Elo slider (contract wording from ARCHITECTURE.md). */
 export function strengthCaption(bot: BotKind, elo: number, variant: VariantId = 'standard'): string {
-  if (bot === 'maia') return `Maia ${elo}, trained on Lichess players rated about ${elo}`
+  if (bot === 'maia') return t('Maia {elo}, trained on Lichess players rated about {elo}', { elo })
   const lowestLimit = variantInfo(variant).engine === 'fairy' ? FAIRY_UCI_ELO_MIN : UCI_ELO_MIN
-  return `${botName(bot, variant)}, ${elo >= lowestLimit ? 'limited to' : 'roughly'} this Elo`
+  return elo >= lowestLimit
+    ? t('{bot}, limited to this Elo', { bot: botName(bot, variant) })
+    : t('{bot}, roughly this Elo', { bot: botName(bot, variant) })
 }
 
 /** Panicfish loses Elo for every check the student has given it. */
@@ -313,21 +316,21 @@ export function currentElo(game: PlayGame): number {
 }
 
 export function panicfishMood(elo: number): string {
-  if (elo >= PANICFISH_START_ELO) return `Full strength. Every check costs it ${PANICFISH_ELO_PER_CHECK} Elo.`
-  return elo > 0 ? `Down to ${elo} Elo and losing its nerve.` : 'Out of Elo. It now plays random moves.'
+  if (elo >= PANICFISH_START_ELO) return t('Full strength. Every check costs it {per} Elo.', { per: PANICFISH_ELO_PER_CHECK })
+  return elo > 0 ? t('Down to {elo} Elo and losing its nerve.', { elo }) : t('Out of Elo. It now plays random moves.')
 }
 
 /** Rough human description of an Elo. */
 export function eloLevel(elo: number): string {
-  if (elo < 800) return 'Beginner'
-  if (elo < 1100) return 'Novice'
-  if (elo < 1400) return 'Intermediate'
-  if (elo < 1700) return 'Club player'
-  if (elo < 2000) return 'Advanced'
-  if (elo < 2200) return 'Expert'
-  if (elo < 2500) return 'Master'
-  if (elo < 2800) return 'Grandmaster'
-  return 'Full strength'
+  if (elo < 800) return t('Beginner')
+  if (elo < 1100) return t('Novice')
+  if (elo < 1400) return t('Intermediate')
+  if (elo < 1700) return t('Club player')
+  if (elo < 2000) return t('Advanced')
+  if (elo < 2200) return t('Expert')
+  if (elo < 2500) return t('Master')
+  if (elo < 2800) return t('Grandmaster')
+  return t('Full strength')
 }
 
 /** What the backend reported about the strength it used. */
@@ -336,11 +339,11 @@ export function strengthDetail(bot: BotKind, s: BotStrength | null, elo: number)
   if (bot === 'panicfish') return panicfishMood(elo)
   const shown = s?.elo ?? elo
   const exact = s ? s.mode === 'uci_elo' : elo >= UCI_ELO_MIN
-  return exact ? `Limited to ${shown} Elo` : `About ${shown} Elo (approximate)`
+  return exact ? t('Limited to {elo} Elo', { elo: shown }) : t('About {elo} Elo (approximate)', { elo: shown })
 }
 
 export function formatMovetime(ms: number): string {
-  return `${ms / 1000} s`
+  return t('{seconds} s', { seconds: ms / 1000 })
 }
 
 export type Outcome = 'win' | 'loss' | 'draw'
@@ -355,33 +358,33 @@ export function outcomeFor(game: PlayGame): Outcome | null {
 export function reasonText(reason: GameReason): string {
   switch (reason) {
     case 'checkmate':
-      return 'by checkmate'
+      return t('by checkmate')
     case 'stalemate':
-      return 'by stalemate'
+      return t('by stalemate')
     case 'insufficient':
-      return 'by insufficient material'
+      return t('by insufficient material')
     case 'threefold':
-      return 'by threefold repetition'
+      return t('by threefold repetition')
     case 'fifty-move':
-      return 'by the 50-move rule'
+      return t('by the 50-move rule')
     case 'draw':
-      return 'by the rules'
+      return t('by the rules')
     case 'resignation':
-      return 'by resignation'
+      return t('by resignation')
     case 'hill':
-      return 'by reaching the center'
+      return t('by reaching the center')
     case 'three-check':
-      return 'by giving three checks'
+      return t('by giving three checks')
     case 'explosion':
-      return 'by blowing up the king'
+      return t('by blowing up the king')
     case 'no-pieces':
-      return 'by losing every piece'
+      return t('by losing every piece')
     case 'stalemated':
-      return 'by getting stalemated'
+      return t('by getting stalemated')
     case 'horde-gone':
-      return 'by capturing the whole horde'
+      return t('by capturing the whole horde')
     case 'race':
-      return 'by reaching the last rank'
+      return t('by reaching the last rank')
   }
 }
 
@@ -390,8 +393,8 @@ export function resultHeadline(game: PlayGame): string {
   const o = outcomeFor(game)
   if (!o || !game.result) return ''
   const how = reasonText(game.result.reason)
-  if (o === 'draw') return `Draw ${how}`
-  return o === 'win' ? `You won ${how}` : `${botName(game.bot, game.variant)} won ${how}`
+  if (o === 'draw') return t('Draw {how}', { how })
+  return o === 'win' ? t('You won {how}', { how }) : t('{bot} won {how}', { bot: botName(game.bot, game.variant), how })
 }
 
 export function gamePlayers(game: PlayGame): Players {
@@ -445,15 +448,15 @@ export function createGame(chosen: PlaySetup, full: OpeningFull | null): PlayGam
   let sans: string[] = []
   const marks: Record<number, MoveMark> = {}
   if (setup.useOpening) {
-    if (!full) throw new Error('The opening is still loading.')
-    if (full.lines.length === 0) throw new Error(`${full.name} has no lines.`)
+    if (!full) throw new Error(t('The opening is still loading.'))
+    if (full.lines.length === 0) throw new Error(t('{name} has no lines.', { name: full.name }))
     const line =
       setup.lineId === RANDOM_LINE || !setup.lineId
         ? full.lines[Math.floor(Math.random() * full.lines.length)]
         : full.lines.find((l) => l.id === setup.lineId)
-    if (!line) throw new Error('That line no longer exists in this opening.')
+    if (!line) throw new Error(t('That line no longer exists in this opening.'))
     const replay = replayGame(START_FEN, line.sans)
-    if (replay.moves.length !== line.sans.length) throw new Error(`Line "${line.name}" contains an illegal move.`)
+    if (replay.moves.length !== line.sans.length) throw new Error(t('Line "{name}" contains an illegal move.', { name: line.name }))
     opening = {
       id: full.id,
       name: full.name,

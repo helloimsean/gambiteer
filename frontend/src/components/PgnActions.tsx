@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
+import { t } from '../lib/i18n'
 import { copyText, downloadPgn } from '../lib/pgnTransfer'
 import { Icon } from './Icon'
 
@@ -28,14 +29,14 @@ export function PgnActions({ getPgn, fileName }: PgnActionsProps): JSX.Element {
   return (
     <div className="row wrap">
       <button type="button" className="btn btn-sm" onClick={() => void copy()} data-testid="pgn-copy">
-        <Icon name="copy" size={15} /> Copy PGN
+        <Icon name="copy" size={15} /> {t('Copy PGN')}
       </button>
       <button type="button" className="btn btn-sm" onClick={() => downloadPgn(getPgn(), fileName)} data-testid="pgn-download">
-        <Icon name="download" size={15} /> Download PGN
+        <Icon name="download" size={15} /> {t('Download PGN')}
       </button>
       {copied ? (
         <span className="small bold" role="status" data-testid="pgn-copied">
-          {copied === 'ok' ? 'PGN copied' : 'Copy failed'}
+          {copied === 'ok' ? t('PGN copied') : t('Copy failed')}
         </span>
       ) : null}
     </div>

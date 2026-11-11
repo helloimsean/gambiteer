@@ -14,6 +14,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { Modal } from '../../components/Modal'
 import { Spinner } from '../../components/Spinner'
 import { START_FEN } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 import { nodeIdFromSans } from '../../lib/tree'
 import { useApp } from '../../state/AppContext'
 import { QuizExercise } from './QuizExercise'
@@ -119,7 +120,7 @@ export function QuizTab(): JSX.Element {
       let err: string | null = null
       results.forEach((r, i) => {
         if (r.status === 'fulfilled') add[missing[i]] = r.value
-        else if (!isAbort(r.reason)) err = `Could not load ${missing[i]}: ${errorText(r.reason)}`
+        else if (!isAbort(r.reason)) err = t('Could not load {id}: {error}', { id: missing[i], error: errorText(r.reason) })
       })
       fullsRef.current = { ...fullsRef.current, ...add }
       setFulls(fullsRef.current)
@@ -141,7 +142,7 @@ export function QuizTab(): JSX.Element {
       let err: string | null = null
       results.forEach((r, i) => {
         if (r.status === 'fulfilled') add[`${apiMode}:${missing[i]}`] = r.value
-        else if (!isAbort(r.reason)) err = `Could not load the ${apiMode} quiz of ${missing[i]}: ${errorText(r.reason)}`
+        else if (!isAbort(r.reason)) err = t('Could not load the {kind} quiz of {id}: {error}', { kind: apiMode === 'traps' ? t('traps') : t('positions'), id: missing[i], error: errorText(r.reason) })
       })
       itemsRef.current = { ...itemsRef.current, ...add }
       setItemsCache(itemsRef.current)
@@ -281,11 +282,11 @@ export function QuizTab(): JSX.Element {
       <div className="tab-placeholder">
         <EmptyState
           icon="warning"
-          title="Could not load the openings"
+          title={t('Could not load the openings')}
           description={openingsError}
           action={
             <button type="button" className="btn btn-primary" onClick={() => setReloadToken((n) => n + 1)}>
-              Retry
+              {t('Retry')}
             </button>
           }
         />
@@ -296,7 +297,7 @@ export function QuizTab(): JSX.Element {
   if (openings && openings.length === 0) {
     return (
       <div className="tab-placeholder">
-        <EmptyState icon="book" title="No openings yet" description="Add opening files to data/openings/ and they will show up here." />
+        <EmptyState icon="book" title={t('No openings yet')} description={t('Add opening files to data/openings/ and they will show up here.')} />
       </div>
     )
   }
@@ -350,26 +351,26 @@ export function QuizTab(): JSX.Element {
                 {dataError ? (
                   <EmptyState
                     icon="warning"
-                    title="Could not load the quiz"
+                    title={t('Could not load the quiz')}
                     description={dataError}
                     action={
                       <button type="button" className="btn btn-primary" onClick={() => setReloadToken((n) => n + 1)}>
-                        Retry
+                        {t('Retry')}
                       </button>
                     }
                   />
                 ) : !ready || !openings ? (
                   <div className="row muted">
-                    <Spinner /> Loading the quiz...
+                    <Spinner /> {t('Loading the quiz...')}
                   </div>
                 ) : (
                   <EmptyState
                     icon="target"
-                    title={mode === 'traps' ? 'No trap positions here' : 'Nothing to quiz'}
+                    title={mode === 'traps' ? t('No trap positions here') : t('Nothing to quiz')}
                     description={
                       mode === 'traps'
-                        ? 'The selected openings have no trap lines. Pick other openings or another mode.'
-                        : 'The selected openings have no positions for this mode.'
+                        ? t('The selected openings have no trap lines. Pick other openings or another mode.')
+                        : t('The selected openings have no positions for this mode.')
                     }
                   />
                 )}
@@ -383,27 +384,26 @@ export function QuizTab(): JSX.Element {
       <Modal
         open={resetOpen}
         onClose={() => setResetOpen(false)}
-        title="Reset quiz statistics?"
+        title={t('Reset quiz statistics?')}
         width={440}
         footer={
           <>
             <button type="button" className="btn btn-ghost" onClick={() => setResetOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </button>
             {openings && effectiveSelected.length < openings.length ? (
               <button type="button" className="btn" onClick={() => doReset('selected')} data-testid="quiz-reset-selected">
-                Selected openings only
+                {t('Selected openings only')}
               </button>
             ) : null}
             <button type="button" className="btn btn-danger" onClick={() => doReset('all')} data-testid="quiz-reset-all">
-              Reset all
+              {t('Reset all')}
             </button>
           </>
         }
       >
         <p>
-          This forgets which positions you know, so mastery starts again from 0% and weak positions are no longer asked first.
-          The session score and streak are reset too.
+          {t('This forgets which positions you know, so mastery starts again from 0% and weak positions are no longer asked first. The session score and streak are reset too.')}
         </p>
       </Modal>
     </div>
