@@ -1,10 +1,12 @@
 package com.gambiteer.mobile
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -123,6 +125,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        app.models.resumePending()
         web.onResume()
         web.resumeTimers()
     }
@@ -194,7 +197,15 @@ class MainActivity : Activity() {
         fun coachStatus(): String = app.models.statusJson()
 
         @JavascriptInterface
-        fun downloadCoach(id: String, allowMobileData: Boolean) = app.models.download(id, allowMobileData)
+        fun downloadCoach(id: String, allowMobileData: Boolean) {
+            runOnUiThread {
+                // Shows the download's progress notification; the download runs either way.
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFY_REQUEST)
+                }
+            }
+            app.models.download(id, allowMobileData)
+        }
 
         @JavascriptInterface
         fun cancelCoach(id: String) = app.models.cancel(id)
@@ -239,6 +250,7 @@ class MainActivity : Activity() {
         private const val POLL_MS = 300L
         private const val WATCH_MS = 2000L
         private const val FILE_REQUEST = 41
+        private const val NOTIFY_REQUEST = 42
         private val BACKGROUND = Color.rgb(38, 36, 33)
     }
 }

@@ -2,16 +2,13 @@ package com.gambiteer.mobile
 
 import android.app.DownloadManager
 import android.content.Context
-import android.database.Cursor
-import android.net.Uri
+import android.content.Intent
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.security.MessageDigest
-import java.util.Collections
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.thread
 
 data class CoachModel(
     val id: String,
@@ -67,38 +64,40 @@ object CoachCatalog {
     fun backendFile(context: Context): File = File(context.filesDir, "coach-backend")
 }
 
-/** Downloads and checks the models. Lives in the app's main process; CoachService only reads the files. */
+/** Starts, tracks and resumes the model downloads (see ModelDownload). Lives in the app's main process. */
 class CoachModels(private val context: Context, private val releaseCoach: () -> Unit) {
     private val catalog = CoachCatalog.models
-    private val manager = context.getSystemService(DownloadManager::class.java)
     private val prefs = context.getSharedPreferences("coach-models", Context.MODE_PRIVATE)
-    private val worker = Executors.newSingleThreadScheduledExecutor()
-    private val verifying: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-    private val errors = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val downloads = ConcurrentHashMap<String, ModelDownload>()
+    private val errors = ConcurrentHashMap<String, String>()
 
     init {
-        worker.scheduleWithFixedDelay({ runCatching(::advance) }, 2, 3, TimeUnit.SECONDS)
+        forgetDownloadManager()
     }
 
     fun download(id: String, allowMobileData: Boolean) {
         val model = catalog.firstOrNull { it.id == id } ?: return
-        if (model.file(context).isFile || prefs.contains(key(id)) || id in verifying) return
+        if (model.file(context).isFile) return
         errors.remove(id)
-        model.partFile(context).delete()
-        val request = DownloadManager.Request(Uri.parse(model.url))
-            .setTitle("Gambiteer coach: ${model.label}")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(context, "models", model.partFile(context).name)
-            .setAllowedOverMetered(allowMobileData)
-            .setAllowedOverRoaming(false)
-        prefs.edit().putLong(key(id), manager.enqueue(request)).apply()
+        prefs.edit().putBoolean(pendingKey(id), allowMobileData).apply()
+        start(model, allowMobileData)
+    }
+
+    /** Carries on downloads that stopped with the app (closed, or paused by Android). */
+    fun resumePending() {
+        for (model in catalog) {
+            if (prefs.contains(pendingKey(model.id)) && !model.file(context).isFile) {
+                start(model, prefs.getBoolean(pendingKey(model.id), false))
+            }
+        }
     }
 
     fun cancel(id: String) {
         val model = catalog.firstOrNull { it.id == id } ?: return
-        takeDownload(id)?.let { manager.remove(it) }
-        model.partFile(context).delete()
+        prefs.edit().remove(pendingKey(id)).apply()
         errors.remove(id)
+        val running = downloads[id]
+        if (running != null) running.stop(discardFiles = true) else discardFiles(model)
     }
 
     fun delete(id: String) {
@@ -107,6 +106,13 @@ class CoachModels(private val context: Context, private val releaseCoach: () -> 
         model.file(context).delete()
         errors.remove(id)
     }
+
+    /** Stops every download but keeps what it fetched; resumePending carries on. */
+    fun pauseDownloads() {
+        downloads.values.forEach { it.stop(discardFiles = false) }
+    }
+
+    fun activeDownloads(): List<ModelDownload> = downloads.values.toList()
 
     fun statusJson(): String {
         val models = JSONArray()
@@ -123,112 +129,72 @@ class CoachModels(private val context: Context, private val releaseCoach: () -> 
             .put("description", model.description)
             .put("bytes", model.bytes)
             .put("downloaded", 0L)
+        val running = downloads[model.id]
         when {
-            model.id in verifying -> json.put("state", "verifying")
-            model.file(context).isFile -> json.put("state", "ready")
-            else -> {
-                val id = prefs.takeIf { it.contains(key(model.id)) }?.getLong(key(model.id), -1L)
-                val row = id?.let(::query)
-                if (row == null) {
-                    json.put("state", if (errors.containsKey(model.id)) "failed" else "absent")
-                    errors[model.id]?.let { json.put("error", it) }
-                } else {
-                    json.put("downloaded", row.bytes)
-                    json.put("state", if (row.status == DownloadManager.STATUS_RUNNING) "downloading" else "waiting")
-                    row.reason?.let { json.put("note", it) }
-                }
+            running != null && running.verifying -> json.put("state", "verifying")
+            running != null -> {
+                val note = running.note
+                json.put("downloaded", running.downloaded)
+                json.put("state", if (note != null) "waiting" else "downloading")
+                note?.let { json.put("note", it) }
             }
+            model.file(context).isFile -> json.put("state", "ready")
+            errors.containsKey(model.id) -> json.put("state", "failed").put("error", errors[model.id])
+            prefs.contains(pendingKey(model.id)) -> {
+                json.put("state", "waiting").put("note", "Paused")
+                json.put("downloaded", ModelDownload.savedParts(context, model)?.sum() ?: 0L)
+            }
+            else -> json.put("state", "absent")
         }
         return json
     }
 
-    /** Runs in the background: picks up finished or failed downloads even with the screen closed. */
-    private fun advance() {
-        for (model in catalog) {
-            if (!prefs.contains(key(model.id))) continue
-            val id = prefs.getLong(key(model.id), -1L)
-            val row = query(id)
-            when (row?.status) {
-                null -> takeDownload(model.id)
-                DownloadManager.STATUS_FAILED -> {
-                    errors[model.id] = row.reason ?: "The download failed."
-                    takeDownload(model.id)?.let { manager.remove(it) }
-                }
-                DownloadManager.STATUS_SUCCESSFUL -> {
-                    // The download stays registered until checked, so a kill during the hash just
-                    // repeats the check at the next launch instead of losing the file.
-                    if (verifying.add(model.id)) worker.execute { verify(model) }
-                }
-            }
-        }
-    }
-
-    private fun verify(model: CoachModel) {
+    private fun start(model: CoachModel, allowMobileData: Boolean) {
+        val job = ModelDownload(context, model, allowMobileData)
+        if (downloads.putIfAbsent(model.id, job) != null) return
         try {
-            val part = model.partFile(context)
-            if (sha256(part) != model.sha256) {
-                part.delete()
-                errors[model.id] = "The download was corrupted. Please try again."
-            } else if (!part.renameTo(model.file(context))) {
-                errors[model.id] = "Could not save the model to this phone's storage."
-            }
+            context.startForegroundService(Intent(context, ModelDownloadService::class.java))
         } catch (e: Exception) {
-            Log.e(TAG, "verify failed", e)
-            errors[model.id] = e.message ?: "Could not check the download."
-        } finally {
-            takeDownload(model.id)
-            verifying.remove(model.id)
+            // Android refuses while the app is in the background; the download still runs while it can.
+            Log.w(TAG, "downloading without the foreground service", e)
         }
-    }
-
-    private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val buffer = ByteArray(1 shl 20)
-        file.inputStream().use { input ->
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                digest.update(buffer, 0, count)
+        thread(name = "download-${model.id}") {
+            try {
+                job.run()
+                if (!job.stopped || job.discard) prefs.edit().remove(pendingKey(model.id)).apply()
+            } catch (e: ModelDownload.Failed) {
+                errors[model.id] = e.message ?: "The download failed."
+                prefs.edit().remove(pendingKey(model.id)).apply()
+            } catch (e: Exception) {
+                Log.e(TAG, "download failed", e)
+                errors[model.id] = "The download failed: ${e.message}"
+                prefs.edit().remove(pendingKey(model.id)).apply()
+            } finally {
+                downloads.remove(model.id, job)
+                // Cancelled and asked for again before this one had finished stopping.
+                if (job.discard && prefs.contains(pendingKey(model.id))) resumePending()
             }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private class Row(val status: Int, val bytes: Long, val reason: String?)
+    private fun discardFiles(model: CoachModel) {
+        model.partFile(context).delete()
+        ModelDownload.progressFile(context, model).delete()
+    }
 
-    private fun query(id: Long): Row? {
-        manager.query(DownloadManager.Query().setFilterById(id)).use { cursor: Cursor ->
-            if (!cursor.moveToFirst()) return null
-            val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            val bytes = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-            val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-            return Row(status, bytes, describe(status, reason))
+    /** Earlier versions downloaded through DownloadManager: drop anything left from those. */
+    private fun forgetDownloadManager() {
+        val manager = context.getSystemService(DownloadManager::class.java)
+        for (model in catalog) {
+            val key = "download-${model.id}"
+            if (!prefs.contains(key)) continue
+            runCatching { manager.remove(prefs.getLong(key, -1L)) }
+            prefs.edit().remove(key).apply()
+            discardFiles(model)
         }
     }
 
-    private fun describe(status: Int, reason: Int): String? = when (status) {
-        DownloadManager.STATUS_PAUSED -> when (reason) {
-            DownloadManager.PAUSED_QUEUED_FOR_WIFI -> "Waiting for Wi-Fi"
-            DownloadManager.PAUSED_WAITING_FOR_NETWORK -> "Waiting for a connection"
-            DownloadManager.PAUSED_WAITING_TO_RETRY -> "Retrying soon"
-            else -> "Paused"
-        }
-        DownloadManager.STATUS_FAILED -> when (reason) {
-            DownloadManager.ERROR_INSUFFICIENT_SPACE -> "Not enough free storage on this phone."
-            DownloadManager.ERROR_CANNOT_RESUME -> "The download could not resume. Please try again."
-            else -> "The download failed (code $reason)."
-        }
-        else -> null
-    }
-
-    private fun takeDownload(id: String): Long? {
-        if (!prefs.contains(key(id))) return null
-        val value = prefs.getLong(key(id), -1L)
-        prefs.edit().remove(key(id)).apply()
-        return value
-    }
-
-    private fun key(id: String) = "download-$id"
+    private fun pendingKey(id: String) = "pending-$id"
 
     companion object {
         private const val TAG = "GambiteerModels"

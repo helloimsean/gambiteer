@@ -39,10 +39,11 @@ Android app (Kotlin, one Activity)
 * **The engines are executables named `lib*.so`.** Android only lets an app run files from its native
   library directory, and packaging them as libraries puts them there.
 * **The coach** is Gemma 4 from Hugging Face (Apache-2.0, no account). E4B is 3.7 GB and recommended;
-  E2B is 2.6 GB. Downloads are pinned to a revision and SHA-256 checked. It uses the GPU and falls back
-  to the CPU, and it unloads after five idle minutes to free memory. It runs in its own Android process
-  (`:coach`), so a native crash costs one explanation, not the app; if the GPU crashes it, the coach
-  stays on the CPU until the next app update.
+  E2B is 2.6 GB. The app downloads it itself over eight connections (Android's DownloadManager managed
+  about 2 MB/s), resumes after an interruption, and checks it against a pinned revision and SHA-256. It
+  uses the GPU and falls back to the CPU, and it unloads after five idle minutes to free memory. It runs
+  in its own Android process (`:coach`), so a native crash costs one explanation, not the app; if the
+  GPU crashes it, the coach stays on the CPU until the next app update.
 
 ## Layout of this folder
 
