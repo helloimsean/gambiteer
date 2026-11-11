@@ -121,6 +121,7 @@ interface ReviewMove {
   winPctBefore: number; winPctAfter: number;  // 0..100 from the MOVER's point of view
   cpLoss: number;           // centipawns lost by the mover (>= 0)
   classification: Classification;
+  sacrifice?: "queen"|"rook"|"bishop"|"knight"|null; // the piece a best move gives up (SEE)
   bookWhy?: string;         // if the move is in our opening data, its "why"
   bookOpening?: string;     // opening name from our data
   explanation?: string;     // filled by /api/explain
@@ -343,8 +344,9 @@ Chessground: import `chessground/assets/chessground.base.css`, `chessground.brow
 ref and call `api.set({...})` on prop changes. Compute legal `movable.dests` from chess.js
 (`moves({verbose:true})`). Promotion: show a small chooser overlay (queen default on right-click).
 Board props: `fen, orientation, lastMove?, check?, interactive, onMove(from,to,promotion?), shapes?
-(arrows: { orig, dest, brush })`. Add a `coordinates` toggle. Piece move sounds via WebAudio (short
-synthesized click for move, lower thud for capture; mutable). chessground re-measures the board only
+(arrows: { orig, dest, brush })`. Add a `coordinates` toggle. Piece move sounds come from
+`public/sounds/*.mp3` when present (git-ignored, not ours to redistribute) and otherwise from a small
+WebAudio synthesiser (mutable). chessground re-measures the board only
 on scroll and resize, so `Board` clears its remembered bounds on every pointer press: a layout change
 can move the board without either.
 

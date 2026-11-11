@@ -414,6 +414,9 @@ Gambiteer uses [Stockfish](https://stockfishchess.org) (GPLv3, downloaded separa
 The variants other than Chess960 run on [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)
 (GPL-3.0), downloaded separately by `tools/install_fairy.py`.
 
+The queen and rook sacrifice voice lines in **Review** are by Levy Rozman
+([GothamChess](https://www.youtube.com/@GothamChess)).
+
 The optional human-like bot runs the [Maia](https://github.com/CSSLab/maia-chess) networks (GPL-3.0)
 inside [Leela Chess Zero](https://github.com/LeelaChessZero/lc0) (lc0, GPL-3.0). Both are downloaded
 separately by `tools/install_maia.py`. Maia comes from this paper:

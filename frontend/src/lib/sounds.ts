@@ -1,22 +1,75 @@
 /**
- * Tiny WebAudio synthesiser for board sounds. No audio files, no dependencies.
+ * Board sounds. Each one plays public/sounds/<file>.mp3 when that file loaded. Those files are
+ * git-ignored because they are not ours to redistribute, so a fresh copy of the repository has none
+ * and falls back to the small WebAudio synthesiser below.
  *
- *   playSound('move')     short wooden click
- *   playSound('capture')  lower, longer thud
- *   playSound('check')    two-tone ping
- *   playSound('illegal')  buzzy low error tone
- *   playSound('promote')  rising chime
- *   playSound('gameEnd')  three-note cadence
+ *   playSound('move')          the player's own move
+ *   playSound('moveOpponent')  the other side's move
+ *   playSound('capture'), playSound('castle'), playSound('check'), playSound('illegal'),
+ *   playSound('promote'), playSound('gameStart'), playSound('gameEnd')
+ *   playSound('sacrificeQueen'), playSound('sacrificeRook')  Levy Rozman's voice, for Review
  *
  * Audio is muted via `setMuted(true)` (the shell wires this to the sound setting).
  * The AudioContext is created lazily on first play, which satisfies autoplay policies
  * as long as the first sound follows a user gesture (a move always does).
  */
+import type { Side } from '../api/types'
+import { turnFromFen } from './chess'
 
-export type SoundName = 'move' | 'capture' | 'check' | 'illegal' | 'promote' | 'gameEnd'
+export type SoundName =
+  | 'move'
+  | 'moveOpponent'
+  | 'capture'
+  | 'castle'
+  | 'check'
+  | 'illegal'
+  | 'promote'
+  | 'gameStart'
+  | 'gameEnd'
+  | 'sacrificeQueen'
+  | 'sacrificeRook'
 
+const SOUND_FILES: Record<SoundName, string> = {
+  move: 'move-self',
+  moveOpponent: 'move-opponent',
+  capture: 'capture',
+  castle: 'castle',
+  check: 'move-check',
+  illegal: 'illegal',
+  promote: 'promote',
+  gameStart: 'game-start',
+  gameEnd: 'game-end',
+  sacrificeQueen: 'sacrifice-queen',
+  sacrificeRook: 'sacrifice-rook',
+}
+
+/** A new game replaces the whole board, which must not also sound like a move. */
+const GAME_START_QUIET_MS = 150
+
+/** Only the files that loaded: a missing one never fires `canplaythrough`. */
+const samples = new Map<SoundName, HTMLAudioElement>()
 let ctx: AudioContext | null = null
 let muted = false
+let gameStartedAt = -Infinity
+
+function loadSamples(): void {
+  if (typeof Audio === 'undefined') return
+  for (const [name, file] of Object.entries(SOUND_FILES) as [SoundName, string][]) {
+    const audio = new Audio(`/sounds/${file}.mp3`)
+    audio.preload = 'auto'
+    audio.addEventListener('canplaythrough', () => samples.set(name, audio), { once: true })
+  }
+}
+
+loadSamples()
+
+function playSample(name: SoundName): boolean {
+  const sample = samples.get(name)
+  if (!sample) return false
+  sample.currentTime = 0
+  void sample.play().catch(() => undefined) // browsers refuse audio before the first user gesture
+  return true
+}
 
 export function setMuted(value: boolean): void {
   muted = value
@@ -98,8 +151,13 @@ function play(tones: Tone[], noise?: { at: number; dur: number; gain: number; lo
 }
 
 export function playSound(name: SoundName): void {
+  if (muted) return
+  if (name === 'gameStart') gameStartedAt = performance.now()
+  if (playSample(name)) return
   switch (name) {
     case 'move':
+    case 'moveOpponent':
+    case 'castle':
       play(
         [{ freq: 520, at: 0, dur: 0.06, type: 'triangle', gain: 0.18, glide: 180 }],
         { at: 0, dur: 0.05, gain: 0.35, lowpass: 2600 },
@@ -140,12 +198,39 @@ export function playSound(name: SoundName): void {
         { freq: 784, at: 0.28, dur: 0.3, type: 'triangle', gain: 0.2 },
       ])
       break
+    case 'gameStart':
+    case 'sacrificeQueen':
+    case 'sacrificeRook':
+      break // no synthesised version
   }
 }
 
-/** Pick move/capture/check for a transition between two FENs and play it. */
-export function playMoveSound(fenBefore: string, fenAfter: string, inCheck: boolean): void {
+/** The 64 squares as one string, leaving out any Crazyhouse pocket, whose pieces are not on the board. */
+function boardOf(fen: string): string {
+  return (fen.split(' ')[0] ?? '')
+    .replace(/\[.*\]|~|\//g, '')
+    .replace(/\d/g, (n) => '.'.repeat(Number(n)))
+}
+
+function squaresOf(board: string, piece: string): string {
+  return [...board].flatMap((p, i) => (p === piece ? [i] : [])).join()
+}
+
+/** No other move changes the squares of both the mover's king and the mover's rooks. */
+function isCastling(before: string, after: string, mover: Side): boolean {
+  const [king, rook] = mover === 'white' ? ['K', 'R'] : ['k', 'r']
+  return squaresOf(before, king) !== squaresOf(after, king) && squaresOf(before, rook) !== squaresOf(after, rook)
+}
+
+/** Pick the sound for a transition between two FENs and play it. `player` is whose moves are "your" moves. */
+export function playMoveSound(fenBefore: string, fenAfter: string, inCheck: boolean, player: Side): void {
+  if (performance.now() - gameStartedAt < GAME_START_QUIET_MS) return
   if (inCheck) return playSound('check')
-  const count = (fen: string) => (fen.split(' ')[0] ?? '').replace(/[^a-zA-Z]/g, '').length
-  playSound(count(fenAfter) < count(fenBefore) ? 'capture' : 'move')
+  const before = boardOf(fenBefore)
+  const after = boardOf(fenAfter)
+  const mover = turnFromFen(fenBefore)
+  if (isCastling(before, after, mover)) return playSound('castle')
+  const pieces = (board: string) => board.replace(/\./g, '').length
+  if (pieces(after) < pieces(before)) return playSound('capture')
+  playSound(mover === player ? 'move' : 'moveOpponent')
 }

@@ -16,6 +16,14 @@ venv/
 engines/*
 !engines/README.md
 
+# sound files that are not ours to redistribute (the app falls back to its own synthesised sounds)
+Chess.com Sounds/
+Lichess sounds/
+Levy/
+frontend/public/sounds/*
+# except Levy Rozman's sacrifice voice lines, kept here with credit (see README)
+!frontend/public/sounds/sacrifice-*.mp3
+
 # generated data, caches, test screenshots and logs
 data/_cache/
 data/_reports/

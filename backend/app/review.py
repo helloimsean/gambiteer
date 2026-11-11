@@ -135,11 +135,16 @@ def mean_accuracy(drops: Sequence[float]) -> float:
 
 
 def is_sacrifice(board: chess.Board, move: chess.Move) -> bool:
-    """Does ``move`` give up material?
+    """Does ``move`` give up material? (see ``sacrificed_piece``)"""
+    return sacrificed_piece(board, move) is not None
+
+
+def sacrificed_piece(board: chess.Board, move: chess.Move) -> chess.PieceType | None:
+    """The most valuable piece ``move`` gives up, or None when it gives up no material.
 
     After the move, look at the moved piece and at every other piece of the mover worth >= 3: if the
     opponent can win more material on one of those squares (static exchange evaluation) than the
-    move itself captured, the move is a sacrifice. Queens and rooks left en prise are covered by the
+    move itself captured, that piece is sacrificed. Queens and rooks left en prise are covered by the
     same test.
     """
     mover = board.turn
@@ -153,14 +158,16 @@ def is_sacrifice(board: chess.Board, move: chess.Move) -> bool:
         gained += PIECE_VALUES[move.promotion] - 1
     after = board.copy(stack=False)
     after.push(move)
-    worst = 0
+    given_up: chess.PieceType | None = None
     for square, piece in after.piece_map().items():
         if piece.color != mover or piece.piece_type == chess.KING:
             continue
-        if PIECE_VALUES[piece.piece_type] < 3:
+        value = PIECE_VALUES[piece.piece_type]
+        if value < 3 or (given_up is not None and value <= PIECE_VALUES[given_up]):
             continue
-        worst = max(worst, see_gain(after, square))
-    return worst > gained
+        if see_gain(after, square) > gained:
+            given_up = piece.piece_type
+    return given_up
 
 
 @dataclass(frozen=True)
@@ -255,7 +262,8 @@ def build_review_result(
         best_line = before_lines[0]
         best_uci = best_line.pvUci[0] if best_line.pvUci else move.uci()
         best_san = best_line.pv[0] if best_line.pv else san
-        sacrifice = is_sacrifice(board, move) if move.uci() == best_uci else False
+        sacrificed = sacrificed_piece(board, move) if move.uci() == best_uci else None
+        sacrifice = sacrificed is not None
 
         board.push(move)
         side_after = board.turn
@@ -305,6 +313,7 @@ def build_review_result(
                 winPctAfter=round(win_after, 2),
                 cpLoss=max(0, cp_before - cp_after),
                 classification=label,  # type: ignore[arg-type]
+                sacrifice=chess.piece_name(sacrificed) if sacrificed else None,  # type: ignore[arg-type]
                 bookWhy=(hit.why or None) if hit else None,
                 bookOpening=hit.opening_name if hit else None,
             )
