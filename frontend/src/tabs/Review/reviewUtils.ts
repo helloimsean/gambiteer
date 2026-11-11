@@ -5,6 +5,15 @@ import type { Classification, Players, ReviewMove, ReviewResult, Score, Side } f
 import { START_FEN, plyOffsetFromFen, sansToPgn } from '../../lib/chess'
 import { mateWinner } from '../../lib/eval'
 import { pgnFileName } from '../../lib/pgnTransfer'
+import type { SoundName } from '../../lib/sounds'
+
+/** Levy Rozman's line for a brilliant or great queen or rook sacrifice, if `move` is one. */
+export function sacrificeSound(move: ReviewMove | undefined): SoundName | null {
+  if (!move || (move.classification !== 'brilliant' && move.classification !== 'great')) return null
+  if (move.sacrifice === 'queen') return 'sacrificeQueen'
+  if (move.sacrifice === 'rook') return 'sacrificeRook'
+  return null
+}
 
 /** Order of the classification count table (chess.com game report order). */
 export const REVIEW_TABLE_ORDER: readonly Classification[] = [

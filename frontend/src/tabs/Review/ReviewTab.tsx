@@ -23,6 +23,7 @@ import { MoveNav, Toolbar, ToolbarButton } from '../../components/Toolbar'
 import { START_FEN, sanPathToFens, type PromotionPiece, type Square } from '../../lib/chess'
 import { recordAccuracy, sameMoves } from '../../lib/gameHistory'
 import { pgnDate } from '../../lib/pgnTransfer'
+import { playSound } from '../../lib/sounds'
 import { loadJson, removeKey, saveJson } from '../../lib/storage'
 import { useApp, type LastGame, type ReviewRequestPayload } from '../../state/AppContext'
 import { ReviewBoardOverlay } from './ReviewBoardOverlay'
@@ -41,6 +42,7 @@ import {
   reviewPlyOffset,
   type ReviewGame,
   type SavedReviewState,
+  sacrificeSound,
 } from './reviewUtils'
 import { ReviewVariationLine } from './ReviewVariationLine'
 import { useReviewExplain } from './useReviewExplain'
@@ -150,6 +152,17 @@ export function ReviewTab(): JSX.Element {
     },
     [maxPly, clearVariation],
   )
+
+  // Arriving at a brilliant or great queen or rook sacrifice plays Levy Rozman's voice line. Opening
+  // the tab on it, or stepping back onto it from the next move, stays quiet.
+  const lastPlyRef = useRef(ply)
+  useEffect(() => {
+    const previous = lastPlyRef.current
+    lastPlyRef.current = ply
+    if (!result || ply === previous || ply === previous - 1) return
+    const sound = sacrificeSound(result.moves[ply - 1])
+    if (sound) playSound(sound)
+  }, [ply, result])
 
   // ---------------------------------------------------------------- starting a review
 

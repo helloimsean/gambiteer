@@ -321,6 +321,8 @@ export interface ReviewMove {
   /** Centipawns lost by the mover (>= 0). */
   cpLoss: number
   classification: Classification
+  /** The piece the move gives up when it is the engine's best move (the test behind "brilliant"). */
+  sacrifice?: 'queen' | 'rook' | 'bishop' | 'knight' | null
   /** If the move is in our opening data, its "why". */
   bookWhy?: string
   /** Opening name from our data. */

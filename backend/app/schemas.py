@@ -249,6 +249,8 @@ class ReviewMove(BaseModel):
     winPctAfter: float
     cpLoss: int
     classification: Classification
+    # the piece the move gives up when it is the engine's best move (the test behind "brilliant")
+    sacrifice: Literal["queen", "rook", "bishop", "knight"] | None = None
     bookWhy: str | None = None
     bookOpening: str | None = None
     explanation: str | None = None

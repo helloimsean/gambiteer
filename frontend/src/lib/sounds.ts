@@ -7,6 +7,7 @@
  *   playSound('moveOpponent')  the other side's move
  *   playSound('capture'), playSound('castle'), playSound('check'), playSound('illegal'),
  *   playSound('promote'), playSound('gameStart'), playSound('gameEnd')
+ *   playSound('sacrificeQueen'), playSound('sacrificeRook')  Levy Rozman's voice, for Review
  *
  * Audio is muted via `setMuted(true)` (the shell wires this to the sound setting).
  * The AudioContext is created lazily on first play, which satisfies autoplay policies
@@ -15,7 +16,18 @@
 import type { Side } from '../api/types'
 import { turnFromFen } from './chess'
 
-export type SoundName = 'move' | 'moveOpponent' | 'capture' | 'castle' | 'check' | 'illegal' | 'promote' | 'gameStart' | 'gameEnd'
+export type SoundName =
+  | 'move'
+  | 'moveOpponent'
+  | 'capture'
+  | 'castle'
+  | 'check'
+  | 'illegal'
+  | 'promote'
+  | 'gameStart'
+  | 'gameEnd'
+  | 'sacrificeQueen'
+  | 'sacrificeRook'
 
 const SOUND_FILES: Record<SoundName, string> = {
   move: 'move-self',
@@ -27,6 +39,8 @@ const SOUND_FILES: Record<SoundName, string> = {
   promote: 'promote',
   gameStart: 'game-start',
   gameEnd: 'game-end',
+  sacrificeQueen: 'sacrifice-queen',
+  sacrificeRook: 'sacrifice-rook',
 }
 
 /** A new game replaces the whole board, which must not also sound like a move. */
@@ -185,6 +199,8 @@ export function playSound(name: SoundName): void {
       ])
       break
     case 'gameStart':
+    case 'sacrificeQueen':
+    case 'sacrificeRook':
       break // no synthesised version
   }
 }

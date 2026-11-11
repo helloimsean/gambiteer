@@ -121,6 +121,7 @@ interface ReviewMove {
   winPctBefore: number; winPctAfter: number;  // 0..100 from the MOVER's point of view
   cpLoss: number;           // centipawns lost by the mover (>= 0)
   classification: Classification;
+  sacrifice?: "queen"|"rook"|"bishop"|"knight"|null; // the piece a best move gives up (SEE)
   bookWhy?: string;         // if the move is in our opening data, its "why"
   bookOpening?: string;     // opening name from our data
   explanation?: string;     // filled by /api/explain

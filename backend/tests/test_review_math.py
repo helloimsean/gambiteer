@@ -10,6 +10,7 @@ from app.review import (
     build_review_result,
     classify,
     is_sacrifice,
+    sacrificed_piece,
     mean_accuracy,
     move_accuracy,
     mover_cp,
@@ -140,6 +141,35 @@ def test_is_sacrifice() -> None:
     assert is_sacrifice(hang, chess.Move.from_uci("d1g4")) is False  # g4 is safe
     assert is_sacrifice(chess.Board("rnbqkbnr/ppp2ppp/8/3pp3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3"),
                         chess.Move.from_uci("d1g4"))  # Bxg4 wins the queen
+
+
+def test_sacrificed_piece() -> None:
+    italian = chess.Board("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4")
+    assert sacrificed_piece(italian, chess.Move.from_uci("c4f7")) == chess.BISHOP
+    assert sacrificed_piece(italian, chess.Move.from_uci("d2d3")) is None
+    # Bxg4 wins the queen
+    queen = chess.Board("rnbqkbnr/ppp2ppp/8/3pp3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3")
+    assert sacrificed_piece(queen, chess.Move.from_uci("d1g4")) == chess.QUEEN
+    # the c5 pawn takes a rook on d4
+    rook = chess.Board("4k3/8/8/2p5/8/8/8/3RK3 w - - 0 1")
+    assert sacrificed_piece(rook, chess.Move.from_uci("d1d4")) == chess.ROOK
+    # Qg8+ Rxg8 Nf7#: the queen, not the knight, is what the move gives up
+    smothered = chess.Board("3r3k/6pp/7N/8/2Q5/8/6PP/6K1 w - - 0 1")
+    assert sacrificed_piece(smothered, chess.Move.from_uci("c4g8")) == chess.QUEEN
+
+
+def test_review_move_names_the_sacrificed_piece() -> None:
+    smothered = chess.Board("3r3k/6pp/7N/8/2Q5/8/6PP/6K1 w - - 0 1")
+    evals = [
+        [line({"mate": 2}, "c4g8"), line({"cp": 200}, "c4c7")],
+        [line({"mate": 1}, "d8g8")],
+    ]
+    res = build_review_result(smothered, [chess.Move.from_uci("c4g8")], evals, depth=10, engine="Stockfish 19")
+    assert res.moves[0].sacrifice == "queen"
+    # only the engine's best move is checked, as for "brilliant"
+    worse = [[line({"mate": 2}, "c4c7"), line({"cp": 200}, "c4g8")], [line({"mate": 1}, "d8g8")]]
+    res = build_review_result(smothered, [chess.Move.from_uci("c4g8")], worse, depth=10, engine="Stockfish 19")
+    assert res.moves[0].sacrifice is None
 
 
 # ----------------------------------------------------------------------------- whole game

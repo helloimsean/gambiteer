@@ -95,7 +95,7 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
         <div className="settings-row">
           <div className="settings-text">
             <span>Sounds</span>
-            <small>Move, capture and check sounds</small>
+            <small>Move, capture and check sounds. Sacrifice voice lines: Levy Rozman (GothamChess)</small>
           </div>
           <Toggle checked={settings.sound} onChange={(v) => setSettings({ sound: v })} />
         </div>
