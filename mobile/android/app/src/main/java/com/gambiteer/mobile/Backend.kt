@@ -16,7 +16,7 @@ class Backend(private val context: Context) {
         private set
 
     @Volatile
-    var status: String = "Starting Gambiteer…"
+    var status: String = context.getString(R.string.starting)
         private set
 
     /** True once the server accepts connections. Android forbids this check on the main thread. */
@@ -31,9 +31,9 @@ class Backend(private val context: Context) {
         }
         thread(name = "gambiteer-backend", isDaemon = true) {
             try {
-                status = "Unpacking the app…"
+                status = context.getString(R.string.unpacking)
                 val payload = unpackPayload()
-                status = "Starting the chess engine service…"
+                status = context.getString(R.string.starting_engine)
                 if (!Python.isStarted()) Python.start(AndroidPlatform(context))
                 Python.getInstance().getModule("mobile_boot").callAttr(
                     "run",
@@ -42,7 +42,7 @@ class Backend(private val context: Context) {
                     PORT,
                     CoachServer.PORT,
                 )
-                failure = "The chess engine service stopped unexpectedly."
+                failure = context.getString(R.string.engine_stopped)
             } catch (t: Throwable) {
                 Log.e(TAG, "backend failed", t)
                 failure = t.message ?: t.toString()

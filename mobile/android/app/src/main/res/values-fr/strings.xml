@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Démarrage de Gambiteer…</string>
+    <string name="unpacking">Décompression de l\'application…</string>
+    <string name="starting_engine">Démarrage du service du moteur d\'échecs…</string>
+    <string name="first_launch_slower">%1$s\n\nLe premier lancement prend un peu plus de temps.</string>
+    <string name="engine_stopped">Le service du moteur d\'échecs s\'est arrêté de façon inattendue.</string>
+    <string name="app_failed">Gambiteer a cessé de fonctionner. Veuillez le fermer puis le rouvrir.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Meilleures explications (recommandé)</string>
+    <string name="model_e2b_description">Plus petit et plus rapide, formulations moins rigoureuses</string>
+
+    <string name="download_paused">En pause</string>
+    <string name="download_failed">Le téléchargement a échoué.</string>
+    <string name="download_failed_reason">Le téléchargement a échoué : %1$s</string>
+    <string name="download_stopped">Le téléchargement s\'est arrêté : %1$s</string>
+    <string name="download_keeps_failing">Le téléchargement échoue sans cesse (%1$s). Veuillez réessayer.</string>
+    <string name="download_no_resume">Le serveur de téléchargement ne peut pas reprendre les téléchargements.</string>
+    <string name="download_refused">Le serveur de téléchargement a refusé (HTTP %1$d).</string>
+    <string name="download_corrupted">Le téléchargement est corrompu. Veuillez réessayer.</string>
+    <string name="download_save_failed">Impossible d\'enregistrer le modèle dans la mémoire de ce téléphone.</string>
+    <string name="waiting_connection">En attente d\'une connexion</string>
+    <string name="waiting_wifi">En attente du Wi-Fi</string>
+
+    <string name="channel_downloads">Téléchargements de l\'entraîneur</string>
+    <string name="notification_title">Téléchargement de l\'entraîneur</string>
+    <string name="notification_starting">Démarrage…</string>
+    <string name="notification_checking">Vérification de %1$s…</string>
+    <string name="notification_progress">%1$s : %2$.1f sur %3$.1f GB</string>
+</resources>

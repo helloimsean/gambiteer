@@ -92,8 +92,13 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* Settings: the label wraps before a dropdown's value is cut off (longer in some languages). */
+.settings-row > .ui-select { flex-shrink: 0; max-width: 60%; }
+
 .m-model { display: flex; flex-direction: column; gap: 8px; }
 .m-model-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.m-model-head .settings-text { display: flex; flex-direction: column; gap: 2px; }
+.m-model-head .settings-text small { color: var(--text-muted); }
 .m-error { color: #ff8a7a; }
 
 /* ---------- controls: finger-sized ---------- */

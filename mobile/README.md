@@ -35,7 +35,11 @@ Android app (Kotlin, one Activity)
 
 * **No code is copied.** `backend/`, `data/openings/` and `frontend/src/` are read from the repo at
   build time, so a desktop fix reaches the phone on the next build. Only the phone shell, its layout
-  (`web/src`) and a few user-facing strings (`web/vite.mobile.mjs`) are separate.
+  (`web/src`) and a few user-facing strings (`web/text-patches.mjs`) are separate.
+* **Languages** come from the desktop catalogs (`frontend/src/i18n`). The phone adds its own for the
+  shell and the patched strings (`web/src/i18n`), and Android's texts are in `res/values-<code>`.
+  Settings > Language sets both: the web app tells `MainActivity.Bridge.setLanguage`, which sets the
+  app locale. Check with `npm run check:i18n:mobile` in `frontend/`.
 * **The engines are executables named `lib*.so`.** Android only lets an app run files from its native
   library directory, and packaging them as libraries puts them there.
 * **The coach** is Gemma 4 from Hugging Face (Apache-2.0, no account). E4B is 3.7 GB and recommended;

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">正在启动 Gambiteer…</string>
+    <string name="unpacking">正在解压应用…</string>
+    <string name="starting_engine">正在启动国际象棋引擎服务…</string>
+    <string name="first_launch_slower">%1$s\n\n首次启动需要多一点时间。</string>
+    <string name="engine_stopped">国际象棋引擎服务意外停止。</string>
+    <string name="app_failed">Gambiteer 已停止工作。请关闭后重新打开。\n\n%1$s</string>
+
+    <string name="model_e4b_description">最佳讲解（推荐）</string>
+    <string name="model_e2b_description">更小更快，措辞更随意</string>
+
+    <string name="download_paused">已暂停</string>
+    <string name="download_failed">下载失败。</string>
+    <string name="download_failed_reason">下载失败：%1$s</string>
+    <string name="download_stopped">下载已停止：%1$s</string>
+    <string name="download_keeps_failing">下载持续失败（%1$s）。请重试。</string>
+    <string name="download_no_resume">下载服务器不支持续传。</string>
+    <string name="download_refused">下载服务器拒绝了请求（HTTP %1$d）。</string>
+    <string name="download_corrupted">下载的文件已损坏，请重试。</string>
+    <string name="download_save_failed">无法将模型保存到本机存储中。</string>
+    <string name="waiting_connection">等待连接</string>
+    <string name="waiting_wifi">等待 Wi-Fi</string>
+
+    <string name="channel_downloads">教练下载</string>
+    <string name="notification_title">正在下载教练</string>
+    <string name="notification_starting">正在启动…</string>
+    <string name="notification_checking">正在检查 %1$s…</string>
+    <string name="notification_progress">%1$s：%2$.1f / %3$.1f GB</string>
+</resources>

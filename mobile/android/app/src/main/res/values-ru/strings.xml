@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Запуск Gambiteer…</string>
+    <string name="unpacking">Распаковка приложения…</string>
+    <string name="starting_engine">Запуск службы шахматного движка…</string>
+    <string name="first_launch_slower">%1$s\n\nПервый запуск занимает немного больше времени.</string>
+    <string name="engine_stopped">Служба шахматного движка неожиданно остановилась.</string>
+    <string name="app_failed">Gambiteer перестал работать. Закройте приложение и откройте его снова.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Лучшие объяснения (рекомендуется)</string>
+    <string name="model_e2b_description">Меньше и быстрее, формулировки проще</string>
+
+    <string name="download_paused">На паузе</string>
+    <string name="download_failed">Скачивание не удалось.</string>
+    <string name="download_failed_reason">Скачивание не удалось: %1$s</string>
+    <string name="download_stopped">Скачивание остановлено: %1$s</string>
+    <string name="download_keeps_failing">Скачивание снова и снова не удаётся (%1$s). Попробуйте ещё раз.</string>
+    <string name="download_no_resume">Сервер загрузки не может возобновлять загрузки.</string>
+    <string name="download_refused">Сервер загрузки отклонил запрос (HTTP %1$d).</string>
+    <string name="download_corrupted">Загрузка повреждена. Попробуйте ещё раз.</string>
+    <string name="download_save_failed">Не удалось сохранить модель в памяти телефона.</string>
+    <string name="waiting_connection">Ожидание соединения</string>
+    <string name="waiting_wifi">Ожидание Wi-Fi</string>
+
+    <string name="channel_downloads">Загрузки тренера</string>
+    <string name="notification_title">Скачивание тренера</string>
+    <string name="notification_starting">Запуск…</string>
+    <string name="notification_checking">Проверка: %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f из %3$.1f ГБ</string>
+</resources>

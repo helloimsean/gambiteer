@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own texts. The web app picks the language (Settings > Language) and passes it to
+     MainActivity.Bridge.setLanguage, which sets the app locale; values-<code>/strings.xml translate these. -->
+<resources>
+    <string name="starting">Starting Gambiteer…</string>
+    <string name="unpacking">Unpacking the app…</string>
+    <string name="starting_engine">Starting the chess engine service…</string>
+    <string name="first_launch_slower">%1$s\n\nThe first launch takes a little longer.</string>
+    <string name="engine_stopped">The chess engine service stopped unexpectedly.</string>
+    <string name="app_failed">Gambiteer stopped working. Please close it and open it again.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Best explanations (recommended)</string>
+    <string name="model_e2b_description">Smaller and quicker, looser wording</string>
+
+    <string name="download_paused">Paused</string>
+    <string name="download_failed">The download failed.</string>
+    <string name="download_failed_reason">The download failed: %1$s</string>
+    <string name="download_stopped">The download stopped: %1$s</string>
+    <string name="download_keeps_failing">The download keeps failing (%1$s). Please try again.</string>
+    <string name="download_no_resume">The download server cannot resume downloads.</string>
+    <string name="download_refused">The download server refused (HTTP %1$d).</string>
+    <string name="download_corrupted">The download was corrupted. Please try again.</string>
+    <string name="download_save_failed">Could not save the model to this phone\'s storage.</string>
+    <string name="waiting_connection">Waiting for a connection</string>
+    <string name="waiting_wifi">Waiting for Wi-Fi</string>
+
+    <string name="channel_downloads">Coach downloads</string>
+    <string name="notification_title">Downloading the coach</string>
+    <string name="notification_starting">Starting…</string>
+    <string name="notification_checking">Checking %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f of %3$.1f GB</string>
+</resources>

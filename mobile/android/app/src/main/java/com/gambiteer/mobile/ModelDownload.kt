@@ -87,7 +87,7 @@ class ModelDownload(
             }
             if (failure.get() && !discard) {
                 val cause = error
-                throw if (cause is Failed) cause else Failed("The download stopped: ${cause?.message ?: cause}")
+                throw if (cause is Failed) cause else Failed(context.getString(R.string.download_stopped, cause?.message ?: cause.toString()))
             }
             if (stopped) return
             verify()
@@ -125,7 +125,7 @@ class ModelDownload(
             } catch (e: IOException) {
                 if (stopped) return
                 failures = if (done.get(index) > before) 1 else failures + 1
-                if (failures > MAX_FAILURES) throw Failed("The download keeps failing (${e.message}). Please try again.")
+                if (failures > MAX_FAILURES) throw Failed(context.getString(R.string.download_keeps_failing, e.message ?: e.toString()))
                 Thread.sleep(minOf(MAX_BACKOFF_MS, 1000L shl failures))
             }
         }
@@ -139,8 +139,8 @@ class ModelDownload(
             val code = connection.responseCode
             when {
                 code == HttpURLConnection.HTTP_PARTIAL -> Unit
-                code == HttpURLConnection.HTTP_OK -> throw Failed("The download server cannot resume downloads.")
-                code in 400..499 && code != 408 && code != 429 -> throw Failed("The download server refused (HTTP $code).")
+                code == HttpURLConnection.HTTP_OK -> throw Failed(context.getString(R.string.download_no_resume))
+                code in 400..499 && code != 408 && code != 429 -> throw Failed(context.getString(R.string.download_refused, code))
                 else -> throw IOException("HTTP $code")
             }
             val range = connection.getHeaderField("Content-Range").orEmpty()
@@ -213,10 +213,10 @@ class ModelDownload(
         val manager = context.getSystemService(ConnectivityManager::class.java)
         val caps = manager.getNetworkCapabilities(manager.activeNetwork)
         if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-            return "Waiting for a connection"
+            return context.getString(R.string.waiting_connection)
         }
         if (!allowMobileData && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) {
-            return "Waiting for Wi-Fi"
+            return context.getString(R.string.waiting_wifi)
         }
         return null
     }
@@ -227,9 +227,9 @@ class ModelDownload(
         if (sha256(partFile) != model.sha256) {
             partFile.delete()
             progressFile.delete()
-            throw Failed("The download was corrupted. Please try again.")
+            throw Failed(context.getString(R.string.download_corrupted))
         }
-        if (!partFile.renameTo(model.file(context))) throw Failed("Could not save the model to this phone's storage.")
+        if (!partFile.renameTo(model.file(context))) throw Failed(context.getString(R.string.download_save_failed))
         progressFile.delete()
     }
 

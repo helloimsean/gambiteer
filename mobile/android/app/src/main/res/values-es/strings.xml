@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Iniciando Gambiteer…</string>
+    <string name="unpacking">Descomprimiendo la app…</string>
+    <string name="starting_engine">Iniciando el servicio del motor de ajedrez…</string>
+    <string name="first_launch_slower">%1$s\n\nEl primer inicio tarda un poco más.</string>
+    <string name="engine_stopped">El servicio del motor de ajedrez se detuvo inesperadamente.</string>
+    <string name="app_failed">Gambiteer dejó de funcionar. Ciérrala y ábrela de nuevo.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Mejores explicaciones (recomendado)</string>
+    <string name="model_e2b_description">Más pequeño y rápido, con una redacción más libre</string>
+
+    <string name="download_paused">En pausa</string>
+    <string name="download_failed">La descarga falló.</string>
+    <string name="download_failed_reason">La descarga falló: %1$s</string>
+    <string name="download_stopped">La descarga se detuvo: %1$s</string>
+    <string name="download_keeps_failing">La descarga sigue fallando (%1$s). Vuelve a intentarlo.</string>
+    <string name="download_no_resume">El servidor de descargas no puede reanudar descargas.</string>
+    <string name="download_refused">El servidor de descargas rechazó la solicitud (HTTP %1$d).</string>
+    <string name="download_corrupted">La descarga está dañada. Vuelve a intentarlo.</string>
+    <string name="download_save_failed">No se pudo guardar el modelo en el almacenamiento de este teléfono.</string>
+    <string name="waiting_connection">Esperando una conexión</string>
+    <string name="waiting_wifi">Esperando Wi-Fi</string>
+
+    <string name="channel_downloads">Descargas del entrenador</string>
+    <string name="notification_title">Descargando el entrenador</string>
+    <string name="notification_starting">Iniciando…</string>
+    <string name="notification_checking">Comprobando %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f de %3$.1f GB</string>
+</resources>

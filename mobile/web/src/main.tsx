@@ -1,3 +1,5 @@
+// First: registers the phone's translations before any module calls t() at load time.
+import './phoneLanguage'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import 'chessground/assets/chessground.base.css'

@@ -1,4 +1,5 @@
 /** The Android side of the app (MainActivity.Bridge). Undefined in a desktop browser. */
+import { t } from '@frontend/lib/i18n'
 
 export type CoachState = 'absent' | 'waiting' | 'downloading' | 'verifying' | 'ready' | 'failed'
 
@@ -26,6 +27,8 @@ interface NativeBridge {
   deleteCoach(id: string): void
   setKeepScreenOn(on: boolean): void
   saveTextFile(name: string, text: string): boolean
+  /** The app's language code (see @frontend/lib/i18n), for Android's own texts. */
+  setLanguage(code: string): void
 }
 
 declare global {
@@ -86,7 +89,7 @@ export function installNativeHooks(): void {
     const name = this.download
     blobs.delete(this.href)
     void blob.text().then((text) => {
-      toast(bridge.saveTextFile(name, text) ? `Saved ${name} to Downloads` : 'Could not save the file')
+      toast(bridge.saveTextFile(name, text) ? t('Saved {name} to Downloads', { name }) : t('Could not save the file'))
     })
   }
 }

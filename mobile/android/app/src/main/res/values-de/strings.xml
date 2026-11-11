@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Gambiteer wird gestartet…</string>
+    <string name="unpacking">App wird entpackt…</string>
+    <string name="starting_engine">Der Dienst der Schach-Engine wird gestartet…</string>
+    <string name="first_launch_slower">%1$s\n\nDer erste Start dauert etwas länger.</string>
+    <string name="engine_stopped">Der Dienst der Schach-Engine wurde unerwartet beendet.</string>
+    <string name="app_failed">Gambiteer funktioniert nicht mehr. Bitte schließe die App und öffne sie erneut.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Beste Erklärungen (empfohlen)</string>
+    <string name="model_e2b_description">Kleiner und schneller, lockerere Formulierungen</string>
+
+    <string name="download_paused">Pausiert</string>
+    <string name="download_failed">Der Download ist fehlgeschlagen.</string>
+    <string name="download_failed_reason">Der Download ist fehlgeschlagen: %1$s</string>
+    <string name="download_stopped">Der Download wurde angehalten: %1$s</string>
+    <string name="download_keeps_failing">Der Download schlägt immer wieder fehl (%1$s). Bitte versuche es erneut.</string>
+    <string name="download_no_resume">Der Download-Server kann Downloads nicht fortsetzen.</string>
+    <string name="download_refused">Der Download-Server hat abgelehnt (HTTP %1$d).</string>
+    <string name="download_corrupted">Der Download war beschädigt. Bitte versuche es erneut.</string>
+    <string name="download_save_failed">Das Modell konnte nicht im Speicher dieses Geräts gespeichert werden.</string>
+    <string name="waiting_connection">Warte auf eine Verbindung</string>
+    <string name="waiting_wifi">Warte auf Wi-Fi</string>
+
+    <string name="channel_downloads">Trainer-Downloads</string>
+    <string name="notification_title">Trainer wird heruntergeladen</string>
+    <string name="notification_starting">Wird gestartet…</string>
+    <string name="notification_checking">Prüfe %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f von %3$.1f GB</string>
+</resources>

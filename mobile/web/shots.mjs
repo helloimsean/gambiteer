@@ -22,6 +22,8 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 })
+// SHOT_LANG=ru node web/shots.mjs ...: the app in that language (Settings > Language)
+if (process.env.SHOT_LANG) await context.addInitScript((code) => localStorage.setItem('language-v1', code), process.env.SHOT_LANG)
 const page = await context.newPage()
 const problems = []
 page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))
@@ -53,7 +55,9 @@ async function shot(name) {
   console.log(`${name}: ${overflow.length ? `OVERFLOW ${overflow.join(', ')}` : 'ok'}`)
 }
 
-const tab = (label) => page.locator('.m-tab', { hasText: label }).click()
+// By position, not by label, so the flows work in every app language.
+const TAB_ORDER = ['Learn', 'Quiz', 'Analyze', 'Play', 'Review', 'History']
+const tab = (label) => page.locator('.m-tab').nth(TAB_ORDER.indexOf(label)).click()
 
 const flows = {
   learn: async () => {
@@ -85,9 +89,9 @@ const flows = {
     await shot('history')
   },
   settings: async () => {
-    await page.locator('[aria-label="Settings"]').click()
+    await page.locator('.m-top .btn-icon').click()
     await shot('settings')
-    await page.locator('[aria-label="Close"]').click()
+    await page.keyboard.press('Escape')
   },
 }
 

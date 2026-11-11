@@ -36,7 +36,7 @@ class ModelDownloadService : Service() {
     override fun onCreate() {
         super.onCreate()
         getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL, "Coach downloads", NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(CHANNEL, getString(R.string.channel_downloads), NotificationManager.IMPORTANCE_LOW),
         )
     }
 
@@ -66,15 +66,15 @@ class ModelDownloadService : Service() {
         val done = active.sumOf { it.downloaded }
         val first = active.firstOrNull()
         val text = when {
-            first == null -> "Starting…"
-            first.verifying -> "Checking ${first.model.label}…"
+            first == null -> getString(R.string.notification_starting)
+            first.verifying -> getString(R.string.notification_checking, first.model.label)
             first.note != null -> first.note
-            else -> "${first.model.label}: %.1f of %.1f GB".format(done / 1e9, total / 1e9)
+            else -> getString(R.string.notification_progress, first.model.label, done / 1e9, total / 1e9)
         }
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Downloading the coach")
+            .setContentTitle(getString(R.string.notification_title))
             .setContentText(text)
             .setProgress(PROGRESS_MAX, if (total > 0) (done * PROGRESS_MAX / total).toInt() else 0, first == null)
             .setOngoing(true)

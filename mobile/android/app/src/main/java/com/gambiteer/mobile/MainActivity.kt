@@ -3,6 +3,7 @@ package com.gambiteer.mobile
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.LocaleManager
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Intent
@@ -11,6 +12,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.os.LocaleList
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
@@ -45,7 +47,7 @@ class MainActivity : Activity() {
             val failure = app.backend.failure
             when {
                 failure != null -> {
-                    splash.text = "Gambiteer stopped working. Please close it and open it again.\n\n$failure"
+                    splash.text = getString(R.string.app_failed, failure)
                     splash.visibility = View.VISIBLE
                     return
                 }
@@ -56,7 +58,7 @@ class MainActivity : Activity() {
                     handler.postDelayed(this, WATCH_MS)
                 }
                 else -> {
-                    splash.text = "${app.backend.status}\n\nThe first launch takes a little longer."
+                    splash.text = getString(R.string.first_launch_slower, app.backend.status)
                     handler.postDelayed(this, POLL_MS)
                 }
             }
@@ -89,7 +91,7 @@ class MainActivity : Activity() {
             textSize = 16f
             gravity = Gravity.CENTER
             setPadding(64, 0, 64, 0)
-            text = "Starting Gambiteer…"
+            text = getString(R.string.starting)
         }
 
         val root = FrameLayout(this).apply {
@@ -222,6 +224,17 @@ class MainActivity : Activity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }
             }
+        }
+
+        /**
+         * The web app's language (Settings > Language), so Android's own texts (the start screen and
+         * the download notification) match it. Android keeps it for the next launch.
+         */
+        @JavascriptInterface
+        fun setLanguage(code: String) {
+            val wanted = LocaleList.forLanguageTags(code)
+            val manager = getSystemService(LocaleManager::class.java)
+            if (manager.applicationLocales != wanted) manager.applicationLocales = wanted
         }
 
         /** Saves a text file (a PGN) to the phone's Downloads folder. */

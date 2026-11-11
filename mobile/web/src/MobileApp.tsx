@@ -12,6 +12,7 @@ import { PlayTab } from '@frontend/tabs/Play/PlayTab'
 import { ReviewTab } from '@frontend/tabs/Review/ReviewTab'
 import { HistoryTab } from '@frontend/tabs/History/HistoryTab'
 import { loadJson, saveJson } from '@frontend/lib/storage'
+import { LANGUAGES, getLanguage, setLanguage, t, tn } from '@frontend/lib/i18n'
 import '@frontend/App.css'
 import { CoachModels } from './CoachModels'
 import { native, readCoachStatus } from './native'
@@ -19,7 +20,7 @@ import { native, readCoachStatus } from './native'
 const INTRO_KEY = 'mobile-coach-intro-v1'
 
 /** Per tab, the button that steps out of an inner screen when Android's back gesture is used. */
-const INNER_BACK_LABEL: Partial<Record<TabId, string>> = { learn: 'All openings' }
+const INNER_BACK_LABEL: Partial<Record<TabId, string>> = { learn: t('All openings') }
 
 interface BoundaryState {
   error: Error | null
@@ -43,11 +44,11 @@ class TabErrorBoundary extends Component<{ tab: TabId; children: ReactNode }, Bo
       <div className="tab-placeholder">
         <EmptyState
           icon="warning"
-          title="This tab hit an error"
+          title={t('This tab hit an error')}
           description={<code className="tab-error-text">{error.message || String(error)}</code>}
           action={
             <button type="button" className="btn btn-primary" onClick={() => this.setState({ error: null })}>
-              Try again
+              {t('Try again')}
             </button>
           }
         />
@@ -77,56 +78,65 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
   const { settings, setSettings, health, refreshHealth } = useApp()
   const modelOptions = useMemo(() => {
     const names = health?.ollama?.models ?? []
-    return [{ value: '', label: 'Automatic' }, ...names.map((n) => ({ value: n, label: n }))]
+    return [{ value: '', label: t('Automatic') }, ...names.map((n) => ({ value: n, label: n }))]
   }, [health])
 
   return (
-    <Modal open={open} onClose={onClose} title="Settings">
+    <Modal open={open} onClose={onClose} title={t('Settings')}>
       <div className="settings-grid">
         <div className="settings-row">
           <div className="settings-text">
-            <span>Sounds</span>
-            <small>Move, capture and check sounds. Sacrifice voice lines: Levy Rozman (GothamChess)</small>
+            <span>{getLanguage() === 'en' ? 'Language' : `${t('Language')} · Language`}</span>
+            <small>{t("The app and the coach's explanations")}</small>
+          </div>
+          <Select value={getLanguage()} options={LANGUAGES.map((l) => ({ value: l.code, label: l.name }))} onChange={(code) => setLanguage(code)} />
+        </div>
+        <div className="settings-row">
+          <div className="settings-text">
+            <span>{t('Sounds')}</span>
+            <small>{t('Move, capture and check sounds. Sacrifice voice lines: Levy Rozman (GothamChess)')}</small>
           </div>
           <Toggle checked={settings.sound} onChange={(v) => setSettings({ sound: v })} />
         </div>
         <div className="settings-row">
           <div className="settings-text">
-            <span>Coordinates</span>
-            <small>Show file and rank labels on the board</small>
+            <span>{t('Coordinates')}</span>
+            <small>{t('Show file and rank labels on the board')}</small>
           </div>
           <Toggle checked={settings.coordinates} onChange={(v) => setSettings({ coordinates: v })} />
         </div>
         <div className="settings-row">
           <div className="settings-text">
-            <span>Review depth</span>
-            <small>Stockfish depth for Game Review</small>
+            <span>{t('Review depth')}</span>
+            <small>{t('Stockfish depth for Game Review')}</small>
           </div>
           <Select
             value={String(settings.defaultDepth)}
             options={[
-              { value: '12', label: '12 (fast)' },
-              { value: '16', label: '16 (default)' },
-              { value: '20', label: '20 (deep)' },
+              { value: '12', label: t('12 (fast)') },
+              { value: '16', label: t('16 (default)') },
+              { value: '20', label: t('20 (deep)') },
             ]}
             onChange={(v) => setSettings({ defaultDepth: Number(v) })}
           />
         </div>
         <div className="divider" />
-        <h3>AI coach</h3>
-        <small className="muted">Explanations are written by a model on this phone. Nothing leaves the device.</small>
+        <h3>{t('AI coach')}</h3>
+        <small className="muted">{t('Explanations are written by a model on this phone. Nothing leaves the device.')}</small>
         <CoachModels onChange={() => void refreshHealth()} />
         {modelOptions.length > 2 ? (
           <div className="settings-row">
             <div className="settings-text">
-              <span>Model in use</span>
+              <span>{t('Model in use')}</span>
             </div>
             <Select value={settings.ollamaModel} options={modelOptions} onChange={(v) => setSettings({ ollamaModel: v })} />
           </div>
         ) : null}
         <div className="divider" />
         <small className="muted">
-          {health ? `${health.stockfish?.name || 'Stockfish unavailable'} · ${health.openings} openings` : 'Checking the engine…'}
+          {health
+            ? `${health.stockfish?.name || t('Stockfish unavailable')} · ${tn(health.openings, '{n} opening', '{n} openings')}`
+            : t('Checking the engine…')}
         </small>
       </div>
     </Modal>
@@ -138,23 +148,25 @@ function CoachIntro({ open, onClose, onSettings }: { open: boolean; onClose: () 
     <Modal
       open={open}
       onClose={onClose}
-      title="Set up the AI coach"
+      title={t('Set up the AI coach')}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
-            Later
+            {t('Later')}
           </button>
           <button type="button" className="btn btn-primary" onClick={onSettings}>
-            Choose a model
+            {t('Choose a model')}
           </button>
         </>
       }
     >
       <p>
-        The coach explains every move in plain language. It runs entirely on this phone, so it needs a one-time download of
-        about 3.7 GB.
+        {t(
+          'The coach explains every move in plain language. It runs entirely on this phone, so it needs a one-time download of about {size}.',
+          { size: t('{gb} GB', { gb: (3.7).toLocaleString(getLanguage()) }) },
+        )}
       </p>
-      <p className="muted">Everything else, including Stockfish, already works without it.</p>
+      <p className="muted">{t('Everything else, including Stockfish, already works without it.')}</p>
     </Modal>
   )
 }
@@ -221,13 +233,13 @@ function Shell(): JSX.Element {
       <header className="m-top">
         <img src="/logo.svg" alt="" width={26} height={26} />
         <span className="m-title">{TABS.find((t) => t.id === activeTab)?.label ?? 'Gambiteer'}</span>
-        <button type="button" className="m-status" onClick={() => setSettingsOpen(true)} aria-label="Engine and coach status">
+        <button type="button" className="m-status" onClick={() => setSettingsOpen(true)} aria-label={t('Engine and coach status')}>
           <span className={dot(stockfishOk)} />
-          <small>Engine</small>
+          <small>{t('Engine')}</small>
           <span className={dot(coachOk)} />
-          <small>Coach</small>
+          <small>{t('Coach')}</small>
         </button>
-        <button type="button" className="btn btn-ghost btn-icon" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+        <button type="button" className="btn btn-ghost btn-icon" aria-label={t('Settings')} onClick={() => setSettingsOpen(true)}>
           <Icon name="settings" size={22} />
         </button>
       </header>
@@ -236,7 +248,7 @@ function Shell(): JSX.Element {
           {renderTab(activeTab)}
         </TabErrorBoundary>
       </main>
-      <nav className="m-tabs" aria-label="Main">
+      <nav className="m-tabs" aria-label={t('Main navigation')}>
         {TABS.map((t) => (
           <button
             key={t.id}

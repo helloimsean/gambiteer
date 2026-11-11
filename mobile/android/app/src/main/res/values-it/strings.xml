@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Avvio di Gambiteer…</string>
+    <string name="unpacking">Estrazione dell\'app…</string>
+    <string name="starting_engine">Avvio del servizio del motore di scacchi…</string>
+    <string name="first_launch_slower">%1$s\n\nIl primo avvio richiede un po\' più di tempo.</string>
+    <string name="engine_stopped">Il servizio del motore di scacchi si è interrotto inaspettatamente.</string>
+    <string name="app_failed">Gambiteer ha smesso di funzionare. Chiudilo e riaprilo.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Spiegazioni migliori (consigliato)</string>
+    <string name="model_e2b_description">Più piccolo e veloce, formulazioni più libere</string>
+
+    <string name="download_paused">In pausa</string>
+    <string name="download_failed">Il download non è riuscito.</string>
+    <string name="download_failed_reason">Il download non è riuscito: %1$s</string>
+    <string name="download_stopped">Il download si è interrotto: %1$s</string>
+    <string name="download_keeps_failing">Il download continua a fallire (%1$s). Riprova.</string>
+    <string name="download_no_resume">Il server di download non può riprendere i download.</string>
+    <string name="download_refused">Il server di download ha rifiutato la richiesta (HTTP %1$d).</string>
+    <string name="download_corrupted">Il download è danneggiato. Riprova.</string>
+    <string name="download_save_failed">Impossibile salvare il modello nella memoria di questo telefono.</string>
+    <string name="waiting_connection">In attesa di una connessione</string>
+    <string name="waiting_wifi">In attesa del Wi-Fi</string>
+
+    <string name="channel_downloads">Download dell\'allenatore</string>
+    <string name="notification_title">Download dell\'allenatore in corso</string>
+    <string name="notification_starting">Avvio…</string>
+    <string name="notification_checking">Verifica di %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f di %3$.1f GB</string>
+</resources>

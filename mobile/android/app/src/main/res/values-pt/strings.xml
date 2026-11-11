@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Iniciando o Gambiteer…</string>
+    <string name="unpacking">Descompactando o app…</string>
+    <string name="starting_engine">Iniciando o serviço do motor de xadrez…</string>
+    <string name="first_launch_slower">%1$s\n\nO primeiro início demora um pouco mais.</string>
+    <string name="engine_stopped">O serviço do motor de xadrez parou inesperadamente.</string>
+    <string name="app_failed">O Gambiteer parou de funcionar. Feche e abra o app novamente.\n\n%1$s</string>
+
+    <string name="model_e4b_description">Melhores explicações (recomendado)</string>
+    <string name="model_e2b_description">Menor e mais rápido, com redação mais livre</string>
+
+    <string name="download_paused">Pausado</string>
+    <string name="download_failed">O download falhou.</string>
+    <string name="download_failed_reason">O download falhou: %1$s</string>
+    <string name="download_stopped">O download parou: %1$s</string>
+    <string name="download_keeps_failing">O download continua falhando (%1$s). Tente novamente.</string>
+    <string name="download_no_resume">O servidor de download não consegue retomar downloads.</string>
+    <string name="download_refused">O servidor de download recusou a solicitação (HTTP %1$d).</string>
+    <string name="download_corrupted">O download está corrompido. Tente novamente.</string>
+    <string name="download_save_failed">Não foi possível salvar o modelo na memória deste celular.</string>
+    <string name="waiting_connection">Aguardando uma conexão</string>
+    <string name="waiting_wifi">Aguardando o Wi-Fi</string>
+
+    <string name="channel_downloads">Downloads do treinador</string>
+    <string name="notification_title">Baixando o treinador</string>
+    <string name="notification_starting">Iniciando…</string>
+    <string name="notification_checking">Verificando %1$s…</string>
+    <string name="notification_progress">%1$s: %2$.1f de %3$.1f GB</string>
+</resources>

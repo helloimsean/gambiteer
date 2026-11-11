@@ -2,14 +2,16 @@
 //
 //   node scripts/i18n.mjs                      check every catalog: missing, unused, broken placeholders
 //   node scripts/i18n.mjs --keys out.json      write every key (with plural info) for translating
-//   node scripts/i18n.mjs --src ../mobile/web/src --catalogs ../mobile/web/src/i18n
-//                                              the same for another source tree and its catalogs
+//   node scripts/i18n.mjs --src ../mobile/web/src --src src --patches ../mobile/web/text-patches.mjs //        --base src/i18n --catalogs ../mobile/web/src/i18n
+//                                              the phone app (npm run check:i18n:mobile): its own
+//                                              sources plus the shared ones as the phone build patches
+//                                              them, counting what src/i18n already translates
 //
 // Keys are the English texts. A plural (tn) is keyed by its English plural form and translated as
 // an object of CLDR plural forms ({ "one": ..., "few": ..., "many": ..., "other": ... }).
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
@@ -17,9 +19,14 @@ const option = (name, fallback) => {
   const i = args.indexOf(name)
   return i >= 0 ? args[i + 1] : fallback
 }
-const srcDir = path.resolve(here, '..', option('--src', 'src'))
-const catalogDir = path.resolve(here, '..', option('--catalogs', 'src/i18n'))
+const every = (name) => args.flatMap((a, i) => (a === name ? [args[i + 1]] : []))
+const fromFrontend = (p) => path.resolve(here, '..', p)
+const srcDirs = (every('--src').length ? every('--src') : ['src']).map(fromFrontend)
+const catalogDir = fromFrontend(option('--catalogs', 'src/i18n'))
+const baseDir = option('--base', null) && fromFrontend(option('--base'))
 const keysOut = option('--keys', null)
+// a module exporting PATCH_ROOT and applyTextPatches(relativePath, code, onMiss), as the phone build has
+const patcher = option('--patches', null) && (await import(pathToFileURL(fromFrontend(option('--patches'))).href))
 
 const LITERAL = String.raw`(['"\x60])((?:\\.|(?!\1)[^\\])*?)\1`
 const T_CALL = new RegExp(String.raw`(?<![\w.$])t\(\s*` + LITERAL, 'g')
@@ -43,9 +50,15 @@ function* sources(dir) {
 
 const keys = new Map() // key -> { plural?: one-form, files: Set }
 const problems = []
-for (const file of sources(srcDir)) {
-  const code = readFileSync(file, 'utf8')
-  const rel = path.relative(srcDir, file)
+const files = srcDirs.flatMap((dir) => [...sources(dir)].map((file) => ({ file, dir })))
+for (const { file, dir } of files) {
+  let code = readFileSync(file, 'utf8')
+  const rel = path.relative(dir, file)
+  if (patcher) {
+    const fromRoot = path.relative(patcher.PATCH_ROOT, file).split(path.sep).join('/')
+    const patched = patcher.applyTextPatches(fromRoot, code, (from) => problems.push(`${rel}: text patch no longer matches: ${from}`))
+    if (patched !== null) code = patched
+  }
   const add = (key, one) => {
     const entry = keys.get(key) ?? { files: new Set() }
     if (one !== undefined) entry.one = one
@@ -77,11 +90,12 @@ let failures = 0
 const catalogs = readdirSync(catalogDir).filter((f) => /^[a-z]{2}\.json$/.test(f))
 for (const name of catalogs) {
   const catalog = JSON.parse(readFileSync(path.join(catalogDir, name), 'utf8'))
-  const missing = [...keys.keys()].filter((k) => !(k in catalog))
+  const base = baseDir ? JSON.parse(readFileSync(path.join(baseDir, name), 'utf8')) : {}
+  const missing = [...keys.keys()].filter((k) => !(k in catalog) && !(k in base))
   const unused = Object.keys(catalog).filter((k) => !keys.has(k))
   const broken = []
   for (const [key, entry] of keys) {
-    const value = catalog[key]
+    const value = catalog[key] ?? base[key]
     if (value === undefined) continue
     const allowed = placeholders(key)
     if (entry.one !== undefined) {
@@ -112,5 +126,5 @@ for (const name of catalogs) {
   for (const m of missing.slice(0, 8)) console.log(`   missing: ${m}`)
 }
 for (const p of problems) console.log(`code: ${p}`)
-console.log(`${keys.size} keys in ${path.relative(process.cwd(), srcDir) || '.'}`)
+console.log(`${keys.size} keys in ${srcDirs.map((d) => path.relative(process.cwd(), d) || '.').join(' + ')}`)
 process.exit(failures || problems.length ? 1 : 0)

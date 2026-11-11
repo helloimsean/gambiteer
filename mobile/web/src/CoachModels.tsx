@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { Toggle } from '@frontend/components/Toggle'
+import { getLanguage, t } from '@frontend/lib/i18n'
 import { native, readCoachStatus, type CoachModelStatus, type CoachStatus } from './native'
 
 function gigabytes(bytes: number): string {
-  return `${(bytes / 1e9).toFixed(1)} GB`
+  const gb = (bytes / 1e9).toLocaleString(getLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  return t('{gb} GB', { gb })
 }
 
 /** Current coach model states, refreshed every second while mounted. */
@@ -37,19 +39,19 @@ function ModelRow({ model, mobileData }: { model: CoachModelStatus; mobileData: 
   let detail: string
   switch (model.state) {
     case 'ready':
-      detail = `Ready · ${gigabytes(model.bytes)}`
+      detail = t('Ready · {size}', { size: gigabytes(model.bytes) })
       break
     case 'downloading':
-      detail = `${gigabytes(model.downloaded)} of ${gigabytes(model.bytes)}`
+      detail = t('{done} of {total}', { done: gigabytes(model.downloaded), total: gigabytes(model.bytes) })
       break
     case 'waiting':
-      detail = model.note ?? 'Waiting to start'
+      detail = model.note ?? t('Waiting to start')
       break
     case 'verifying':
-      detail = 'Checking the download…'
+      detail = t('Checking the download…')
       break
     case 'failed':
-      detail = model.error ?? 'The download failed.'
+      detail = model.error ?? t('The download failed.')
       break
     default:
       detail = `${model.description} · ${gigabytes(model.bytes)}`
@@ -63,15 +65,15 @@ function ModelRow({ model, mobileData }: { model: CoachModelStatus; mobileData: 
         </div>
         {model.state === 'ready' ? (
           <button type="button" className="btn btn-danger btn-sm" onClick={() => native?.deleteCoach(model.id)}>
-            Delete
+            {t('Delete')}
           </button>
         ) : busy ? (
           <button type="button" className="btn btn-sm" onClick={() => native?.cancelCoach(model.id)}>
-            Cancel
+            {t('Cancel')}
           </button>
         ) : model.state === 'verifying' ? null : (
           <button type="button" className="btn btn-primary btn-sm" onClick={() => native?.downloadCoach(model.id, mobileData)}>
-            Download
+            {t('Download')}
           </button>
         )}
       </div>
@@ -90,7 +92,7 @@ export function CoachModels({ onChange }: { onChange: () => void }): JSX.Element
   const [mobileData, setMobileData] = useState(false)
 
   if (!native || !status) {
-    return <small className="muted">Coach models can only be managed in the Android app.</small>
+    return <small className="muted">{t('Coach models can only be managed in the Android app.')}</small>
   }
   return (
     <div className="col gap-12">
@@ -99,12 +101,12 @@ export function CoachModels({ onChange }: { onChange: () => void }): JSX.Element
       ))}
       <div className="settings-row">
         <div className="settings-text">
-          <span>Use mobile data</span>
-          <small>Off: downloads wait for Wi-Fi</small>
+          <span>{t('Use mobile data')}</span>
+          <small>{t('Off: downloads wait for Wi-Fi')}</small>
         </div>
         <Toggle checked={mobileData} onChange={setMobileData} />
       </div>
-      {status.backend ? <small className="muted">The coach is running on the {status.backend}.</small> : null}
+      {status.backend ? <small className="muted">{t('The coach is running on the {backend}.', { backend: status.backend })}</small> : null}
     </div>
   )
 }

@@ -14,7 +14,7 @@ data class CoachModel(
     val id: String,
     val ollamaName: String,
     val label: String,
-    val description: String,
+    val description: Int, // a string resource, so it follows the app's language
     val parameters: String,
     val fileName: String,
     val url: String,
@@ -38,7 +38,7 @@ object CoachCatalog {
             id = "e4b",
             ollamaName = "gemma4:e4b",
             label = "Gemma 4 E4B",
-            description = "Best explanations (recommended)",
+            description = R.string.model_e4b_description,
             parameters = "4B",
             fileName = "gemma-4-E4B-it.litertlm",
             url = "$BASE/gemma-4-E4B-it-litert-lm/resolve/$E4B_REVISION/gemma-4-E4B-it.litertlm",
@@ -49,7 +49,7 @@ object CoachCatalog {
             id = "e2b",
             ollamaName = "gemma4:e2b",
             label = "Gemma 4 E2B",
-            description = "Smaller and quicker, looser wording",
+            description = R.string.model_e2b_description,
             parameters = "2B",
             fileName = "gemma-4-E2B-it.litertlm",
             url = "$BASE/gemma-4-E2B-it-litert-lm/resolve/$E2B_REVISION/gemma-4-E2B-it.litertlm",
@@ -126,7 +126,7 @@ class CoachModels(private val context: Context, private val releaseCoach: () -> 
             .put("id", model.id)
             .put("name", model.ollamaName)
             .put("label", model.label)
-            .put("description", model.description)
+            .put("description", context.getString(model.description))
             .put("bytes", model.bytes)
             .put("downloaded", 0L)
         val running = downloads[model.id]
@@ -141,7 +141,7 @@ class CoachModels(private val context: Context, private val releaseCoach: () -> 
             model.file(context).isFile -> json.put("state", "ready")
             errors.containsKey(model.id) -> json.put("state", "failed").put("error", errors[model.id])
             prefs.contains(pendingKey(model.id)) -> {
-                json.put("state", "waiting").put("note", "Paused")
+                json.put("state", "waiting").put("note", context.getString(R.string.download_paused))
                 json.put("downloaded", ModelDownload.savedParts(context, model)?.sum() ?: 0L)
             }
             else -> json.put("state", "absent")
@@ -163,11 +163,11 @@ class CoachModels(private val context: Context, private val releaseCoach: () -> 
                 job.run()
                 if (!job.stopped || job.discard) prefs.edit().remove(pendingKey(model.id)).apply()
             } catch (e: ModelDownload.Failed) {
-                errors[model.id] = e.message ?: "The download failed."
+                errors[model.id] = e.message ?: context.getString(R.string.download_failed)
                 prefs.edit().remove(pendingKey(model.id)).apply()
             } catch (e: Exception) {
                 Log.e(TAG, "download failed", e)
-                errors[model.id] = "The download failed: ${e.message}"
+                errors[model.id] = context.getString(R.string.download_failed_reason, e.message ?: e.toString())
                 prefs.edit().remove(pendingKey(model.id)).apply()
             } finally {
                 downloads.remove(model.id, job)
