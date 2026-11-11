@@ -1,7 +1,8 @@
 /**
  * Play tab: a game against a bot (Stockfish 19, Maia or Panicfish; POST /api/bot/move), in standard
  * chess or one of the variants, optionally starting from one of the opening lines (pre-played, or
- * played out with book hints).
+ * played out with book hints). Or over the board: two people take turns on this device and the
+ * board turns to whoever is to move.
  *
  * State: the game itself is a SAN list (see PlayGame.ts) persisted to localStorage on every change,
  * so switching tabs or reloading resumes it; the bot reply is re-requested when the tab mounts on
@@ -42,7 +43,9 @@ import {
   BOOK_MOVE_DELAY_MS,
   HINT_DEPTH,
   HINT_DURATION_MS,
+  OTB_FLIP_DELAY_MS,
   RANDOM_LINE,
+  agreeDraw,
   alternativeBookLine,
   bookState,
   botCanPlay,
@@ -58,6 +61,7 @@ import {
   maiaRatingsOf,
   maiaStatusOf,
   moverOfPly,
+  otbName,
   outcomeFor,
   playableSetup,
   rematchSetup,
@@ -117,6 +121,7 @@ export function PlayTab(): JSX.Element {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [overOpen, setOverOpen] = useState(false)
   const [resignOpen, setResignOpen] = useState(false)
+  const [drawOpen, setDrawOpen] = useState(false)
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [botThinking, setBotThinking] = useState(false)
   const [botError, setBotError] = useState<string | null>(null)
@@ -166,11 +171,33 @@ export function PlayTab(): JSX.Element {
   const lastMove = shownMove ? `${shownMove.from}${shownMove.to}` : null
   const turn = turnFromFen(liveFen)
   const over = Boolean(game?.result)
+  const otb = game?.otb ?? null
   const studentColor: Side = game?.studentColor ?? (setup.color === 'black' ? 'black' : 'white')
-  const isStudentTurn = Boolean(game) && !over && turn === studentColor
-  const isBotTurn = Boolean(game) && !over && turn !== studentColor
+  // over the board both sides are played here, so the side to move is always "the student"
+  const isStudentTurn = Boolean(game) && !over && (otb !== null || turn === studentColor)
+  const isBotTurn = Boolean(game) && !over && otb === null && turn !== studentColor
   const canMove = isStudentTurn && isLive && !botThinking
-  const orientation: Side = flipped ? oppositeSide(studentColor) : studentColor
+  /** Who plays the next move on this device: the student, or the side to move over the board. */
+  const moverColor: Side = otb ? turn : studentColor
+  // over the board the board turns to the side to move, a moment after the move so it can be seen
+  const [facing, setFacing] = useState<Side>(turn)
+  const facingGameRef = useRef(game?.id)
+  const autoFlip = otb?.autoFlip ?? false
+  useEffect(() => {
+    if (!autoFlip) return
+    if (facingGameRef.current !== game?.id) {
+      facingGameRef.current = game?.id
+      setFacing(turn) // a new game: at once
+      return
+    }
+    const timer = setTimeout(() => setFacing(turn), OTB_FLIP_DELAY_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turn, autoFlip, game?.id])
+  // before an over-the-board game starts, the bars and board already show the players from the form
+  const previewOtb = !game && setup.mode === 'otb' ? { white: setup.whiteName, black: setup.blackName } : null
+  const bottomSide: Side = otb ? (autoFlip ? facing : 'white') : previewOtb ? 'white' : studentColor
+  const orientation: Side = flipped ? oppositeSide(bottomSide) : bottomSide
   const book = useMemo(() => bookState(game), [game])
   const bookExpected = book?.inBook ? book.expected : null
   const activeMiss = bookMiss && bookMiss.fen === liveFen ? bookMiss : null
@@ -402,7 +429,7 @@ export function PlayTab(): JSX.Element {
 
   const pickFromPocket = (role: PocketRole, event?: MouseEvent) => {
     setArmed(armedRole === role ? null : { role, fen: liveFen })
-    if (event) boardHandleRef.current?.dragNewPiece(role, studentColor, event)
+    if (event) boardHandleRef.current?.dragNewPiece(role, moverColor, event)
   }
 
   // ------------------------------------------------------------ actions
@@ -419,10 +446,16 @@ export function PlayTab(): JSX.Element {
     setBotError(null)
   }
 
-  const resign = () => {
+  const resign = (side: Side = studentColor) => {
     setResignOpen(false)
     if (!game || over) return
-    setGame(resignGame(game))
+    setGame(resignGame(game, side))
+  }
+
+  const drawGame = () => {
+    setDrawOpen(false)
+    if (!game || over) return
+    setGame(agreeDraw(game))
   }
 
   const startGame = (s: PlaySetup) => {
@@ -457,7 +490,7 @@ export function PlayTab(): JSX.Element {
   const rematch = () => {
     if (!game) return
     // Maia or this rating's net is gone: the dialog says how to install it and offers what is there
-    if (!botCanPlay(game.bot, game.elo, maiaStatus, maiaRatings) || variantBlocked(game.variant, fairyStatus)) {
+    if (!game.otb && !botCanPlay(game.bot, game.elo, maiaStatus, maiaRatings) || variantBlocked(game.variant, fairyStatus)) {
       openNewGame()
       return
     }
@@ -479,6 +512,7 @@ export function PlayTab(): JSX.Element {
     if (!playRequest) return
     const patch: Partial<PlaySetup> = {}
     if (playRequest.openingId) {
+      patch.mode = 'bot' // an opening line is played against a bot
       patch.variant = 'standard'
       patch.useOpening = true
       patch.openingId = playRequest.openingId
@@ -531,6 +565,22 @@ export function PlayTab(): JSX.Element {
   const botLabel = botName(bot, game?.variant ?? setup.variant)
 
   const renderBar = (side: Side) => {
+    const players = otb ?? previewOtb
+    if (players) {
+      const active = Boolean(game) && side === turn && canMove
+      return (
+        <PlayPlayerBar
+          name={otbName(players, side)}
+          icon="knight"
+          color={side}
+          captured={showMaterial ? material.captured[side] : []}
+          advantage={showMaterial ? (side === 'white' ? material.diff : -material.diff) : 0}
+          pocket={pockets ? <PlayPocket color={side} pocket={pockets[side]} active={active} armed={active ? armedRole : null} onPick={pickFromPocket} /> : undefined}
+          toMove={Boolean(game) && !over && isLive && turn === side}
+          testId={`play-bar-${side}`}
+        />
+      )
+    }
     const isStudent = side === studentColor
     return (
       <PlayPlayerBar
@@ -553,7 +603,8 @@ export function PlayTab(): JSX.Element {
   }
 
   const outcome = game ? outcomeFor(game) : null
-  const startDisabled = (setup.useOpening && !setupOpening) || variantBlocked(setup.variant, fairyStatus)
+  // over the board needs no engine: the moves are checked here, in every variant
+  const startDisabled = setup.mode !== 'otb' && ((setup.useOpening && !setupOpening) || variantBlocked(setup.variant, fairyStatus))
 
   // ------------------------------------------------------------ side panel pieces
 
@@ -584,6 +635,14 @@ export function PlayTab(): JSX.Element {
         <div className="play-status thinking" data-testid="play-status">
           <Spinner size={16} />
           <span className="grow">{t('{bot} is thinking...', { bot: botLabel })}</span>
+        </div>
+      )
+    }
+    if (otb) {
+      return (
+        <div className="play-status your-move" data-testid="play-status">
+          <span className={`play-status-swatch ${turn}`} />
+          <span className="grow">{t('{name} to move', { name: otbName(otb, turn) })}</span>
         </div>
       )
     }
@@ -710,7 +769,8 @@ export function PlayTab(): JSX.Element {
       className="workspace play-tab"
       data-testid="play-tab"
       data-game-id={game?.id ?? ''}
-      data-bot={bot}
+      data-bot={otb ? 'otb' : bot}
+      data-orientation={orientation}
       data-bot-elo={botElo}
       data-variant={variant}
       data-turn={turn}
@@ -726,10 +786,10 @@ export function PlayTab(): JSX.Element {
             orientation={orientation}
             lastMove={lastMove}
             interactive={canMove}
-            movableColor={game ? studentColor : 'none'}
+            movableColor={game ? (otb ? 'both' : studentColor) : 'none'}
             rules={boardRules}
             onMove={handleMove}
-            dropPiece={armedRole ? { role: armedRole, color: studentColor } : null}
+            dropPiece={armedRole ? { role: armedRole, color: moverColor } : null}
             onDrop={handleDrop}
             handleRef={boardHandleRef}
             shapes={shapes}
@@ -745,11 +805,12 @@ export function PlayTab(): JSX.Element {
               <ToolbarButton
                 icon="undo"
                 label={t('Takeback')}
-                title={t("Take back your last move (and the bot's reply)")}
+                title={otb ? t('Take back the last move') : t("Take back your last move (and the bot's reply)")}
                 onClick={takeback}
                 disabled={takebackPly === null}
               />
-              {variant === 'standard' ? (
+              {otb ? <ToolbarButton icon="swords" label={t('Draw')} title={t('Agree to a draw')} onClick={() => setDrawOpen(true)} /> : null}
+              {variant === 'standard' && !otb ? (
                 <ToolbarButton
                   icon="hint"
                   label={hintLoading ? t('Thinking...') : t('Hint')}
@@ -775,25 +836,31 @@ export function PlayTab(): JSX.Element {
         {game ? (
           <div className="panel grow play-panel">
             <div className="panel-header">
-              <Icon name="robot" size={18} />
-              <span className="panel-title">{t('vs {bot}', { bot: botLabel })}</span>
+              <Icon name={otb ? 'people' : 'robot'} size={18} />
+              <span className="panel-title">{otb ? t('Over the board') : t('vs {bot}', { bot: botLabel })}</span>
               {variant !== 'standard' ? (
                 <span className="badge badge-blue" title={variantInfo(variant).rule} data-testid="play-variant-badge">
                   {variantInfo(variant).name}
                 </span>
               ) : null}
-              <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
-                {botElo}
-              </span>
-              <span className="badge" title={t('Bot move time')}>
-                {formatMovetime(game.movetimeMs)}
-              </span>
+              {otb ? null : (
+                <>
+                  <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
+                    {botElo}
+                  </span>
+                  <span className="badge" title={t('Bot move time')}>
+                    {formatMovetime(game.movetimeMs)}
+                  </span>
+                </>
+              )}
             </div>
             <div className="play-panel-top">
               {renderStatus()}
-              <div className="play-strength muted small" title={t('Strength mode reported by the backend')} data-testid="play-strength">
-                {strengthDetail(game.bot, strength, botElo)}
-              </div>
+              {otb ? null : (
+                <div className="play-strength muted small" title={t('Strength mode reported by the backend')} data-testid="play-strength">
+                  {strengthDetail(game.bot, strength, botElo)}
+                </div>
+              )}
               {threeCheck ? (
                 <div className="play-strength small" data-testid="play-checks">
                   {t('Checks given: White {white} of 3, Black {black} of 3', { white: threeCheck.white, black: threeCheck.black })}
@@ -850,8 +917,8 @@ export function PlayTab(): JSX.Element {
         ) : (
           <div className="panel grow play-panel">
             <div className="panel-header">
-              <Icon name="robot" size={18} />
-              <span className="panel-title">{t('Play vs {bot}', { bot: botLabel })}</span>
+              <Icon name={setup.mode === 'otb' ? 'people' : 'robot'} size={18} />
+              <span className="panel-title">{setup.mode === 'otb' ? t('Over the board') : t('Play vs {bot}', { bot: botLabel })}</span>
             </div>
             <div className="panel-body scroll grow">
               <PlaySetupForm
@@ -926,17 +993,50 @@ export function PlayTab(): JSX.Element {
         title={t('Resign?')}
         width={380}
         footer={
+          otb ? (
+            <>
+              <button type="button" className="btn btn-ghost" onClick={() => setResignOpen(false)}>
+                {t('Cancel')}
+              </button>
+              {/* the side to move first: it is usually the one holding the device */}
+              {[turn, oppositeSide(turn)].map((side) => (
+                <button key={side} type="button" className="btn btn-danger" onClick={() => resign(side)} data-testid={`play-resign-${side}`}>
+                  <Icon name="flag" size={16} /> {t('{name} resigns', { name: otbName(otb, side) })}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn btn-ghost" onClick={() => setResignOpen(false)}>
+                {t('Cancel')}
+              </button>
+              <button type="button" className="btn btn-danger" onClick={() => resign()} data-testid="play-resign-confirm">
+                <Icon name="flag" size={16} /> {t('Resign')}
+              </button>
+            </>
+          )
+        }
+      >
+        <p>{otb ? t('Who resigns?') : t('Resign this game against {bot}?', { bot: botTitle(bot, botElo, variant) })}</p>
+      </Modal>
+
+      <Modal
+        open={drawOpen}
+        onClose={() => setDrawOpen(false)}
+        title={t('Agree to a draw?')}
+        width={380}
+        footer={
           <>
-            <button type="button" className="btn btn-ghost" onClick={() => setResignOpen(false)}>
+            <button type="button" className="btn btn-ghost" onClick={() => setDrawOpen(false)}>
               {t('Cancel')}
             </button>
-            <button type="button" className="btn btn-danger" onClick={resign} data-testid="play-resign-confirm">
-              <Icon name="flag" size={16} /> {t('Resign')}
+            <button type="button" className="btn btn-primary" onClick={drawGame} data-testid="play-draw-confirm">
+              <Icon name="swords" size={16} /> {t('Draw')}
             </button>
           </>
         }
       >
-        <p>{t('Resign this game against {bot}?', { bot: botTitle(bot, botElo, variant) })}</p>
+        <p>{t('Both players agree to end the game as a draw.')}</p>
       </Modal>
 
       <PlayGameOverModal

@@ -51,14 +51,21 @@ export const HINT_DURATION_MS = 3000
 export const HINT_DEPTH = 12
 /** Value of the line select meaning "pick a random line when the game starts". */
 export const RANDOM_LINE = '__random__'
+/** Over the board: the longest player name. */
+export const NAME_MAX = 24
+/** Over the board: the pause after a move before the board turns to the other player. */
+export const OTB_FLIP_DELAY_MS = 450
 
 // ---------------------------------------------------------------- types
 
 export type ColorChoice = Side | 'random'
+/** "bot": against Stockfish, Maia or Panicfish. "otb": over the board, two people on one device. */
+export type PlayMode = 'bot' | 'otb'
 /** "end": the game starts after the whole line. "hints": the line is played out with book feedback. */
 export type OpeningMode = 'end' | 'hints'
 
 export interface PlaySetup {
+  mode: PlayMode
   variant: VariantId
   color: ColorChoice
   bot: BotKind
@@ -72,9 +79,14 @@ export interface PlaySetup {
   /** A line id or {@link RANDOM_LINE}. */
   lineId: string
   openingMode: OpeningMode
+  /** Over the board: the players' names ("" = White / Black) and whether the board turns each move. */
+  whiteName: string
+  blackName: string
+  autoFlip: boolean
 }
 
 export const DEFAULT_SETUP: PlaySetup = {
+  mode: 'bot',
   variant: 'standard',
   color: 'white',
   bot: 'stockfish',
@@ -85,6 +97,18 @@ export const DEFAULT_SETUP: PlaySetup = {
   openingId: '',
   lineId: RANDOM_LINE,
   openingMode: 'hints',
+  whiteName: '',
+  blackName: '',
+  autoFlip: true,
+}
+
+/** An over-the-board game: two people take turns on this device. */
+export interface OtbPlayers {
+  /** As typed; "" shows as White / Black. */
+  white: string
+  black: string
+  /** The board turns to the side to move after every move. */
+  autoFlip: boolean
 }
 
 /** "check" = the student found the book move; "book" = a move from the line (bot or pre-played). */
@@ -112,6 +136,7 @@ export type GameReason =
   | 'fifty-move'
   | 'draw'
   | 'resignation'
+  | 'agreement'
   | VariantWinReason
 
 export interface GameResult {
@@ -137,6 +162,8 @@ export interface PlayGame {
   /** Per-move marks for the move list, keyed by ply (1-based, relative to startFen). */
   marks: Record<number, MoveMark>
   opening?: PlayOpening
+  /** Set for an over-the-board game: no bot moves, either side is played here. */
+  otb?: OtbPlayers
   bookStats: { correct: number; missed: number }
   result?: GameResult
   startedAt: number
@@ -208,6 +235,7 @@ export function withMove(game: PlayGame, san: string, mark?: MoveMark, patch?: P
  * taken back.
  */
 export function takebackTarget(game: PlayGame): number | null {
+  if (game.otb) return game.sans.length > game.basePly ? game.sans.length - 1 : null // one move at a time
   for (let ply = game.sans.length; ply > game.basePly; ply--) {
     if (moverOfPly(game.startFen, ply) === game.studentColor) return ply - 1
   }
@@ -223,12 +251,29 @@ export function truncateGame(game: PlayGame, plies: number): PlayGame {
   return { ...game, sans: game.sans.slice(0, plies), marks, result: undefined, endedAt: undefined }
 }
 
-export function resignGame(game: PlayGame): PlayGame {
+/** `side` resigns: the student against a bot, either player over the board. */
+export function resignGame(game: PlayGame, side: Side = game.studentColor): PlayGame {
   return {
     ...game,
-    result: { result: game.studentColor === 'white' ? '0-1' : '1-0', reason: 'resignation' },
+    result: { result: side === 'white' ? '0-1' : '1-0', reason: 'resignation' },
     endedAt: Date.now(),
   }
+}
+
+/** Over the board: both players agree to a draw. */
+export function agreeDraw(game: PlayGame): PlayGame {
+  return { ...game, result: { result: '1/2-1/2', reason: 'agreement' }, endedAt: Date.now() }
+}
+
+/** Over the board: the name shown for a side ("White" / "Black" when none was typed). */
+export function otbName(otb: Pick<OtbPlayers, 'white' | 'black'>, side: Side): string {
+  return otb[side].trim() || (side === 'white' ? t('White') : t('Black'))
+}
+
+/** The winner's side, or null for a draw or a game still going. */
+export function winnerOf(game: PlayGame): Side | null {
+  if (game.result?.result === '1-0') return 'white'
+  return game.result?.result === '0-1' ? 'black' : null
 }
 
 // ---------------------------------------------------------------- book (hints mode)
@@ -348,9 +393,11 @@ export function formatMovetime(ms: number): string {
 
 export type Outcome = 'win' | 'loss' | 'draw'
 
+/** From the student's side. Over the board nobody is "you", so a decisive game counts as a win. */
 export function outcomeFor(game: PlayGame): Outcome | null {
   if (!game.result) return null
   if (game.result.result === '1/2-1/2') return 'draw'
+  if (game.otb) return 'win'
   const whiteWon = game.result.result === '1-0'
   return whiteWon === (game.studentColor === 'white') ? 'win' : 'loss'
 }
@@ -371,6 +418,8 @@ export function reasonText(reason: GameReason): string {
       return t('by the rules')
     case 'resignation':
       return t('by resignation')
+    case 'agreement':
+      return t('by agreement')
     case 'hill':
       return t('by reaching the center')
     case 'three-check':
@@ -394,10 +443,13 @@ export function resultHeadline(game: PlayGame): string {
   if (!o || !game.result) return ''
   const how = reasonText(game.result.reason)
   if (o === 'draw') return t('Draw {how}', { how })
+  const winner = winnerOf(game)
+  if (game.otb && winner) return t('{name} won {how}', { name: otbName(game.otb, winner), how })
   return o === 'win' ? t('You won {how}', { how }) : t('{bot} won {how}', { bot: botName(game.bot, game.variant), how })
 }
 
 export function gamePlayers(game: PlayGame): Players {
+  if (game.otb) return { white: otbName(game.otb, 'white'), black: otbName(game.otb, 'black') }
   const bot = botTitle(game.bot, currentElo(game), game.variant)
   return game.studentColor === 'white' ? { white: 'You', black: bot } : { white: bot, black: 'You' }
 }
@@ -423,6 +475,7 @@ export function toHistoryGame(game: PlayGame): HistoryGame {
     players: gamePlayers(game),
     result: game.result?.result ?? '*',
     ...(game.variant !== 'standard' ? { variant: game.variant } : {}),
+    ...(game.otb ? { otb: true } : {}),
   }
 }
 
@@ -442,6 +495,7 @@ export function resolveColor(choice: ColorChoice): Side {
  * `setup.useOpening` is on. Throws a readable Error when the setup cannot be used.
  */
 export function createGame(chosen: PlaySetup, full: OpeningFull | null): PlayGame {
+  if (chosen.mode === 'otb') return createOtbGame(chosen)
   const setup = fitToVariant(chosen)
   const studentColor = resolveColor(setup.color)
   let opening: PlayOpening | undefined
@@ -498,10 +552,35 @@ export function createGame(chosen: PlaySetup, full: OpeningFull | null): PlayGam
   return game
 }
 
+/** Over the board: White at the bottom when the board does not turn. No bot, no opening line. */
+function createOtbGame(setup: PlaySetup): PlayGame {
+  return {
+    version: 1,
+    id: newGameId(),
+    variant: setup.variant,
+    studentColor: 'white',
+    bot: 'stockfish',
+    elo: 0,
+    movetimeMs: setup.movetimeMs,
+    startFen: variantStartFen(setup.variant),
+    sans: [],
+    basePly: 0,
+    marks: {},
+    otb: { white: setup.whiteName.trim().slice(0, NAME_MAX), black: setup.blackName.trim().slice(0, NAME_MAX), autoFlip: setup.autoFlip },
+    bookStats: { correct: 0, missed: 0 },
+    startedAt: Date.now(),
+  }
+}
+
 /** Dialog values for a rematch: same settings; colours swapped unless the game used an opening line. */
 export function rematchSetup(game: PlayGame, current: PlaySetup): PlaySetup {
+  if (game.otb) {
+    // the players swap colours
+    return { ...current, mode: 'otb', variant: game.variant, whiteName: game.otb.black, blackName: game.otb.white, autoFlip: game.otb.autoFlip }
+  }
   return {
     ...current,
+    mode: 'bot',
     variant: game.variant,
     color: game.opening ? game.studentColor : oppositeSide(game.studentColor),
     bot: game.bot,
@@ -595,7 +674,7 @@ function nearestRating(elo: number, ratings: readonly number[]): number {
  */
 export function playableSetup(chosen: PlaySetup, status: MaiaStatus, ratings: readonly number[] | null): PlaySetup {
   const setup = fitToVariant(chosen)
-  if (setup.bot !== 'maia') return setup
+  if (setup.mode === 'otb' || setup.bot !== 'maia') return setup
   if (status === 'missing') return { ...setup, bot: 'stockfish' }
   const rating = clampMaiaElo(setup.maiaElo)
   if (!ratings || ratings.length === 0 || ratings.includes(rating)) return setup
@@ -608,6 +687,10 @@ export function loadSetup(): PlaySetup {
   const s = loadJson<Record<string, unknown> | null>(PLAY_SETUP_KEY, null)
   const out: PlaySetup = { ...DEFAULT_SETUP }
   if (!s || typeof s !== 'object') return out
+  if (s.mode === 'bot' || s.mode === 'otb') out.mode = s.mode
+  if (typeof s.whiteName === 'string') out.whiteName = s.whiteName.slice(0, NAME_MAX)
+  if (typeof s.blackName === 'string') out.blackName = s.blackName.slice(0, NAME_MAX)
+  if (typeof s.autoFlip === 'boolean') out.autoFlip = s.autoFlip
   if (isVariantId(s.variant)) out.variant = s.variant
   if (s.color === 'white' || s.color === 'black' || s.color === 'random') out.color = s.color
   if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish') out.bot = s.bot
@@ -669,6 +752,15 @@ export function loadSavedGame(): PlayGame | null {
     }
   }
   const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
+  const savedOtb = g.otb
+  const otb: OtbPlayers | undefined =
+    savedOtb && typeof savedOtb === 'object'
+      ? {
+          white: typeof savedOtb.white === 'string' ? savedOtb.white.slice(0, NAME_MAX) : '',
+          black: typeof savedOtb.black === 'string' ? savedOtb.black.slice(0, NAME_MAX) : '',
+          autoFlip: savedOtb.autoFlip !== false,
+        }
+      : undefined
   const savedElo = typeof g.elo === 'number' ? g.elo : NaN
   const game: PlayGame = {
     version: 1,
@@ -683,15 +775,16 @@ export function loadSavedGame(): PlayGame | null {
     basePly: typeof g.basePly === 'number' ? Math.min(Math.max(0, g.basePly), sans.length) : 0,
     marks,
     opening,
+    ...(otb ? { otb } : {}),
     bookStats: {
       correct: typeof g.bookStats?.correct === 'number' ? g.bookStats.correct : 0,
       missed: typeof g.bookStats?.missed === 'number' ? g.bookStats.missed : 0,
     },
     startedAt: typeof g.startedAt === 'number' ? g.startedAt : Date.now(),
   }
-  // the result is re-derived from the rules; a resignation is kept as stored
+  // the result is re-derived from the rules; a resignation or an agreed draw is kept as stored
   if (replay.result) game.result = replay.result
-  else if (g.result && g.result.reason === 'resignation') game.result = g.result
+  else if (g.result && (g.result.reason === 'resignation' || g.result.reason === 'agreement')) game.result = g.result
   if (game.result) game.endedAt = typeof g.endedAt === 'number' ? g.endedAt : Date.now()
   return game
 }

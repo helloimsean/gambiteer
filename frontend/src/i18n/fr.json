@@ -716,5 +716,22 @@
   "{seconds} s": "{seconds} s",
   "{speed} n/s": "{speed} n/s",
   "{variant} has no checks, so it would never lose any Elo.": "{variant} n'a pas de compteur d'échecs, donc il ne perdrait jamais d'Elo.",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} nécessite le moteur Fairy-Stockfish. Pour l'ajouter, lancez"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "{variant} nécessite le moteur Fairy-Stockfish. Pour l'ajouter, lancez",
+  "{name} resigns": "{name} abandonne",
+  "{name} to move": "Trait à {name}",
+  "{name} wins!": "{name} gagne !",
+  "{name} won {how}": "{name} a gagné {how}",
+  "{white} vs {black}": "{white} contre {black}",
+  "Agree to a draw": "Accepter la nulle",
+  "Agree to a draw?": "Accepter la nulle ?",
+  "Black player name": "Nom des Noirs",
+  "Both players agree to end the game as a draw.": "Les deux joueurs acceptent de terminer la partie par une nulle.",
+  "by agreement": "par accord",
+  "Over the board": "En présentiel",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "Passez l'appareil après chaque coup. Les indications du moteur sont désactivées ; vous pouvez reprendre des coups et accepter la nulle.",
+  "Play a friend on this device. The board turns to face whoever is to move.": "Jouez contre un ami sur cet appareil. L'échiquier se tourne vers celui qui doit jouer.",
+  "Take back the last move": "Reprendre le dernier coup",
+  "Turn the board after every move": "Retourner l'échiquier après chaque coup",
+  "White player name": "Nom des Blancs",
+  "Who resigns?": "Qui abandonne ?"
 }

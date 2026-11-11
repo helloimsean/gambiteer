@@ -750,5 +750,22 @@
   "{seconds} s": "{seconds} с",
   "{speed} n/s": "{speed} узл/с",
   "{variant} has no checks, so it would never lose any Elo.": "В варианте {variant} нет шахов, поэтому бот никогда не теряет Эло.",
-  "{variant} needs the Fairy-Stockfish engine. To add it, run": "Для варианта {variant} нужен движок Fairy-Stockfish. Чтобы установить его, выполните"
+  "{variant} needs the Fairy-Stockfish engine. To add it, run": "Для варианта {variant} нужен движок Fairy-Stockfish. Чтобы установить его, выполните",
+  "{name} resigns": "{name} сдаётся",
+  "{name} to move": "Ход: {name}",
+  "{name} wins!": "Победа: {name}!",
+  "{name} won {how}": "Победа: {name}, {how}",
+  "{white} vs {black}": "{white} против {black}",
+  "Agree to a draw": "Согласиться на ничью",
+  "Agree to a draw?": "Согласиться на ничью?",
+  "Black player name": "Имя игрока за чёрных",
+  "Both players agree to end the game as a draw.": "Оба игрока соглашаются завершить партию вничью.",
+  "by agreement": "по соглашению",
+  "Over the board": "Вживую",
+  "Pass the device after each move. Engine hints are off; you can take back moves and agree to a draw.": "Передавайте устройство после каждого хода. Подсказки движка выключены; можно отменять ходы и соглашаться на ничью.",
+  "Play a friend on this device. The board turns to face whoever is to move.": "Играйте с другом на одном устройстве. Доска поворачивается к тому, кто ходит.",
+  "Take back the last move": "Отменить последний ход",
+  "Turn the board after every move": "Поворачивать доску после каждого хода",
+  "White player name": "Имя игрока за белых",
+  "Who resigns?": "Кто сдаётся?"
 }
