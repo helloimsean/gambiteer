@@ -112,7 +112,8 @@
   width: min(100%, calc(100dvh - 360px));
 }
 
-/* One row of controls: the flip button stays a fixed square and the labelled ones share what is left. */
+/* One row of controls: the flip button stays a fixed square and the labelled ones share what is left.
+   Icon above label, so five buttons fit even with longer labels (Russian, German). */
 .play-tab .play-toolbar {
   flex-wrap: nowrap;
   gap: 6px;
@@ -120,13 +121,25 @@
 .play-tab .play-toolbar .btn {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0 6px;
-  gap: 4px;
-  font-size: 12.5px;
+  height: 52px;
+  padding: 0 3px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.2;
   white-space: nowrap;
 }
+.play-tab .play-toolbar .btn svg {
+  flex-shrink: 0;
+}
+.play-tab .play-toolbar .btn > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .play-tab .play-toolbar .btn.btn-icon {
-  flex: 0 0 42px;
+  flex: 0 0 46px;
   padding: 0;
 }
 
