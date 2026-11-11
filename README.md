@@ -53,6 +53,9 @@ model turns the engine's facts into plain-language explanations.
     mistakes. See [How bot strength works](#how-bot-strength-works).
   * **Panicfish** is Stockfish 19 at full strength that loses 300 Elo every time you check it. After
     12 checks it has nothing left and plays random moves.
+  * **Over the board**: play a friend on the same computer or phone. The board turns to whoever is to
+    move, and the game goes to History and Review like any other. Works in every variant, with no
+    engine needed.
   * **Variants**: pick Crazyhouse, Chess960, King of the Hill, Three-Check, Antichess, Atomic, Horde
     or Racing Kings from the dropdown. Chess960 runs on Stockfish 19; the others need Fairy-Stockfish
     (optional, step 6 of the install). Hint, Review and Analyze are for standard chess only, and
