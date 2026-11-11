@@ -55,6 +55,16 @@ def test_build_explain_messages_facts() -> None:
     assert "previous move was a mistake" in text
 
 
+def test_explanation_language() -> None:
+    english_system, english_user = (m["content"] for m in build_explain_messages(_move()))
+    system, user = (m["content"] for m in build_explain_messages(_move(), language="ru"))
+    assert "Write your whole answer in Russian" in system and user.endswith("Answer in Russian.")
+    assert system.startswith(english_system) and user.startswith(english_user)
+    # English, and codes the coach does not know, leave the prompt alone
+    for code in ("en", "xx", None):
+        assert [m["content"] for m in build_explain_messages(_move(), language=code)] == [english_system, english_user]
+
+
 def test_capture_notes() -> None:
     # 7...Nf6 instead of 7...Nxe5, which would have taken the queen
     mv = _move(

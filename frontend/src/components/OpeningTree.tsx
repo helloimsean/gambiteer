@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState, type JSX, type ReactNode, type RefObject } from 'react'
 import type { LineMeta, OpeningNode } from '../api/types'
 import { scrollIntoViewWithin } from '../lib/dom'
+import { t, tn } from '../lib/i18n'
 import { linesEndingAt } from '../lib/tree'
 import { Icon } from './Icon'
 import './OpeningTree.css'
@@ -153,7 +154,7 @@ function Variation({ node, depth, ctx }: { node: OpeningNode; depth: number; ctx
         type="button"
         className={`tree-toggle${collapsed ? ' collapsed' : ''}`}
         onClick={() => setCollapsed((c) => !c)}
-        aria-label={collapsed ? 'Expand variation' : 'Collapse variation'}
+        aria-label={collapsed ? t('Expand variation') : t('Collapse variation')}
         aria-expanded={!collapsed}
       >
         <Icon name="chevronDown" size={12} />
@@ -163,7 +164,7 @@ function Variation({ node, depth, ctx }: { node: OpeningNode; depth: number; ctx
           <MoveToken node={node} ctx={{ ...ctx, showLineNames: false }} forceNumber />
           {plies > 0 ? (
             <span className="tree-collapsed-hint">
-              +{plies} {plies === 1 ? 'ply' : 'plies'}
+              {tn(plies, '+{n} ply', '+{n} plies')}
             </span>
           ) : null}
           {label ? <span className={`tree-line-name cat-${label.category}`}>{label.name}</span> : null}
@@ -199,7 +200,7 @@ export function OpeningTree({
   if (root.children.length === 0) {
     return (
       <div className={cls}>
-        <div className="tree-empty">This opening has no moves.</div>
+        <div className="tree-empty">{t('This opening has no moves.')}</div>
       </div>
     )
   }

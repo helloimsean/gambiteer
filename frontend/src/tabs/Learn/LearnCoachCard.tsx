@@ -15,6 +15,7 @@ import { CLASSIFICATION_COLORS, CLASSIFICATION_LABELS, ClassificationBadge } fro
 import { Icon } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
 import { formatScore } from '../../lib/eval'
+import { t, tn } from '../../lib/i18n'
 import {
   learnCleanCoachText,
   learnEngineTag,
@@ -109,9 +110,9 @@ function CoachCardBody(props: LearnCoachCardProps): JSX.Element {
       {canPlayOpponent ? (
         <div className="learn-coach-turn">
           <Icon name="robot" size={15} />
-          <span className="muted">Opponent to move.</span>
+          <span className="muted">{t('Opponent to move.')}</span>
           <button type="button" className="btn btn-sm btn-primary" onClick={onPlayOpponent} data-testid="learn-play-opponent">
-            <Icon name="autoplay" size={14} /> Play opponent's move <span className="kbd learn-kbd">Space</span>
+            <Icon name="autoplay" size={14} /> {t("Play opponent's move")} <span className="kbd learn-kbd">Space</span>
           </button>
         </div>
       ) : null}
@@ -147,16 +148,16 @@ function ReplyBar({ row, entry, onClick }: { row: LearnCoachRow; entry: LearnCoa
   const textState = entry?.textState ?? 'idle'
   const note =
     textState === 'streaming' || textState === 'queued'
-      ? 'coach is explaining…'
+      ? t('coach is explaining…')
       : textState === 'done'
-        ? "read the coach's explanation"
+        ? t("read the coach's explanation")
         : row.why
-          ? 'see the repertoire note'
-          : 'see below'
+          ? t('see the repertoire note')
+          : t('see below')
   return (
-    <button type="button" className="learn-coach-more" onClick={onClick} data-testid="learn-coach-more" title="Scroll to the opponent's reply">
+    <button type="button" className="learn-coach-more" onClick={onClick} data-testid="learn-coach-more" title={t("Scroll to the opponent's reply")}>
       <Icon name="next" size={13} className="learn-coach-more-icon" />
-      <span className="learn-coach-who opp">{row.isStudent ? 'You' : 'Opponent'}</span>
+      <span className="learn-coach-who opp">{row.isStudent ? t('You') : t('Opponent')}</span>
       <span className="learn-coach-move">{row.label}</span>
       {cls ? <ClassificationBadge classification={cls} size={15} withLabel className="learn-coach-badge" /> : null}
       {v ? <span className={`learn-coach-eval ${evalSide(v.evalAfter, v.fenAfter)}`}>{formatScore(v.evalAfter)}</span> : null}
@@ -171,25 +172,25 @@ function CompleteBanner({ complete, onAgain, onNext }: { complete: LearnLineComp
     <div className="learn-complete" data-testid="learn-complete">
       <div className="learn-complete-head">
         <Icon name="check" size={16} />
-        <b>Line complete</b>
+        <b>{t('Line complete')}</b>
         <span className="truncate learn-complete-name" title={complete.lineName}>
           {complete.lineName}
         </span>
       </div>
       <div className="learn-complete-stats">
         <span data-testid="learn-complete-moves">
-          <b>{moves}</b> move{moves === 1 ? '' : 's'} played
+          <b>{moves}</b> {tn(moves, 'move played', 'moves played')}
         </span>
         <span className="dim">·</span>
         <span data-testid="learn-complete-offbook" className={offBook > 0 ? 'learn-complete-warn' : ''}>
-          <b>{offBook}</b> off-book attempt{offBook === 1 ? '' : 's'}
+          <b>{offBook}</b> {tn(offBook, 'off-book attempt', 'off-book attempts')}
         </span>
         <span className="learn-complete-actions">
           <button type="button" className="btn btn-sm" onClick={onAgain} data-testid="learn-practice-again">
-            <Icon name="refresh" size={14} /> Practice again
+            <Icon name="refresh" size={14} /> {t('Practice again')}
           </button>
           <button type="button" className="btn btn-sm btn-primary" onClick={onNext} data-testid="learn-next-line">
-            <Icon name="next" size={14} /> Next line
+            <Icon name="next" size={14} /> {t('Next line')}
           </button>
         </span>
       </div>
@@ -233,7 +234,7 @@ function CoachRow({ row, entry, onAsk, offBook, rowRef }: CoachRowProps): JSX.El
       data-text={entry?.textState ?? 'idle'}
     >
       <div className="learn-coach-head">
-        <span className={`learn-coach-who ${row.isStudent ? 'you' : 'opp'}`}>{row.isStudent ? 'You' : 'Opponent'}</span>
+        <span className={`learn-coach-who ${row.isStudent ? 'you' : 'opp'}`}>{row.isStudent ? t('You') : t('Opponent')}</span>
         <span className="learn-coach-move">
           {row.label}
           {row.nag ? <span className={`nag ${learnNagClass(row.nag)}`}>{row.nag}</span> : null}
@@ -244,15 +245,15 @@ function CoachRow({ row, entry, onAsk, offBook, rowRef }: CoachRowProps): JSX.El
           <Spinner size={12} />
         ) : null}
         {tag ? (
-          <span className="learn-coach-tag" style={{ color: CLASSIFICATION_COLORS[tag] }} title="The engine's verdict, ignoring opening theory">
-            engine: {CLASSIFICATION_LABELS[tag].toLowerCase()}
+          <span className="learn-coach-tag" style={{ color: CLASSIFICATION_COLORS[tag] }} title={t("The engine's verdict, ignoring opening theory")}>
+            {t('engine: {verdict}', { verdict: CLASSIFICATION_LABELS[tag].toLowerCase() })}
           </span>
         ) : null}
         <span className="spacer" />
         {v ? (
           <span
             className={`learn-coach-eval ${evalSide(v.evalAfter, v.fenAfter)}`}
-            title="Engine evaluation after the move (White's view)"
+            title={t("Engine evaluation after the move (White's view)")}
             data-testid="learn-coach-eval"
           >
             {formatScore(v.evalAfter)}
@@ -275,18 +276,18 @@ function OffBookVerdict({ row, entry, offBook }: { row: LearnCoachRow; entry: Le
   let verdict: ReactNode
   if (v) {
     verdict = learnIsSoundMove(v.classification) ? (
-      <b className="learn-offbook-ok">Good move, but not in this repertoire.</b>
+      <b className="learn-offbook-ok">{t('Good move, but not in this repertoire.')}</b>
     ) : (
       <b style={{ color: CLASSIFICATION_COLORS[v.classification] }}>{learnVerdictSentence(row.label, v.classification)}.</b>
     )
   } else if (entry?.verdictState === 'pending') {
     verdict = (
       <span className="muted">
-        {row.label} is not in this repertoire. Checking it with the engine… <Spinner size={11} />
+        {t('{label} is not in this repertoire. Checking it with the engine…', { label: row.label })} <Spinner size={11} />
       </span>
     )
   } else {
-    verdict = <b className="learn-offbook-warn">{row.label} is not in this repertoire.</b>
+    verdict = <b className="learn-offbook-warn">{t('{label} is not in this repertoire.', { label: row.label })}</b>
   }
   return (
     <div className="learn-offbook" data-testid="learn-offbook">
@@ -295,26 +296,27 @@ function OffBookVerdict({ row, entry, offBook }: { row: LearnCoachRow; entry: Le
       </div>
       {rep ? (
         <div className="learn-offbook-rep">
-          <span className="learn-offbook-rep-label">Repertoire:</span> <b>{learnMoveLabel(rep)}</b>
+          <span className="learn-offbook-rep-label">{t('Repertoire:')}</span> <b>{learnMoveLabel(rep)}</b>
           {rep.why ? <span className="muted"> {rep.why}</span> : null}
         </div>
       ) : (
-        <div className="learn-offbook-rep muted">The repertoire has no move here.</div>
+        <div className="learn-offbook-rep muted">{t('The repertoire has no move here.')}</div>
       )}
       <div className="learn-offbook-actions">
-        <button type="button" className="btn btn-sm btn-primary" onClick={offBook.onTakeBack} data-testid="learn-takeback" title="Take back (Backspace, Esc or Left arrow)">
-          <Icon name="undo" size={14} /> Take back
+        <button type="button" className="btn btn-sm btn-primary" onClick={offBook.onTakeBack} data-testid="learn-takeback" title={t('Take back (Backspace, Esc or Left arrow)')}>
+          <Icon name="undo" size={14} /> {t('Take back')}
         </button>
         <button type="button" className="btn btn-sm" onClick={offBook.onAnalyze} data-testid="learn-offbook-analyze">
-          <Icon name="analyze" size={14} /> Analyze it
+          <Icon name="analyze" size={14} /> {t('Analyze it')}
         </button>
       </div>
     </div>
   )
 }
 
-const AI_NOTE =
-  'Explanation written by a local AI model (Ollama): it can get details wrong. The badge and the evaluation come from Stockfish.'
+const AI_NOTE = t(
+  'Explanation written by a local AI model (Ollama): it can get details wrong. The badge and the evaluation come from Stockfish.',
+)
 
 function CoachText({ row, entry, onAsk }: { row: LearnCoachRow; entry: LearnCoachEntry | undefined; onAsk: (row: LearnCoachRow) => void }): JSX.Element {
   const state = entry?.textState ?? 'idle'
@@ -339,7 +341,7 @@ function CoachText({ row, entry, onAsk }: { row: LearnCoachRow; entry: LearnCoac
       <div className="learn-coach-text pending" data-testid="learn-coach-text">
         <Icon name="brain" size={14} className="learn-coach-icon" />
         <span className="dim">
-          Coach is thinking… <Spinner size={11} />
+          {t('Coach is thinking…')} <Spinner size={11} />
         </span>
       </div>
     )
@@ -349,9 +351,9 @@ function CoachText({ row, entry, onAsk }: { row: LearnCoachRow; entry: LearnCoac
       <div className="learn-coach-text error" data-testid="learn-coach-error" role="status">
         <Icon name="warning" size={14} className="learn-coach-icon" />
         <span>
-          {entry?.textError ?? 'Coach unavailable.'}{' '}
+          {entry?.textError ?? t('Coach unavailable.')}{' '}
           <button type="button" className="learn-link" onClick={() => onAsk(row)}>
-            Retry
+            {t('Retry')}
           </button>
         </span>
       </div>
@@ -362,7 +364,7 @@ function CoachText({ row, entry, onAsk }: { row: LearnCoachRow; entry: LearnCoac
     <div className="learn-coach-text idle">
       {entry?.verdictState === 'error' ? <span className="dim learn-coach-err-inline">{entry.verdictError} </span> : null}
       <button type="button" className="learn-link learn-ask" onClick={() => onAsk(row)} data-testid="learn-ask-coach">
-        <Icon name="brain" size={13} /> Ask the coach
+        <Icon name="brain" size={13} /> {t('Ask the coach')}
       </button>
     </div>
   )

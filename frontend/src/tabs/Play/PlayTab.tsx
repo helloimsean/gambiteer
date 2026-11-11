@@ -34,6 +34,7 @@ import {
 } from '../../lib/chess'
 import { recordGame } from '../../lib/gameHistory'
 import { playSound } from '../../lib/sounds'
+import { t } from '../../lib/i18n'
 import { findNodeByPath } from '../../lib/tree'
 import { boardRulesFor, checksGiven, pocketsOf, variantDrop, variantInfo, type PocketRole } from '../../lib/variants'
 import { useApp } from '../../state/AppContext'
@@ -218,7 +219,7 @@ export function PlayTab(): JSX.Element {
       setBotThinking(false)
       const san = sanOfEngineMove(game.variant, fenNow, res.uci)
       if (!san) {
-        setBotError(`The engine answered with an illegal move (${res.uci}).`)
+        setBotError(t('The engine answered with an illegal move ({uci}).', { uci: res.uci }))
         return
       }
       setStrength(res.strength)
@@ -293,8 +294,8 @@ export function PlayTab(): JSX.Element {
   useEffect(() => () => hintCtrlRef.current?.abort(), [])
   useEffect(() => {
     if (!hint) return
-    const t = setTimeout(() => setHint(null), HINT_DURATION_MS)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setHint(null), HINT_DURATION_MS)
+    return () => clearTimeout(timer)
   }, [hint])
 
   const requestHint = () => {
@@ -311,7 +312,7 @@ export function PlayTab(): JSX.Element {
         const line = res.lines[0]
         const uci = line?.pvUci[0]
         if (!line || !uci) {
-          setHintError('No hint available in this position.')
+          setHintError(t('No hint available in this position.'))
           return
         }
         setHint({ fen: fenNow, uci, san: line.pv[0] ?? uciToSan(fenNow, uci) ?? uci })
@@ -533,8 +534,8 @@ export function PlayTab(): JSX.Element {
     const isStudent = side === studentColor
     return (
       <PlayPlayerBar
-        name={isStudent ? 'You' : botLabel}
-        detail={isStudent ? (game ? side : undefined) : String(botElo)}
+        name={isStudent ? t('You') : botLabel}
+        detail={isStudent ? (game ? (side === 'white' ? t('white') : t('black')) : undefined) : String(botElo)}
         icon={isStudent ? 'knight' : 'robot'}
         color={side}
         captured={showMaterial ? material.captured[side] : []}
@@ -571,9 +572,9 @@ export function PlayTab(): JSX.Element {
       return (
         <div className="play-status error" data-testid="play-status">
           <Icon name="warning" size={18} />
-          <span className="grow">Bot move failed: {botError}</span>
+          <span className="grow">{t('Bot move failed: {error}', { error: botError })}</span>
           <button type="button" className="btn btn-sm" onClick={() => setBotRetry((n) => n + 1)}>
-            Retry
+            {t('Retry')}
           </button>
         </div>
       )
@@ -582,16 +583,16 @@ export function PlayTab(): JSX.Element {
       return (
         <div className="play-status thinking" data-testid="play-status">
           <Spinner size={16} />
-          <span className="grow">{botLabel} is thinking...</span>
+          <span className="grow">{t('{bot} is thinking...', { bot: botLabel })}</span>
         </div>
       )
     }
     return (
       <div className="play-status your-move" data-testid="play-status">
         <span className={`play-status-swatch ${studentColor}`} />
-        <span className="grow">Your move</span>
+        <span className="grow">{t('Your move')}</span>
         {hintError ? <span className="play-status-note">{hintError}</span> : null}
-        {hint && hint.fen === liveFen ? <span className="play-status-note">Hint: {hint.san}</span> : null}
+        {hint && hint.fen === liveFen ? <span className="play-status-note">{t('Hint: {san}', { san: hint.san })}</span> : null}
       </div>
     )
   }
@@ -610,7 +611,7 @@ export function PlayTab(): JSX.Element {
             <Icon name="check" size={14} strokeWidth={2.4} />
           </span>
         ) : (
-          <ClassificationBadge classification="book" size={20} className="play-book-entry-badge" title="Book move" />
+          <ClassificationBadge classification="book" size={20} className="play-book-entry-badge" title={t('Book move')} />
         )}
         <div className="play-book-entry-text">
           <div>
@@ -618,7 +619,9 @@ export function PlayTab(): JSX.Element {
               {moveNumberPrefix(ply + plyOffsetFromFen(game.startFen))}
               {san}
             </strong>{' '}
-            <span className="muted">{mark === 'check' ? 'is book. Well played!' : byStudent ? '(book)' : `${botLabel} follows the line.`}</span>
+            <span className="muted">
+              {mark === 'check' ? t('is book. Well played!') : byStudent ? t('(book)') : t('{bot} follows the line.', { bot: botLabel })}
+            </span>
           </div>
           {why ? <div className="play-book-why">{why}</div> : null}
         </div>
@@ -634,7 +637,7 @@ export function PlayTab(): JSX.Element {
     return (
       <div className="play-book" data-testid="play-book">
         <div className="play-book-head">
-          <ClassificationBadge classification="book" size={18} title="Opening line" />
+          <ClassificationBadge classification="book" size={18} title={t('Opening line')} />
           <div className="play-book-title">
             <strong className="truncate" title={o.name}>
               {o.name}
@@ -643,7 +646,7 @@ export function PlayTab(): JSX.Element {
               {o.lineName}
             </span>
           </div>
-          <span className="badge">{o.mode === 'hints' ? 'with hints' : 'from end of line'}</span>
+          <span className="badge">{o.mode === 'hints' ? t('with hints') : t('from end of line')}</span>
         </div>
         {o.mode === 'end' ? (
           <div className="play-book-body">
@@ -651,7 +654,7 @@ export function PlayTab(): JSX.Element {
               {formatSanPath(o.lineSans)}
             </div>
             {!game.result && game.sans.length === game.basePly ? (
-              <div className="muted small">The line is on the board. The game starts here.</div>
+              <div className="muted small">{t('The line is on the board. The game starts here.')}</div>
             ) : null}
           </div>
         ) : (
@@ -663,7 +666,7 @@ export function PlayTab(): JSX.Element {
                 </span>
                 <div className="play-book-entry-text">
                   <div>
-                    <strong>{activeMiss.attempted.san}</strong> <span className="muted">is not the book move. The line continues</span>{' '}
+                    <strong>{activeMiss.attempted.san}</strong> <span className="muted">{t('is not the book move. The line continues')}</span>{' '}
                     <strong>
                       {moveNumberPrefix(ply + 1 + offset)}
                       {activeMiss.expectedSan}
@@ -674,7 +677,7 @@ export function PlayTab(): JSX.Element {
                     <div className="play-book-why">{whyOf([...game.sans, activeMiss.expectedSan])}</div>
                   ) : null}
                   <button type="button" className="btn btn-sm play-anyway" onClick={playAnyway} data-testid="play-anyway">
-                    Play {activeMiss.attempted.san} anyway (leave the book)
+                    {t('Play {move} anyway (leave the book)', { move: activeMiss.attempted.san })}
                   </button>
                 </div>
               </div>
@@ -684,13 +687,12 @@ export function PlayTab(): JSX.Element {
                 {renderBookEntry(ply)}
               </>
             )}
-            {book?.inBook && isStudentTurn && !activeMiss ? <div className="play-book-prompt">Your move: play the book move.</div> : null}
-            {book?.completed ? (
-              <div className="play-book-prompt done">End of the line. From here you are on your own.</div>
-            ) : null}
-            {book?.left ? <div className="play-book-prompt left">You left the book after {book.followed} plies.</div> : null}
+            {book?.inBook && isStudentTurn && !activeMiss ? <div className="play-book-prompt">{t('Your move: play the book move.')}</div> : null}
+            {book?.completed ? <div className="play-book-prompt done">{t('End of the line. From here you are on your own.')}</div> : null}
+            {book?.left ? <div className="play-book-prompt left">{t('You left the book after {plies} plies.', { plies: book.followed })}</div> : null}
             <div className="play-book-stats">
-              Book moves: <strong className="ok">{game.bookStats.correct}</strong> correct, <strong className="bad">{game.bookStats.missed}</strong> missed
+              {t('Book moves:')} <strong className="ok">{game.bookStats.correct}</strong> {t('correct')}, <strong className="bad">{game.bookStats.missed}</strong>{' '}
+              {t('missed')}
             </div>
           </div>
         )}
@@ -739,13 +741,19 @@ export function PlayTab(): JSX.Element {
         <Toolbar className="play-toolbar">
           {game && !over ? (
             <>
-              <ToolbarButton icon="flag" label="Resign" title="Resign" onClick={() => setResignOpen(true)} />
-              <ToolbarButton icon="undo" label="Takeback" title="Take back your last move (and the bot's reply)" onClick={takeback} disabled={takebackPly === null} />
+              <ToolbarButton icon="flag" label={t('Resign')} title={t('Resign')} onClick={() => setResignOpen(true)} />
+              <ToolbarButton
+                icon="undo"
+                label={t('Takeback')}
+                title={t("Take back your last move (and the bot's reply)")}
+                onClick={takeback}
+                disabled={takebackPly === null}
+              />
               {variant === 'standard' ? (
                 <ToolbarButton
                   icon="hint"
-                  label={hintLoading ? 'Thinking...' : 'Hint'}
-                  title={`Show the engine's best move for ${HINT_DURATION_MS / 1000} s`}
+                  label={hintLoading ? t('Thinking...') : t('Hint')}
+                  title={t("Show the engine's best move for {seconds} s", { seconds: HINT_DURATION_MS / 1000 })}
                   onClick={requestHint}
                   disabled={!canMove || hintLoading}
                 />
@@ -754,12 +762,12 @@ export function PlayTab(): JSX.Element {
           ) : null}
           {game && over ? (
             <>
-              {reviewable ? <ToolbarButton icon="review" label="Review" title="Review this game" onClick={reviewGame} primary /> : null}
-              <ToolbarButton icon="refresh" label="Rematch" title="Rematch" onClick={rematch} />
+              {reviewable ? <ToolbarButton icon="review" label={t('Review')} title={t('Review this game')} onClick={reviewGame} primary /> : null}
+              <ToolbarButton icon="refresh" label={t('Rematch')} title={t('Rematch')} onClick={rematch} />
             </>
           ) : null}
-          <ToolbarButton icon="flip" title="Flip board" onClick={() => setFlipped((f) => !f)} active={flipped} />
-          {game ? <ToolbarButton icon="plus" label="New game" title="New game" onClick={openNewGame} /> : null}
+          <ToolbarButton icon="flip" title={t('Flip board')} onClick={() => setFlipped((f) => !f)} active={flipped} />
+          {game ? <ToolbarButton icon="plus" label={t('New game')} title={t('New game')} onClick={openNewGame} /> : null}
         </Toolbar>
       </div>
 
@@ -768,7 +776,7 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">vs {botLabel}</span>
+              <span className="panel-title">{t('vs {bot}', { bot: botLabel })}</span>
               {variant !== 'standard' ? (
                 <span className="badge badge-blue" title={variantInfo(variant).rule} data-testid="play-variant-badge">
                   {variantInfo(variant).name}
@@ -777,26 +785,30 @@ export function PlayTab(): JSX.Element {
               <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
                 {botElo}
               </span>
-              <span className="badge" title="Bot move time">
+              <span className="badge" title={t('Bot move time')}>
                 {formatMovetime(game.movetimeMs)}
               </span>
             </div>
             <div className="play-panel-top">
               {renderStatus()}
-              <div className="play-strength muted small" title="Strength mode reported by the backend" data-testid="play-strength">
+              <div className="play-strength muted small" title={t('Strength mode reported by the backend')} data-testid="play-strength">
                 {strengthDetail(game.bot, strength, botElo)}
               </div>
               {threeCheck ? (
                 <div className="play-strength small" data-testid="play-checks">
-                  Checks given: White {threeCheck.white} of 3, Black {threeCheck.black} of 3
+                  {t('Checks given: White {white} of 3, Black {black} of 3', { white: threeCheck.white, black: threeCheck.black })}
                 </div>
               ) : null}
               {renderOpening()}
               {!isLive ? (
                 <div className="play-viewing">
-                  <span className="grow">Viewing move {moveNumberPrefix(shownPly + plyOffsetFromFen(game.startFen))}{game.sans[shownPly - 1] ?? 'start'}</span>
+                  <span className="grow">
+                    {t('Viewing move {move}', {
+                      move: `${moveNumberPrefix(shownPly + plyOffsetFromFen(game.startFen))}${game.sans[shownPly - 1] ?? t('start')}`,
+                    })}
+                  </span>
                   <button type="button" className="btn btn-sm btn-primary" onClick={() => setViewPly(null)}>
-                    Back to game
+                    {t('Back to game')}
                   </button>
                 </div>
               ) : null}
@@ -807,13 +819,13 @@ export function PlayTab(): JSX.Element {
               currentPly={shownPly}
               startPly={plyOffsetFromFen(game.startFen)}
               onSelect={(p) => setViewPly(p >= total ? null : p)}
-              emptyText={isStudentTurn ? 'Make your first move' : 'Waiting for the first move'}
+              emptyText={isStudentTurn ? t('Make your first move') : t('Waiting for the first move')}
               renderBadge={(p) => {
                 const mark = game.marks[p]
                 if (!mark) return null
-                if (mark === 'book') return <ClassificationBadge classification="book" size={16} className="play-mark book" title="Book move" />
+                if (mark === 'book') return <ClassificationBadge classification="book" size={16} className="play-mark book" title={t('Book move')} />
                 return (
-                  <span className="play-mark check" title="Book move found">
+                  <span className="play-mark check" title={t('Book move found')}>
                     <Icon name="check" size={12} strokeWidth={2.6} />
                   </span>
                 )
@@ -823,11 +835,11 @@ export function PlayTab(): JSX.Element {
               <div className="panel-footer play-over-actions">
                 {reviewable ? (
                   <button type="button" className="btn btn-primary grow" onClick={reviewGame} data-testid="play-review">
-                    <Icon name="review" size={16} /> Review this game
+                    <Icon name="review" size={16} /> {t('Review this game')}
                   </button>
                 ) : null}
                 <button type="button" className={`btn${reviewable ? '' : ' grow'}`} onClick={rematch}>
-                  <Icon name="refresh" size={16} /> Rematch
+                  <Icon name="refresh" size={16} /> {t('Rematch')}
                 </button>
               </div>
             ) : null}
@@ -839,7 +851,7 @@ export function PlayTab(): JSX.Element {
           <div className="panel grow play-panel">
             <div className="panel-header">
               <Icon name="robot" size={18} />
-              <span className="panel-title">Play vs {botLabel}</span>
+              <span className="panel-title">{t('Play vs {bot}', { bot: botLabel })}</span>
             </div>
             <div className="panel-body scroll grow">
               <PlaySetupForm
@@ -864,7 +876,7 @@ export function PlayTab(): JSX.Element {
                 disabled={startDisabled}
                 data-testid="play-start"
               >
-                <Icon name="play" size={18} /> Start game
+                <Icon name="play" size={18} /> {t('Start game')}
               </button>
             </div>
           </div>
@@ -874,24 +886,24 @@ export function PlayTab(): JSX.Element {
       <Modal
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title="New game"
+        title={t('New game')}
         width={520}
         className="play-new-modal"
         footer={
           <>
             {startError ? <span className="play-inline-error grow">{startError}</span> : null}
             <button type="button" className="btn btn-ghost" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="button" className="btn btn-primary" onClick={() => startGame(setup)} disabled={startDisabled} data-testid="play-start">
-              <Icon name="play" size={16} /> Start game
+              <Icon name="play" size={16} /> {t('Start game')}
             </button>
           </>
         }
       >
         {game && !game.result ? (
           <div className="play-warning">
-            <Icon name="warning" size={16} /> Starting a new game abandons the current one.
+            <Icon name="warning" size={16} /> {t('Starting a new game abandons the current one.')}
           </div>
         ) : null}
         <PlaySetupForm
@@ -911,20 +923,20 @@ export function PlayTab(): JSX.Element {
       <Modal
         open={resignOpen}
         onClose={() => setResignOpen(false)}
-        title="Resign?"
+        title={t('Resign?')}
         width={380}
         footer={
           <>
             <button type="button" className="btn btn-ghost" onClick={() => setResignOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="button" className="btn btn-danger" onClick={resign} data-testid="play-resign-confirm">
-              <Icon name="flag" size={16} /> Resign
+              <Icon name="flag" size={16} /> {t('Resign')}
             </button>
           </>
         }
       >
-        <p>Resign this game against {botTitle(bot, botElo, variant)}?</p>
+        <p>{t('Resign this game against {bot}?', { bot: botTitle(bot, botElo, variant) })}</p>
       </Modal>
 
       <PlayGameOverModal

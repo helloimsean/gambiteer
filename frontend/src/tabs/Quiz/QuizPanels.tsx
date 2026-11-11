@@ -5,10 +5,18 @@
 import type { JSX } from 'react'
 import type { OpeningSummary } from '../../api/types'
 import { Icon } from '../../components/Icon'
+import { t, tn } from '../../lib/i18n'
 import { masteryOf, type QuizSession, type QuizStats } from './QuizStats'
 import { QUIZ_MODES, RANDOM_LINE, type LineOptionGroup, type QuizMode } from './QuizTasks'
 
 // ---------------------------------------------------------------- settings
+
+function openingTitle(o: OpeningSummary, count: number | undefined, mode: QuizMode): string {
+  const side = o.side === 'white' ? t('White') : t('Black')
+  if (count === undefined) return t('{name} (you play {side})', { name: o.name, side })
+  const items = mode === 'traps' ? tn(count, '{n} trap position', '{n} trap positions') : tn(count, '{n} position', '{n} positions')
+  return t('{name} (you play {side}): {items}', { name: o.name, side, items })
+}
 
 export interface QuizSettingsPanelProps {
   mode: QuizMode
@@ -41,7 +49,7 @@ export function QuizSettingsPanel({
   return (
     <div className="panel quiz-settings" data-testid="quiz-settings">
       <div className="panel-body quiz-settings-body">
-        <div className="btn-group quiz-modes" role="tablist" aria-label="Quiz mode">
+        <div className="btn-group quiz-modes" role="tablist" aria-label={t('Quiz mode')}>
           {QUIZ_MODES.map((m) => (
             <button
               key={m.id}
@@ -58,7 +66,7 @@ export function QuizSettingsPanel({
         </div>
         <div className="quiz-mode-hint dim small">{hint}</div>
 
-        <div className="quiz-openings" aria-label="Openings">
+        <div className="quiz-openings" aria-label={t('Openings')}>
           <button
             type="button"
             className={`quiz-chip${allSelected ? ' active' : ''}`}
@@ -66,7 +74,7 @@ export function QuizSettingsPanel({
             aria-pressed={allSelected}
             data-testid="quiz-opening-all"
           >
-            All
+            {t('All')}
           </button>
           {openings.map((o) => {
             const on = selected.includes(o.id)
@@ -78,7 +86,7 @@ export function QuizSettingsPanel({
                 className={`quiz-chip${on ? ' active' : ''}`}
                 aria-pressed={on}
                 onClick={() => onToggleOpening(o.id)}
-                title={`${o.name} (you play ${o.side})${count !== undefined ? `: ${count} ${mode === 'traps' ? 'trap positions' : 'positions'}` : ''}`}
+                title={openingTitle(o, count, mode)}
                 data-testid={`quiz-opening-${o.id}`}
               >
                 <span className={`quiz-side-dot quiz-side-${o.side}`} />
@@ -91,9 +99,9 @@ export function QuizSettingsPanel({
 
         {mode === 'line' ? (
           <label className="field quiz-line-field">
-            <span className="field-label">Line</span>
+            <span className="field-label">{t('Line')}</span>
             <select value={lineChoice} onChange={(e) => onLineChoice(e.target.value)} data-testid="quiz-line-select">
-              <option value={RANDOM_LINE}>Random line (weak lines more often)</option>
+              <option value={RANDOM_LINE}>{t('Random line (weak lines more often)')}</option>
               {lineGroups.map((g) => (
                 <optgroup key={g.openingId} label={g.openingName}>
                   {g.options.map((o) => (
@@ -127,20 +135,20 @@ export function QuizStatsPanel({ session, stats, openings, selected, onReset }: 
   return (
     <div className="panel quiz-stats" data-testid="quiz-stats">
       <div className="quiz-stats-top">
-        <div className="quiz-stat" title="Correct first tries in a row">
+        <div className="quiz-stat" title={t('Correct first tries in a row')}>
           <div className={`quiz-stat-num${session.streak >= 5 ? ' hot' : ''}`} data-testid="quiz-streak">
             {session.streak}
           </div>
-          <div className="quiz-stat-label">streak{session.best > 0 ? ` (best ${session.best})` : ''}</div>
+          <div className="quiz-stat-label">{session.best > 0 ? t('streak (best {best})', { best: session.best }) : t('streak')}</div>
         </div>
-        <div className="quiz-stat" title="Moves right on the first try / moves asked, this session">
+        <div className="quiz-stat" title={t('Moves right on the first try / moves asked, this session')}>
           <div className="quiz-stat-num" data-testid="quiz-score">
             {session.correct}/{session.total}
           </div>
-          <div className="quiz-stat-label">session score{session.total ? ` (${pct}%)` : ''}</div>
+          <div className="quiz-stat-label">{session.total ? t('session score ({pct}%)', { pct }) : t('session score')}</div>
         </div>
-        <button type="button" className="btn btn-ghost btn-sm quiz-reset" onClick={onReset} title="Reset quiz statistics" data-testid="quiz-reset">
-          <Icon name="trash" size={15} /> Reset stats
+        <button type="button" className="btn btn-ghost btn-sm quiz-reset" onClick={onReset} title={t('Reset quiz statistics')} data-testid="quiz-reset">
+          <Icon name="trash" size={15} /> {t('Reset stats')}
         </button>
       </div>
       <div className="quiz-mastery" data-testid="quiz-mastery">
@@ -150,7 +158,7 @@ export function QuizStatsPanel({ session, stats, openings, selected, onReset }: 
             <div
               key={o.id}
               className="quiz-mastery-row"
-              title={`${m.mastered} of ${m.seen} positions seen are known (more right than wrong answers)`}
+              title={t('{mastered} of {seen} positions seen are known (more right than wrong answers)', { mastered: m.mastered, seen: m.seen })}
               data-testid={`quiz-mastery-${o.id}`}
               data-pct={m.pct}
               data-seen={m.seen}

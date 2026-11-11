@@ -2,6 +2,7 @@
 import { Chess, type Move } from 'chess.js'
 import * as api from '../../api/client'
 import { START_FEN, moveToUci } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 
 /** A move sequence on the analysis board: start position + linear SAN history. */
 export interface AnalyzeLine {
@@ -26,7 +27,7 @@ export function buildLine(line: AnalyzeLine): BuiltLine {
     try {
       mv = chess.move(san)
     } catch {
-      throw new Error(`Illegal move "${san}" at ply ${i + 1}`)
+      throw new Error(t('Illegal move "{san}" at ply {ply}', { san, ply: i + 1 }))
     }
     ucis.push(moveToUci(mv))
     fens.push(chess.fen())
@@ -41,9 +42,9 @@ export function isInitialPosition(fen: string): boolean {
 
 /** Heuristic: a single line whose first field looks like a FEN board (8 ranks). */
 export function looksLikeFen(text: string): boolean {
-  const t = text.trim()
-  if (!t || t.includes('\n')) return false
-  const board = t.split(/\s+/)[0]
+  const tk = text.trim()
+  if (!tk || tk.includes('\n')) return false
+  const board = tk.split(/\s+/)[0]
   return board.split('/').length === 8 && /^[pnbrqkPNBRQK1-8/]+$/.test(board)
 }
 
@@ -53,7 +54,7 @@ export function looksLikeFen(text: string): boolean {
  */
 export function normalizeFen(input: string): { fen: string } | { error: string } {
   const parts = input.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return { error: 'Enter a FEN.' }
+  if (parts.length === 0) return { error: t('Enter a FEN.') }
   if (parts.length === 1) parts.push('w', '-', '-', '0', '1')
   else if (parts.length === 2) parts.push('-', '-', '0', '1')
   else if (parts.length === 3) parts.push('-', '0', '1')
@@ -64,7 +65,7 @@ export function normalizeFen(input: string): { fen: string } | { error: string }
     return { fen: new Chess(fen).fen() }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return { error: msg.replace(/^(Error:\s*)?(Invalid FEN:\s*)?/i, '') || 'Invalid FEN.' }
+    return { error: msg.replace(/^(Error:\s*)?(Invalid FEN:\s*)?/i, '') || t('Invalid FEN.') }
   }
 }
 

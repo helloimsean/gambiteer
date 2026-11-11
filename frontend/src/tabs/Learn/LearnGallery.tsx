@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { Icon } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
 import { formatSanPath } from '../../lib/chess'
+import { t, tn } from '../../lib/i18n'
 import { LearnMiniBoard } from './LearnMiniBoard'
 import { learnCategoryRank, learnFirstSentence, learnIsGambit, learnPreview, learnSortOpenings } from './learnUtils'
 
@@ -34,12 +35,12 @@ function LearnCard({ o, onOpen }: { o: OpeningSummary; onOpen: (id: string) => v
         <div className="learn-card-head">
           <div className="learn-card-name">{o.name}</div>
           <div className="row wrap gap-4">
-            <span className={`badge badge-${o.side}`}>{o.side === 'white' ? 'White' : 'Black'}</span>
+            <span className={`badge badge-${o.side}`}>{o.side === 'white' ? t('White') : t('Black')}</span>
             {o.eco ? <span className="badge badge-eco">{o.eco}</span> : null}
-            {learnIsGambit(o.name) ? <span className="badge badge-yellow">Gambit</span> : null}
+            {learnIsGambit(o.name) ? <span className="badge badge-yellow">{t('Gambit')}</span> : null}
           </div>
           <div className="learn-card-count">
-            <Icon name="book" size={14} /> {o.lineCount} {o.lineCount === 1 ? 'line' : 'lines'}
+            <Icon name="book" size={14} /> {tn(o.lineCount, '{n} line', '{n} lines')}
           </div>
           {preview.sans.length > 0 ? <div className="learn-card-moves mono truncate">{formatSanPath(preview.sans)}</div> : null}
         </div>
@@ -49,7 +50,7 @@ function LearnCard({ o, onOpen }: { o: OpeningSummary; onOpen: (id: string) => v
         <div className="learn-card-cats">
           {cats.map(([cat, n]) => (
             <span key={cat} className={`learn-cat-pill cat-${cat}`}>
-              {n} {LINE_CATEGORY_LABELS[cat] ?? cat}
+              {n} {(LINE_CATEGORY_LABELS[cat] ?? cat)}
             </span>
           ))}
         </div>
@@ -103,15 +104,16 @@ export function LearnGallery({ onOpen }: LearnGalleryProps): JSX.Element {
       <div className="learn-gallery-header">
         <div>
           <h1 className="learn-title">
-            <Icon name="learn" size={24} /> Learn
+            <Icon name="learn" size={24} /> {t('Learn')}
           </h1>
           <p className="muted learn-subtitle">
-            Pick an opening to browse it move by move: the tree of every line, why each move is played, and the plans and
-            traps behind it.
+            {t(
+              'Pick an opening to browse it move by move: the tree of every line, why each move is played, and the plans and traps behind it.',
+            )}
           </p>
         </div>
         <div className="row wrap">
-          <div className="btn-group" role="group" aria-label="Filter by side">
+          <div className="btn-group" role="group" aria-label={t('Filter by side')}>
             {(['all', 'white', 'black'] as const).map((s) => (
               <button
                 key={s}
@@ -120,17 +122,17 @@ export function LearnGallery({ onOpen }: LearnGalleryProps): JSX.Element {
                 onClick={() => setSide(s)}
                 aria-pressed={side === s}
               >
-                {s === 'all' ? 'All' : s === 'white' ? 'As White' : 'As Black'} <span className="learn-filter-count">{counts[s]}</span>
+                {s === 'all' ? t('All') : s === 'white' ? t('As White') : t('As Black')} <span className="learn-filter-count">{counts[s]}</span>
               </button>
             ))}
           </div>
           <input
             type="search"
             className="learn-search"
-            placeholder="Search openings, ECO…"
+            placeholder={t('Search openings, ECO…')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search openings"
+            aria-label={t('Search openings')}
           />
         </div>
       </div>
@@ -138,27 +140,27 @@ export function LearnGallery({ onOpen }: LearnGalleryProps): JSX.Element {
       {error ? (
         <EmptyState
           icon="warning"
-          title="Could not load the openings"
+          title={t('Could not load the openings')}
           description={error}
           action={
             <button type="button" className="btn btn-primary" onClick={() => setReload((n) => n + 1)}>
-              <Icon name="refresh" size={16} /> Retry
+              <Icon name="refresh" size={16} /> {t('Retry')}
             </button>
           }
         />
       ) : openings === null ? (
         <div className="learn-loading">
           <Spinner size={28} />
-          <span className="muted">Loading openings…</span>
+          <span className="muted">{t('Loading openings…')}</span>
         </div>
       ) : openings.length === 0 ? (
         <EmptyState
           icon="book"
-          title="No openings yet"
-          description="Add repertoire files to data/openings/*.json and they will show up here."
+          title={t('No openings yet')}
+          description={t('Add repertoire files to data/openings/*.json and they will show up here.')}
         />
       ) : shown.length === 0 ? (
-        <EmptyState icon="search" title="No opening matches" description="Try another search or side filter." />
+        <EmptyState icon="search" title={t('No opening matches')} description={t('Try another search or side filter.')} />
       ) : (
         <div className="learn-grid">
           {shown.map((o) => (

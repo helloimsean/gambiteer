@@ -3,6 +3,7 @@ import type { Side } from '../../api/types'
 import { Icon, type IconName } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
 import type { PieceSymbol } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 
 const ROLES: Record<PieceSymbol, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' }
 
@@ -63,13 +64,13 @@ export function PlayPlayerBar({ name, detail, icon, color, captured, advantage, 
           <span className="truncate">{name}</span>
           {detail ? <span className="play-bar-detail">{detail}</span> : null}
           {thinking ? (
-            <span className="play-bar-thinking" title="Thinking">
+            <span className="play-bar-thinking" title={t('Thinking')}>
               <Spinner size={13} />
             </span>
           ) : null}
         </div>
         {pocket ?? (
-          <div className="play-captured" aria-label={`Captured: ${captured.join(' ') || 'nothing'}`}>
+          <div className="play-captured" aria-label={t('Captured: {pieces}', { pieces: captured.join(' ') || t('nothing') })}>
             {groups.map((g) => (
               <span key={g.piece} className="play-captured-group" data-piece={g.piece} data-count={g.count}>
                 {Array.from({ length: g.count }, (_, i) => (
@@ -81,7 +82,7 @@ export function PlayPlayerBar({ name, detail, icon, color, captured, advantage, 
           </div>
         )}
       </div>
-      <span className={`play-turn-dot${toMove ? ' on' : ''}`} title={toMove ? 'To move' : undefined} />
+      <span className={`play-turn-dot${toMove ? ' on' : ''}`} title={toMove ? t('To move') : undefined} />
     </div>
   )
 }

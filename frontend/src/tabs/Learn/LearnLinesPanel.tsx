@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, type JSX } from 'react'
 import { LINE_CATEGORIES, LINE_CATEGORY_LABELS, type LineCategory, type LineMeta } from '../../api/types'
 import { Icon } from '../../components/Icon'
 import { scrollIntoViewWithin } from '../../lib/dom'
+import { t, tn } from '../../lib/i18n'
 import { learnIsGambit } from './learnUtils'
 
 export interface LearnLinesPanelProps {
@@ -34,19 +35,20 @@ export function LearnDeclinedBox({
 }): JSX.Element {
   const declined = lines.filter((l) => l.category === 'declined')
   return (
-    <section className="learn-declined" aria-label="If declined">
+    <section className="learn-declined" aria-label={t('If declined')}>
       <div className="learn-declined-title">
-        <Icon name="warning" size={16} /> If declined
+        <Icon name="warning" size={16} /> {t('If declined')}
       </div>
       {declined.length === 0 ? (
         <p className="learn-declined-empty">
-          This repertoire has no lines marked as declined. If the opponent does not take the bait, look at the Alternatives
-          and Sidelines groups below.
+          {t(
+            'This repertoire has no lines marked as declined. If the opponent does not take the bait, look at the Alternatives and Sidelines groups below.',
+          )}
         </p>
       ) : (
         <>
           <p className="learn-declined-intro">
-            Not every opponent takes the bait. Know what to play when the gambit is declined:
+            {t('Not every opponent takes the bait. Know what to play when the gambit is declined:')}
           </p>
           <ul className="learn-declined-list">
             {declined.map((l) => (
@@ -125,7 +127,7 @@ export function LearnLinesPanel({ openingName, lines, activeLineId, ply, onSelec
         <section key={g.category} className={`learn-line-group cat-${g.category}`} data-category={g.category}>
           <h4 className="learn-line-group-title">
             <span className={`learn-cat-dot cat-${g.category}`} />
-            {LINE_CATEGORY_LABELS[g.category] ?? g.category}
+            {(LINE_CATEGORY_LABELS[g.category] ?? g.category)}
             <span className="learn-line-group-count">{g.lines.length}</span>
           </h4>
           {g.lines.map((l) => {
@@ -134,23 +136,23 @@ export function LearnLinesPanel({ openingName, lines, activeLineId, ply, onSelec
               <div key={l.id} className={`learn-line${active ? ' active' : ''}`} data-line-id={l.id}>
                 <button type="button" className="learn-line-head" onClick={() => onSelectLine(l)} aria-expanded={active}>
                   <span className="learn-line-name">{l.name}</span>
-                  <span className="learn-line-plies">{Math.ceil(l.sans.length / 2)} moves</span>
+                  <span className="learn-line-plies">{tn(Math.ceil(l.sans.length / 2), '{n} move', '{n} moves')}</span>
                 </button>
                 {active ? (
                   <div className="learn-line-body fade-in">
                     {l.description ? <p className="learn-line-desc">{l.description}</p> : null}
                     {l.evaluation ? (
                       <p className="learn-line-eval">
-                        <span className="learn-line-eval-label">Evaluation</span> {l.evaluation}
+                        <span className="learn-line-eval-label">{t('Evaluation')}</span> {l.evaluation}
                       </p>
                     ) : null}
                     <LineMoves line={l} ply={ply} onJump={onJump} />
                     <div className="row learn-line-actions">
                       <button type="button" className="btn btn-sm" onClick={() => onJump(l, 0)}>
-                        <Icon name="first" size={14} /> From the start
+                        <Icon name="first" size={14} /> {t('From the start')}
                       </button>
                       <button type="button" className="btn btn-sm" onClick={() => onDrill(l)}>
-                        <Icon name="quiz" size={14} /> Drill this line
+                        <Icon name="quiz" size={14} /> {t('Drill this line')}
                       </button>
                     </div>
                   </div>

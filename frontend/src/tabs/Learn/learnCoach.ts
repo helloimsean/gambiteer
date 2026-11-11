@@ -10,6 +10,7 @@
  * item's `variant`, and explanations are cached per (opening, model, node, variant).
  */
 import type { BookMoveNote, Classification, CoachContext, CoachMove, OpeningNode, Side } from '../../api/types'
+import { t } from '../../lib/i18n'
 import { loadJson, removeKey, saveJson } from '../../lib/storage'
 import { learnMoveLabel, learnSideToMove } from './learnUtils'
 
@@ -346,25 +347,25 @@ export function learnIsSoundMove(c: Classification): boolean {
 export function learnVerdictSentence(label: string, c: Classification): string {
   switch (c) {
     case 'brilliant':
-      return `${label} is brilliant`
+      return t('{label} is brilliant', { label })
     case 'great':
-      return `${label} is a great move`
+      return t('{label} is a great move', { label })
     case 'best':
-      return `${label} is the best move`
+      return t('{label} is the best move', { label })
     case 'excellent':
-      return `${label} is excellent`
+      return t('{label} is excellent', { label })
     case 'good':
-      return `${label} is a good move`
+      return t('{label} is a good move', { label })
     case 'book':
-      return `${label} is a book move`
+      return t('{label} is a book move', { label })
     case 'inaccuracy':
-      return `${label} is an inaccuracy`
+      return t('{label} is an inaccuracy', { label })
     case 'mistake':
-      return `${label} is a mistake`
+      return t('{label} is a mistake', { label })
     case 'blunder':
-      return `${label} is a blunder`
+      return t('{label} is a blunder', { label })
     case 'miss':
-      return `${label} is a miss`
+      return t('{label} is a miss', { label })
   }
 }
 
@@ -385,14 +386,14 @@ export function learnCoachErrorText(message: string, stage: 'analysis' | 'explai
   const m = message.toLowerCase()
   if (stage === 'explain') {
     if (m.includes('not installed') || m.includes('not found') || m.includes('unknown model')) {
-      return `Coach unavailable: the selected Ollama model is not installed.`
+      return t('Coach unavailable: the selected Ollama model is not installed.')
     }
-    if (m.includes('empty answer')) return 'The coach returned an empty answer.'
-    return 'Coach unavailable (is Ollama running?)'
+    if (m.includes('empty answer')) return t('The coach returned an empty answer.')
+    return t('Coach unavailable (is Ollama running?)')
   }
-  if (m.includes('connection')) return 'Coach unavailable (is the backend running?)'
-  if (m.includes('stockfish') || m.includes('engine')) return 'Engine verdict unavailable (Stockfish not found).'
-  return 'Engine verdict unavailable.'
+  if (m.includes('connection')) return t('Coach unavailable (is the backend running?)')
+  if (m.includes('stockfish') || m.includes('engine')) return t('Engine verdict unavailable (Stockfish not found).')
+  return t('Engine verdict unavailable.')
 }
 
 /** Light clean-up of model output: markdown emphasis and stray whitespace. */

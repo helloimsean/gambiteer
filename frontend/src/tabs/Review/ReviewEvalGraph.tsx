@@ -8,6 +8,7 @@ import type { ReviewResult } from '../../api/types'
 import { CLASSIFICATION_COLORS, ClassificationBadge } from '../../components/ClassificationBadge'
 import { moveNumberPrefix } from '../../lib/chess'
 import { formatScore } from '../../lib/eval'
+import { t } from '../../lib/i18n'
 import { GRAPH_MATE, graphValues, isKeyMoment, reviewPlyOffset } from './reviewUtils'
 
 export interface ReviewEvalGraphProps {
@@ -77,7 +78,7 @@ export function ReviewEvalGraph({ result, ply, onSelect, height = 84 }: ReviewEv
           height={H}
           viewBox={`0 0 ${width} ${H}`}
           role="slider"
-          aria-label="Evaluation graph: click to jump to a move"
+          aria-label={t('Evaluation graph: click to jump to a move')}
           aria-valuemin={0}
           aria-valuemax={n}
           aria-valuenow={ply}
@@ -133,7 +134,7 @@ export function ReviewEvalGraph({ result, ply, onSelect, height = 84 }: ReviewEv
               </span>
             </>
           ) : (
-            <span className="bold">Start</span>
+            <span className="bold">{t('Start')}</span>
           )}
           <span className="mono">{formatScore(hoverScore)}</span>
         </div>

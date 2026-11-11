@@ -13,14 +13,15 @@ import { Chess } from 'chess.js'
 import { LINE_CATEGORIES, LINE_CATEGORY_LABELS, type LineMeta, type OpeningFull, type OpeningNode, type QuizItem, type Side } from '../../api/types'
 import { START_FEN, moveToUci, sanPathToMoves, sanToUci, turnFromFen } from '../../lib/chess'
 import { findNodeByPath, nodeIdFromSans } from '../../lib/tree'
+import { t } from '../../lib/i18n'
 import { pickWeighted, tierOf, type QuizStats } from './QuizStats'
 
 export type QuizMode = 'line' | 'positions' | 'traps'
 
 export const QUIZ_MODES: readonly { id: QuizMode; label: string; hint: string }[] = [
-  { id: 'line', label: 'Line drill', hint: 'Play a whole line from move 1. The app answers with the book reply.' },
-  { id: 'positions', label: 'Positions', hint: 'Random positions from your repertoire. Any book move counts.' },
-  { id: 'traps', label: 'Traps', hint: 'The opponent just went wrong. Find the punishing moves.' },
+  { id: 'line', label: t('Line drill'), hint: t('Play a whole line from move 1. The app answers with the book reply.') },
+  { id: 'positions', label: t('Positions'), hint: t('Random positions from your repertoire. Any book move counts.') },
+  { id: 'traps', label: t('Traps'), hint: t('The opponent just went wrong. Find the punishing moves.') },
 ]
 
 /** Value of the line picker meaning "pick a line for me". */

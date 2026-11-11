@@ -40,7 +40,7 @@ EMPTY_ANSWER = "the model returned an empty answer"
 
 async def _explain_stream(svc: Services, req: CoachRequest, analysis: CoachAnalysis) -> AsyncIterator[str]:
     """Ollama tokens for the explanation (raises OllamaError, also for an unknown model)."""
-    messages = build_coach_messages(analysis.move, req.context, book_eval=analysis.book_eval)
+    messages = build_coach_messages(analysis.move, req.context, book_eval=analysis.book_eval, language=req.language)
     model = await svc.ollama.resolve(req.model)
     async for token in svc.ollama.chat_stream(model, messages):
         yield token

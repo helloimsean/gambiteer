@@ -6,6 +6,7 @@
  *  - Scores are ALWAYS from White's point of view on the wire.
  *  - Moves travel as UCI ("e2e4"); SAN is included for display.
  */
+import { t } from '../lib/i18n'
 
 // ---------------------------------------------------------------- shared
 
@@ -47,13 +48,13 @@ export const LINE_CATEGORIES: readonly LineCategory[] = [
 
 /** Human-readable group names used by the Learn "Lines" panel. */
 export const LINE_CATEGORY_LABELS: Record<LineCategory, string> = {
-  main: 'Main',
-  accepted: 'Accepted',
-  declined: 'Declined',
-  alternative: 'Alternatives',
-  sideline: 'Sidelines',
-  trap: 'Traps',
-  transposition: 'Transpositions',
+  main: t('Main'),
+  accepted: t('Accepted'),
+  declined: t('Declined'),
+  alternative: t('Alternatives'),
+  sideline: t('Sidelines'),
+  trap: t('Traps'),
+  transposition: t('Transpositions'),
 }
 
 /** NAG annotation glyphs allowed in the data. */
@@ -364,6 +365,8 @@ export interface ExplainRequest {
   jobId: string
   ply: number
   model?: string
+  /** App language code: the language of the answer (the client fills it in). */
+  language?: string
 }
 
 export interface ExplainResponse {
@@ -407,6 +410,8 @@ export interface CoachRequest {
   uci: string
   /** Default true: also stream an Ollama explanation. */
   explain?: boolean
+  /** App language code: the language of the explanation (the client fills it in). */
+  language?: string
   /** Ollama model; omitted = backend default. */
   model?: string
   /** 8-22, default 14. */

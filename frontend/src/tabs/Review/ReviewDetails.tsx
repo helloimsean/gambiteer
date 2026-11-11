@@ -9,6 +9,7 @@ import { Icon } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
 import { formatSanPath, moveNumberPrefix } from '../../lib/chess'
 import { formatScore } from '../../lib/eval'
+import { t, tn } from '../../lib/i18n'
 import { ReviewModelPicker, ReviewOllamaDown } from './ReviewModelPicker'
 import { classificationSentence, friendlyExplainError, reviewPlyOffset, sideName } from './reviewUtils'
 import type { ReviewExplainApi } from './useReviewExplain'
@@ -84,14 +85,14 @@ function TriedFacts({ move, absPly, players, onPlayBest, onRetry }: TriedFactsPr
       {move.error ? (
         <div className="row small">
           <span className="review-explain-error grow" role="alert">
-            Could not check this move: {move.error}
+            {t('Could not check this move: {error}', { error: move.error })}
           </span>
           <button type="button" className="btn btn-sm" onClick={() => onRetry(move)} data-testid="review-tried-retry">
-            Retry
+            {t('Retry')}
           </button>
         </div>
       ) : (
-        <p className="small muted review-start-hint">Stockfish is checking this move…</p>
+        <p className="small muted review-start-hint">{t('Stockfish is checking this move…')}</p>
       )}
     </div>
   )
@@ -102,12 +103,14 @@ function StartFacts({ result, keyCount }: { result: ReviewResult; keyCount: numb
     <div className="review-facts">
       <div className="review-verdict">
         <Icon name="flag" size={22} />
-        <span className="review-verdict-text">Starting position</span>
+        <span className="review-verdict-text">{t('Starting position')}</span>
       </div>
       <p className="small muted review-start-hint">
-        Step through the game with <span className="kbd">←</span> <span className="kbd">→</span>, click a move, the
-        graph or a count in the summary. {result.moves.length} plies, {keyCount} key moment{keyCount === 1 ? '' : 's'}. You
-        can also play any move on the board to see what Stockfish thinks of it.
+        {t('Step through the game with')} <span className="kbd">←</span> <span className="kbd">→</span>
+        {t(', click a move, the graph or a count in the summary. {plies} plies, {moments}. You can also play any move on the board to see what Stockfish thinks of it.', {
+          plies: result.moves.length,
+          moments: tn(keyCount, '{n} key moment', '{n} key moments'),
+        })}
       </p>
     </div>
   )
@@ -155,54 +158,54 @@ function MoveFacts({ move, absPly, players, onPlayBest }: MoveFactsProps): JSX.E
           {classificationSentence(label, move.classification)}
         </span>
         <span className="spacer" />
-        <span className={`review-eval-pill ${scoreSide(move.evalAfter, move.fenAfter)}`} title="Evaluation after the move (White's view)">
+        <span className={`review-eval-pill ${scoreSide(move.evalAfter, move.fenAfter)}`} title={t("Evaluation after the move (White's view)")}>
           {formatScore(move.evalAfter)}
         </span>
       </div>
 
       <div className="review-fact-row">
-        <span className="review-fact-key">Eval</span>
+        <span className="review-fact-key">{t('Eval')}</span>
         <span className="mono review-eval-change" data-testid="review-eval-change">
           {formatScore(move.evalBefore)} <span className="dim">→</span> {formatScore(move.evalAfter)}
         </span>
         <span className="spacer" />
-        <span className="small muted" title={`Win chance for ${mover} before and after the move`}>
+        <span className="small muted" title={t('Win chance for {name} before and after the move', { name: mover })}>
           {mover}: {before}% → <span style={{ color: after < before - 4 ? color : undefined }}>{after}%</span>
         </span>
       </div>
 
       {differs ? (
         <div className="review-fact-row top">
-          <span className="review-fact-key">Best</span>
+          <span className="review-fact-key">{t('Best')}</span>
           <div className="grow">
             <span className="review-best-move" data-testid="review-best-move">
               {moveNumberPrefix(absPly)}
               {move.bestMove.san}
             </span>
             {bestLine.length > 1 ? (
-              <div className="review-line mono" title="Engine's best line">
+              <div className="review-line mono" title={t("Engine's best line")}>
                 {formatSanPath(bestLine.slice(0, LINE_PLIES), absPly - 1)}
                 {bestLine.length > LINE_PLIES ? ' …' : ''}
               </div>
             ) : null}
           </div>
           <button type="button" className="btn btn-sm btn-primary review-play-best" onClick={onPlayBest} data-testid="review-play-best">
-            <Icon name="autoplay" size={14} /> Play best move
+            <Icon name="autoplay" size={14} /> {t('Play best move')}
           </button>
         </div>
       ) : move.classification !== 'book' ? (
         <div className="review-fact-row">
-          <span className="review-fact-key">Best</span>
+          <span className="review-fact-key">{t('Best')}</span>
           <span className="small muted">
-            <Icon name="check" size={13} /> This was the engine's top choice.
+            <Icon name="check" size={13} /> {t("This was the engine's top choice.")}
           </span>
         </div>
       ) : null}
 
       {move.playedPv.length > 0 ? (
         <div className="review-fact-row top">
-          <span className="review-fact-key">Line</span>
-          <div className="review-line mono grow" title={`Engine line after ${move.san}`}>
+          <span className="review-fact-key">{t('Line')}</span>
+          <div className="review-line mono grow" title={t('Engine line after {san}', { san: move.san })}>
             {formatSanPath(move.playedPv.slice(0, LINE_PLIES), absPly)}
             {move.playedPv.length > LINE_PLIES ? ' …' : ''}
           </div>
@@ -250,7 +253,8 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
   } else if (!move) {
     body = (
       <p className="small muted review-explain-placeholder">
-        Pick a move and press <b>Explain</b>, or let the coach go through all {keyPlies.length} key moments.
+        {t('Pick a move and press')} <b>{t('Explain')}</b>
+        {t(', or let the coach go through all {moments}.', { moments: tn(keyPlies.length, '{n} key moment', '{n} key moments') })}
       </p>
     )
   } else if (entry && (entry.text || entry.status === 'streaming')) {
@@ -258,7 +262,7 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
       <div className={`review-explain-text${entry.status === 'streaming' ? ' streaming' : ''}`} data-testid="review-explain-text">
         {entry.text}
         {entry.status === 'streaming' ? <span className="review-caret" aria-hidden="true" /> : null}
-        {entry.status === 'stopped' ? <span className="dim small"> (stopped)</span> : null}
+        {entry.status === 'stopped' ? <span className="dim small"> {t('(stopped)')}</span> : null}
         {err ? <div className="review-explain-error small">{err.text}</div> : null}
       </div>
     )
@@ -271,7 +275,7 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
   } else {
     body = (
       <p className="small muted review-explain-placeholder">
-        Ask the coach why {classificationSentence(move.san, move.classification)}.
+        {t('Ask the coach why {move}.', { move: classificationSentence(move.san, move.classification) })}
       </p>
     )
   }
@@ -280,7 +284,7 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
     <div className="review-explain" data-testid="review-explain">
       <div className="review-explain-head">
         <Icon name="brain" size={16} />
-        <span className="bold">Coach</span>
+        <span className="bold">{t('Coach')}</span>
         {entry?.status === 'streaming' ? <Spinner size={12} /> : null}
         <span className="spacer" />
         {!ollamaDown ? <ReviewModelPicker models={models} value={modelValue} onChange={onModel} compact /> : null}
@@ -291,7 +295,7 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
       <div className="review-explain-actions">
         {streamingThis && !batch ? (
           <button type="button" className="btn btn-sm btn-danger" onClick={explain.stop} data-testid="review-explain-stop">
-            <Icon name="pause" size={14} /> Stop
+            <Icon name="pause" size={14} /> {t('Stop')}
           </button>
         ) : (
           <button
@@ -300,21 +304,21 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
             disabled={!move || ollamaDown || models.status === 'loading'}
             onClick={() => move && explain.explain(move.ply)}
             data-testid="review-explain-btn"
-            title={effectiveModel ? `Explain with ${effectiveModel}` : 'Explain with the backend default model'}
+            title={effectiveModel ? t('Explain with {model}', { model: effectiveModel }) : t('Explain with the backend default model')}
           >
-            <Icon name="brain" size={14} /> {entry?.status === 'done' ? 'Explain again' : 'Explain'}
+            <Icon name="brain" size={14} /> {entry?.status === 'done' ? t('Explain again') : t('Explain')}
           </button>
         )}
         {batch ? (
           <>
             <button type="button" className="btn btn-sm btn-danger" onClick={explain.stop} data-testid="review-explain-all-stop">
-              <Icon name="pause" size={14} /> Stop
+              <Icon name="pause" size={14} /> {t('Stop')}
             </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm review-batch-status"
               onClick={() => batch.current !== null && onJump(batch.current)}
-              title="Show the move being explained"
+              title={t('Show the move being explained')}
               data-testid="review-batch-status"
             >
               <Spinner size={12} /> {batch.index + 1} / {batch.plies.length}
@@ -332,12 +336,14 @@ function ExplainPanel(props: ReviewDetailsProps & { move: ReviewMove | null }): 
             data-testid="review-explain-all"
             title={
               keyPlies.length === 0
-                ? 'No key moments in this game'
-                : 'Explain every blunder, mistake, miss, inaccuracy, brilliant and great move, one after another'
+                ? t('No key moments in this game')
+                : t('Explain every blunder, mistake, miss, inaccuracy, brilliant and great move, one after another')
             }
           >
             <Icon name="autoplay" size={14} />{' '}
-            {keyPlies.length > 0 && remainingKey === 0 ? 'All key moments explained' : `Explain all key moments (${remainingKey})`}
+            {keyPlies.length > 0 && remainingKey === 0
+              ? t('All key moments explained')
+              : t('Explain all key moments ({count})', { count: remainingKey })}
           </button>
         )}
       </div>

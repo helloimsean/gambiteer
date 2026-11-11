@@ -1,4 +1,5 @@
 import type { JSX } from 'react'
+import { t } from '../lib/i18n'
 import './controls.css'
 
 export interface SpinnerProps {
@@ -13,7 +14,7 @@ export function Spinner({ size = 18, className }: SpinnerProps): JSX.Element {
       className={`ui-spinner${className ? ` ${className}` : ''}`}
       style={{ width: size, height: size }}
       role="status"
-      aria-label="Loading"
+      aria-label={t('Loading')}
     />
   )
 }

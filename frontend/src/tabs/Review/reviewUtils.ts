@@ -4,6 +4,7 @@
 import type { Classification, Players, ReviewMove, ReviewResult, Score, Side } from '../../api/types'
 import { START_FEN, plyOffsetFromFen, sansToPgn } from '../../lib/chess'
 import { mateWinner } from '../../lib/eval'
+import { t } from '../../lib/i18n'
 import { pgnFileName } from '../../lib/pgnTransfer'
 import type { SoundName } from '../../lib/sounds'
 
@@ -45,25 +46,25 @@ export function keyMomentPlies(result: ReviewResult): number[] {
 export function classificationSentence(san: string, c: Classification): string {
   switch (c) {
     case 'brilliant':
-      return `${san} is brilliant`
+      return t('{san} is brilliant', { san })
     case 'great':
-      return `${san} is a great move`
+      return t('{san} is a great move', { san })
     case 'best':
-      return `${san} is the best move`
+      return t('{san} is the best move', { san })
     case 'excellent':
-      return `${san} is excellent`
+      return t('{san} is excellent', { san })
     case 'good':
-      return `${san} is good`
+      return t('{san} is good', { san })
     case 'book':
-      return `${san} is a book move`
+      return t('{san} is a book move', { san })
     case 'inaccuracy':
-      return `${san} is an inaccuracy`
+      return t('{san} is an inaccuracy', { san })
     case 'mistake':
-      return `${san} is a mistake`
+      return t('{san} is a mistake', { san })
     case 'blunder':
-      return `${san} is a blunder`
+      return t('{san} is a blunder', { san })
     case 'miss':
-      return `${san} is a miss`
+      return t('{san} is a miss', { san })
   }
 }
 
@@ -118,7 +119,8 @@ export function graphValues(result: ReviewResult): number[] {
 
 export function sideName(players: Players | undefined, side: Side): string {
   const n = players?.[side]?.trim()
-  return n ? n : side === 'white' ? 'White' : 'Black'
+  if (n === 'You') return t('You') // saved by the Play tab in English
+  return n ? n : side === 'white' ? t('White') : t('Black')
 }
 
 /** Accuracy for display: one decimal like chess.com. */
@@ -130,12 +132,13 @@ export function formatAccuracy(a: number | undefined): string {
 /** "5 min ago", "2 h ago", "3 days ago". */
 export function timeAgo(ts: number, now: number = Date.now()): string {
   const s = Math.max(0, Math.round((now - ts) / 1000))
-  if (s < 60) return 'just now'
+  if (s < 60) return t('just now')
   const m = Math.round(s / 60)
-  if (m < 60) return `${m} min ago`
+  if (m < 60) return t('{m} min ago', { m })
   const h = Math.round(m / 60)
-  if (h < 48) return `${h} h ago`
-  return `${Math.round(h / 24)} days ago`
+  if (h < 48) return t('{h} h ago', { h })
+  const days = Math.round(h / 24)
+  return t('{days} days ago', { days })
 }
 
 /** Players from PGN headers ("?" or empty names fall back to undefined). */
@@ -197,11 +200,11 @@ export function friendlyExplainError(message: string): { kind: 'ollama' | 'gone'
   if (m.includes('unknown review job')) {
     return {
       kind: 'gone',
-      text: 'This review is no longer on the server (the backend was restarted). Run the review again to get explanations.',
+      text: t('This review is no longer on the server (the backend was restarted). Run the review again to get explanations.'),
     }
   }
   if (m.includes('not installed') || m.includes('not found') || m.includes('unknown model')) {
-    return { kind: 'model', text: `The selected model is not available: ${message}` }
+    return { kind: 'model', text: t('The selected model is not available: {message}', { message }) }
   }
   if (
     m.includes('ollama') ||

@@ -5,6 +5,7 @@ import { Icon } from './components/Icon'
 import { Modal } from './components/Modal'
 import { Toggle } from './components/Toggle'
 import { Select } from './components/Select'
+import { LANGUAGES, getLanguage, setLanguage, t, tn } from './lib/i18n'
 import { LearnTab } from './tabs/Learn/LearnTab'
 import { QuizTab } from './tabs/Quiz/QuizTab'
 import { AnalyzeTab } from './tabs/Analyze/AnalyzeTab'
@@ -43,16 +44,16 @@ class TabErrorBoundary extends Component<TabBoundaryProps, TabBoundaryState> {
   render(): ReactNode {
     const { error } = this.state
     if (!error) return this.props.children
-    const label = TABS.find((t) => t.id === this.props.tab)?.label ?? this.props.tab
+    const label = TABS.find((info) => info.id === this.props.tab)?.label ?? this.props.tab
     return (
       <div className="tab-placeholder">
         <EmptyState
           icon="warning"
-          title={`The ${label} tab hit an error`}
+          title={t('The {label} tab hit an error', { label })}
           description={<code className="tab-error-text">{error.message || String(error)}</code>}
           action={
             <button type="button" className="btn btn-primary" onClick={() => this.setState({ error: null })}>
-              Try again
+              {t('Try again')}
             </button>
           }
         />
@@ -84,46 +85,57 @@ function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }
     const names = health?.ollama?.models ?? []
     const opts = names.map((n) => ({ value: n, label: n }))
     if (settings.ollamaModel && !names.includes(settings.ollamaModel)) {
-      opts.push({ value: settings.ollamaModel, label: `${settings.ollamaModel} (not installed)` })
+      opts.push({ value: settings.ollamaModel, label: t('{model} (not installed)', { model: settings.ollamaModel }) })
     }
-    return [{ value: '', label: 'Backend default' }, ...opts]
+    return [{ value: '', label: t('Backend default') }, ...opts]
   }, [health, settings.ollamaModel])
 
   return (
-    <Modal open={open} onClose={onClose} title="Settings" width={460}>
+    <Modal open={open} onClose={onClose} title={t('Settings')} width={460}>
       <div className="settings-grid">
         <div className="settings-row">
           <div className="settings-text">
-            <span>Sounds</span>
-            <small>Move, capture and check sounds. Sacrifice voice lines: Levy Rozman (GothamChess)</small>
+            <span>{getLanguage() === 'en' ? 'Language' : `${t('Language')} · Language`}</span>
+            <small>{t("The app and the coach's explanations")}</small>
+          </div>
+          <Select
+            value={getLanguage()}
+            options={LANGUAGES.map((l) => ({ value: l.code, label: l.name }))}
+            onChange={(code) => setLanguage(code)}
+          />
+        </div>
+        <div className="settings-row">
+          <div className="settings-text">
+            <span>{t('Sounds')}</span>
+            <small>{t('Move, capture and check sounds. Sacrifice voice lines: Levy Rozman (GothamChess)')}</small>
           </div>
           <Toggle checked={settings.sound} onChange={(v) => setSettings({ sound: v })} />
         </div>
         <div className="settings-row">
           <div className="settings-text">
-            <span>Coordinates</span>
-            <small>Show file and rank labels on the board</small>
+            <span>{t('Coordinates')}</span>
+            <small>{t('Show file and rank labels on the board')}</small>
           </div>
           <Toggle checked={settings.coordinates} onChange={(v) => setSettings({ coordinates: v })} />
         </div>
         <div className="settings-row">
           <div className="settings-text">
-            <span>Explanation model</span>
-            <small>Ollama model used by Game Review and the Learn coach</small>
+            <span>{t('Explanation model')}</span>
+            <small>{t('Ollama model used by Game Review and the Learn coach')}</small>
           </div>
           <Select value={settings.ollamaModel} options={modelOptions} onChange={(v) => setSettings({ ollamaModel: v })} />
         </div>
         <div className="settings-row">
           <div className="settings-text">
-            <span>Review depth</span>
-            <small>Stockfish depth for Game Review</small>
+            <span>{t('Review depth')}</span>
+            <small>{t('Stockfish depth for Game Review')}</small>
           </div>
           <Select
             value={String(settings.defaultDepth)}
             options={[
-              { value: '12', label: '12 (fast)' },
-              { value: '16', label: '16 (default)' },
-              { value: '20', label: '20 (deep)' },
+              { value: '12', label: t('12 (fast)') },
+              { value: '16', label: t('16 (default)') },
+              { value: '20', label: t('20 (deep)') },
             ]}
             onChange={(v) => setSettings({ defaultDepth: Number(v) })}
           />
@@ -175,7 +187,7 @@ function Shell(): JSX.Element {
 
   return (
     <div className="app">
-      <nav className="nav" aria-label="Main">
+      <nav className="nav" aria-label={t('Main navigation')}>
         <div className="nav-brand">
           <img className="nav-logo" src="/logo.svg" alt="" width={32} height={32} />
           <span>Gambiteer</span>
@@ -186,12 +198,12 @@ function Shell(): JSX.Element {
             type="button"
             className="nav-item nav-more"
             onClick={toggleMore}
-            title={moreOpen ? 'Show less' : 'Show more'}
+            title={moreOpen ? t('Show less') : t('Show more')}
             aria-expanded={moreOpen}
             data-testid="nav-more"
           >
             <Icon name={moreOpen ? 'chevronUp' : 'chevronDown'} size={22} />
-            <span>{moreOpen ? 'Less' : 'More'}</span>
+            <span>{moreOpen ? t('Less') : t('More')}</span>
           </button>
           {moreOpen ? TABS.filter((t) => t.more).map(navItem) : null}
         </div>
@@ -199,40 +211,40 @@ function Shell(): JSX.Element {
           <StatusRow
             ok={stockfishOk}
             name={health?.stockfish?.name || 'Stockfish'}
-            detail={health ? `${health.openings} openings` : undefined}
+            detail={health ? tn(health.openings, '{n} opening', '{n} openings') : undefined}
             title={
               health
                 ? stockfishOk
-                  ? `${health.stockfish.name} at ${health.stockfish.path}\n${health.openings} openings loaded`
-                  : `Stockfish not available\n${health.openings} openings loaded`
-                : healthError ?? 'Checking backend…'
+                  ? `${t('{name} at {path}', { name: health.stockfish.name, path: health.stockfish.path })}\n${tn(health.openings, '{n} opening loaded', '{n} openings loaded')}`
+                  : `${t('Stockfish not available')}\n${tn(health.openings, '{n} opening loaded', '{n} openings loaded')}`
+                : healthError ?? t('Checking backend…')
             }
           />
           <StatusRow
             ok={ollamaOk}
             name="Ollama"
-            detail={ollamaOk ? `${ollamaModels.length} models` : undefined}
+            detail={ollamaOk ? tn(ollamaModels.length, '{n} model', '{n} models') : undefined}
             title={
               health
                 ? ollamaOk
-                  ? `Models: ${ollamaModels.join(', ')}`
-                  : 'Ollama not reachable at localhost:11434'
-                : healthError ?? 'Checking backend…'
+                  ? t('Models: {models}', { models: ollamaModels.join(', ') })
+                  : t('Ollama not reachable at localhost:11434')
+                : healthError ?? t('Checking backend…')
             }
           />
           <div className="nav-footer-actions">
             <button
               type="button"
               className="btn btn-ghost btn-icon btn-sm"
-              title={settings.sound ? 'Mute sounds' : 'Unmute sounds'}
+              title={settings.sound ? t('Mute sounds') : t('Unmute sounds')}
               onClick={() => setSettings({ sound: !settings.sound })}
             >
               <Icon name={settings.sound ? 'sound' : 'soundOff'} size={18} />
             </button>
-            <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Settings" onClick={() => setSettingsOpen(true)}>
+            <button type="button" className="btn btn-ghost btn-icon btn-sm" title={t('Settings')} onClick={() => setSettingsOpen(true)}>
               <Icon name="settings" size={18} />
             </button>
-            <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Re-check backend" onClick={() => void refreshHealth()}>
+            <button type="button" className="btn btn-ghost btn-icon btn-sm" title={t('Re-check backend')} onClick={() => void refreshHealth()}>
               <Icon name="refresh" size={18} />
             </button>
           </div>

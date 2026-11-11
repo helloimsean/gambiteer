@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import { Icon } from '../../components/Icon'
 import { Select } from '../../components/Select'
 import { Toggle } from '../../components/Toggle'
+import { t } from '../../lib/i18n'
 import type { LearnPracticeSettings, LearnReplyMode } from './useLearnPractice'
 
 export interface LearnPracticeMenuProps {
@@ -16,8 +17,8 @@ export interface LearnPracticeMenuProps {
 }
 
 const REPLY_OPTIONS: { value: LearnReplyMode; label: string }[] = [
-  { value: 'line', label: 'Follow line' },
-  { value: 'random', label: 'Random variation' },
+  { value: 'line', label: t('Follow line') },
+  { value: 'random', label: t('Random variation') },
 ]
 
 export function LearnPracticeMenu({ settings, onChange, model }: LearnPracticeMenuProps): JSX.Element {
@@ -50,8 +51,8 @@ export function LearnPracticeMenu({ settings, onChange, model }: LearnPracticeMe
       <button
         type="button"
         className={`btn btn-ghost btn-icon btn-sm learn-practice-gear${open ? ' on' : ''}${off ? ' warn' : ''}`}
-        title={`Practice options (auto-reply ${settings.autoReply ? 'on' : 'off'})`}
-        aria-label="Practice options"
+        title={t('Practice options (auto-reply {state})', { state: settings.autoReply ? t('on') : t('off') })}
+        aria-label={t('Practice options')}
         aria-expanded={open}
         data-testid="learn-practice-options"
         onClick={() => setOpen((o) => !o)}
@@ -60,34 +61,37 @@ export function LearnPracticeMenu({ settings, onChange, model }: LearnPracticeMe
       </button>
       {open ? (
         <div className="learn-practice-pop" role="menu" data-testid="learn-practice-pop">
-          <div className="learn-practice-pop-title">Practice</div>
+          <div className="learn-practice-pop-title">{t('Practice')}</div>
           <Toggle
             className="learn-opt-autoreply"
             checked={settings.autoReply}
             onChange={(v) => onChange({ autoReply: v })}
-            label="Auto-reply"
-            title="The opponent answers your board moves automatically"
+            label={t('Auto-reply')}
+            title={t('The opponent answers your board moves automatically')}
           />
           <Select<LearnReplyMode>
             className="learn-opt-replymode"
-            label="Opponent replies"
+            label={t('Opponent replies')}
             value={settings.replyMode}
             options={REPLY_OPTIONS}
             onChange={(v) => onChange({ replyMode: v })}
             disabled={!settings.autoReply}
-            title="Follow line = the line you are on; Random variation = any reply in the tree (popular ones more often)"
+            title={t(
+              'Follow line = the line you are on; Random variation = any reply in the tree (popular ones more often)',
+            )}
           />
           <Toggle
             className="learn-opt-explain"
             checked={settings.autoExplain}
             onChange={(v) => onChange({ autoExplain: v })}
-            label="Coach explains every move"
-            title="Ask the Ollama coach to explain each move you and the opponent play"
+            label={t('Coach explains every move')}
+            title={t('Ask the Ollama coach to explain each move you and the opponent play')}
           />
           <p className="learn-practice-pop-hint dim">
-            Coach model: {model || 'backend default'} (change it in Settings). Engine verdicts are always shown. The
-            explanations come from a local AI model and can get details wrong; badges and evaluations come from Stockfish.
-            While you practise, the move arrows stay hidden on your turn (the arrows button shows a hint).
+            {t(
+              'Coach model: {model} (change it in Settings). Engine verdicts are always shown. The explanations come from a local AI model and can get details wrong; badges and evaluations come from Stockfish. While you practise, the move arrows stay hidden on your turn (the arrows button shows a hint).',
+              { model: model || t('backend default') },
+            )}
           </p>
         </div>
       ) : null}

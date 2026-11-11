@@ -303,6 +303,7 @@ class ExplainRequest(BaseModel):
     jobId: str
     ply: int = Field(ge=1)
     model: str | None = None
+    language: str | None = Field(default=None, max_length=10)  # app language code: the answer's language
 
 
 class ExplainResponse(BaseModel):
@@ -338,6 +339,7 @@ class CoachRequest(BaseModel):
     model: str | None = None
     depth: int = Field(default=14, ge=8, le=22)
     context: CoachContext | None = None
+    language: str | None = Field(default=None, max_length=10)  # app language code: the answer's language
 
 
 class CoachMove(BaseModel):

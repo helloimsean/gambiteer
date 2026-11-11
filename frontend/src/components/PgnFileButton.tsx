@@ -1,4 +1,5 @@
 import { useRef, type ChangeEvent, type JSX } from 'react'
+import { t } from '../lib/i18n'
 import { Icon } from './Icon'
 
 /** One game is a few kB; anything far larger is a whole database, and only its first game is read. */
@@ -19,13 +20,13 @@ export function PgnFileButton({ onText, onError, disabled }: PgnFileButtonProps)
     e.target.value = '' // so choosing the same file again still fires a change
     if (!file) return
     if (file.size > MAX_FILE_BYTES) {
-      onError(`${file.name} is over 2 MB. Open a file with just the game you want.`)
+      onError(t('{name} is over 2 MB. Open a file with just the game you want.', { name: file.name }))
       return
     }
     try {
       onText(await file.text())
     } catch {
-      onError(`Could not read ${file.name}.`)
+      onError(t('Could not read {name}.', { name: file.name }))
     }
   }
 
@@ -40,7 +41,7 @@ export function PgnFileButton({ onText, onError, disabled }: PgnFileButtonProps)
         data-testid="pgn-file-input"
       />
       <button type="button" className="btn btn-sm" onClick={() => inputRef.current?.click()} disabled={disabled} data-testid="pgn-file-open">
-        <Icon name="upload" size={14} /> Open .pgn file
+        <Icon name="upload" size={14} /> {t('Open .pgn file')}
       </button>
     </>
   )

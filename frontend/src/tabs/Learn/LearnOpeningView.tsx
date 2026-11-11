@@ -20,6 +20,7 @@ import { MoveNav, ToolbarButton } from '../../components/Toolbar'
 import { parseUci } from '../../lib/chess'
 import { loadJson, saveJson } from '../../lib/storage'
 import { deepestNodeOnPath, findNodeById, sansFromNodeId } from '../../lib/tree'
+import { t, tn } from '../../lib/i18n'
 import { useApp } from '../../state/AppContext'
 import { LearnCoachCard } from './LearnCoachCard'
 import { LearnIdeasPanel } from './LearnIdeasPanel'
@@ -320,10 +321,10 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
                 <span className="learn-move-big" data-testid="learn-current-move">
                   {learnMoveLabel(offBook)}
                 </span>
-                <span className="badge badge-yellow">Not in repertoire</span>
+                <span className="badge badge-yellow">{t('Not in repertoire')}</span>
               </>
             ) : node.ply === 0 ? (
-              <span className="learn-move-big">Starting position</span>
+              <span className="learn-move-big">{t('Starting position')}</span>
             ) : (
               <>
                 <span className="learn-move-big" data-testid="learn-current-move">
@@ -331,16 +332,16 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
                   {node.nag ? <span className={`nag ${learnNagClass(node.nag)}`}>{node.nag}</span> : null}
                 </span>
                 {node.nag ? <span className={`learn-nag-meaning ${learnNagClass(node.nag)}`}>{learnNagMeaning(node.nag)}</span> : null}
-                <span className={`badge ${studentMoved ? 'badge-green' : ''}`}>{studentMoved ? 'Your move' : "Opponent's move"}</span>
+                <span className={`badge ${studentMoved ? 'badge-green' : ''}`}>{studentMoved ? t('Your move') : t("Opponent's move")}</span>
               </>
             )}
             <span className="spacer" />
             {practice.pendingReply ? (
               <span className="learn-thinking dim" data-testid="learn-reply-pending">
-                Opponent is replying…
+                {t('Opponent is replying…')}
               </span>
             ) : null}
-            <span className="learn-ply-count dim" title="Move on this line">
+            <span className="learn-ply-count dim" title={t('Move on this line')}>
               {ply}/{nav.path.length}
             </span>
             <button
@@ -348,12 +349,12 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
               className={`btn btn-ghost btn-icon btn-sm learn-arrows-toggle${arrowsShown ? ' on' : ''}${arrows && hideAnswer ? ' hint' : ''}`}
               title={
                 arrows && hideAnswer
-                  ? 'Hint: show the repertoire move (arrows are hidden on your turn while you practise)'
+                  ? t('Hint: show the repertoire move (arrows are hidden on your turn while you practise)')
                   : arrows
-                    ? 'Hide move arrows'
-                    : 'Show move arrows'
+                    ? t('Hide move arrows')
+                    : t('Show move arrows')
               }
-              aria-label={arrows && hideAnswer ? 'Show a hint' : arrows ? 'Hide move arrows' : 'Show move arrows'}
+              aria-label={arrows && hideAnswer ? t('Show a hint') : arrows ? t('Hide move arrows') : t('Show move arrows')}
               aria-pressed={arrowsShown}
               data-testid="learn-arrows-toggle"
               onClick={onArrowsButton}
@@ -383,12 +384,15 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
             onPlayOpponent={practice.playOpponentMove}
             placeholder={
               <span className="muted learn-coach-intro">
-                Play your move on the board and the opponent answers from the line, with a coach explaining every move. Or
-                step through with <span className="kbd">→</span>, Autoplay, or click any move in the tree.
+                {t(
+                  'Play your move on the board and the opponent answers from the line, with a coach explaining every move. Or step through with',
+                )}{' '}
+                <span className="kbd">→</span>
+                {t(', Autoplay, or click any move in the tree.')}
                 {activeLine ? (
                   <>
                     {' '}
-                    Following: <b className="learn-following">{activeLine.name}</b>
+                    {t('Following:')} <b className="learn-following">{activeLine.name}</b>
                   </>
                 ) : null}
               </span>
@@ -396,10 +400,10 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
             footer={
               atEnd && activeLine && !practice.complete && !offBook ? (
                 <div className="learn-end">
-                  <b>End of line.</b> {activeLine.evaluation || 'No evaluation given.'}
+                  <b>{t('End of line.')}</b> {activeLine.evaluation || t('No evaluation given.')}
                 </div>
               ) : node.ply > 0 && !node.why && !offBook ? (
-                <span className="muted small">No repertoire note for this move.</span>
+                <span className="muted small">{t('No repertoire note for this move.')}</span>
               ) : null
             }
           />
@@ -407,17 +411,18 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
           <div className={`learn-here${showAllLines ? ' expanded' : ''}`}>
             {node.ply === 0 ? (
               <span className="dim">
-                {opening.lines.length} lines in this repertoire. {learnIsGambit(opening.name) ? 'See "If declined" in Lines.' : ''}
+                {tn(opening.lines.length, '{n} line in this repertoire.', '{n} lines in this repertoire.')}{' '}
+                {learnIsGambit(opening.name) ? t('See "If declined" in Lines.') : ''}
               </span>
             ) : (
               <>
-                <span className="dim learn-here-label">{linesHere.length === 1 ? 'Line:' : `${linesHere.length} lines:`}</span>
+                <span className="dim learn-here-label">{tn(linesHere.length, 'Line:', '{n} lines:')}</span>
                 {shownLines.map((l) => (
                   <button
                     key={l.id}
                     type="button"
                     className={`learn-chip cat-${l.category}${l.id === nav.lineId ? ' active' : ''}`}
-                    title={`${LINE_CATEGORY_LABELS[l.category] ?? l.category}: ${l.name}`}
+                    title={t('{category}: {name}', { category: (LINE_CATEGORY_LABELS[l.category] ?? l.category), name: l.name })}
                     onClick={() => followLine(l, ply)}
                   >
                     {l.name}
@@ -425,7 +430,7 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
                 ))}
                 {linesHere.length > VISIBLE_LINE_CHIPS ? (
                   <button type="button" className="learn-link" onClick={() => setShowAllLines((s) => !s)}>
-                    {showAllLines ? 'show less' : `+${linesHere.length - VISIBLE_LINE_CHIPS} more`}
+                    {showAllLines ? t('show less') : t('+{n} more', { n: linesHere.length - VISIBLE_LINE_CHIPS })}
                   </button>
                 ) : null}
               </>
@@ -436,8 +441,8 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
             <MoveNav ply={ply} maxPly={nav.path.length} onChange={setPly} keyboard className="learn-nav">
               <ToolbarButton
                 icon={running ? 'pause' : 'autoplay'}
-                title={running ? 'Pause autoplay' : 'Autoplay (1.5 s per move)'}
-                label={running ? 'Pause' : 'Autoplay'}
+                title={running ? t('Pause autoplay') : t('Autoplay (1.5 s per move)')}
+                label={running ? t('Pause') : t('Autoplay')}
                 active={running}
                 onClick={toggleAutoplay}
                 disabled={nav.path.length === 0}
@@ -445,8 +450,10 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
               />
               <ToolbarButton
                 icon="target"
-                title={`Practice this line from the start: you play ${opening.side === 'white' ? 'White' : 'Black'}, the opponent answers`}
-                label="Practice"
+                title={t('Practice this line from the start: you play {side}, the opponent answers', {
+                  side: opening.side === 'white' ? t('White') : t('Black'),
+                })}
+                label={t('Practice')}
                 onClick={() => practice.start()}
                 disabled={nav.path.length === 0}
                 className="learn-practice-btn"
@@ -457,21 +464,21 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
               type="button"
               className="btn btn-primary learn-action"
               onClick={() => navigate('quiz', { openingId: opening.id })}
-              title="Quiz this opening"
+              title={t('Quiz this opening')}
             >
               <Icon name="quiz" size={16} />
-              <span className="learn-label-long">Quiz this opening</span>
-              <span className="learn-label-short">Quiz</span>
+              <span className="learn-label-long">{t('Quiz this opening')}</span>
+              <span className="learn-label-short">{t('Quiz')}</span>
             </button>
             <button
               type="button"
               className="btn learn-action learn-analyze-action"
               onClick={() => navigate('analyze', { sans: sansHere })}
-              title="Analyze this position"
+              title={t('Analyze this position')}
             >
               <Icon name="analyze" size={16} />
-              <span className="learn-label-long">Analyze this position</span>
-              <span className="learn-label-short">Analyze</span>
+              <span className="learn-label-long">{t('Analyze this position')}</span>
+              <span className="learn-label-short">{t('Analyze')}</span>
             </button>
           </div>
         </div>
@@ -480,7 +487,7 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
       <div className="workspace-side">
         <div className="panel grow learn-side">
           <div className="panel-header learn-side-header">
-            <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={onBack} title="All openings" aria-label="All openings">
+            <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={onBack} title={t('All openings')} aria-label={t('All openings')}>
               <Icon name="prev" size={18} />
             </button>
             <div className="panel-title learn-side-title">
@@ -494,16 +501,16 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
             </div>
           </div>
           <div className="panel-tabs" role="tablist">
-            {(['tree', 'lines', 'ideas'] as const).map((t) => (
+            {(['tree', 'lines', 'ideas'] as const).map((tk) => (
               <button
-                key={t}
+                key={tk}
                 type="button"
                 role="tab"
-                aria-selected={panel === t}
-                className={panel === t ? 'active' : ''}
-                onClick={() => setPanel(t)}
+                aria-selected={panel === tk}
+                className={panel === tk ? 'active' : ''}
+                onClick={() => setPanel(tk)}
               >
-                {t === 'tree' ? 'Tree' : t === 'lines' ? `Lines (${opening.lines.length})` : 'Ideas'}
+                {tk === 'tree' ? t('Tree') : tk === 'lines' ? t('Lines ({count})', { count: opening.lines.length }) : t('Ideas')}
               </button>
             ))}
           </div>
@@ -512,10 +519,10 @@ export function LearnOpeningView({ opening, initial, onBack }: LearnOpeningViewP
               <>
                 <div className="learn-tree-bar">
                   <span className="dim learn-tree-legend">
-                    <b>Bold</b> = main line · chips mark where a line starts
+                    <b>{t('Bold')}</b> {t('= main line · chips mark where a line starts')}
                   </span>
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExpandAll((e) => !e)}>
-                    {expandAll ? 'Collapse' : 'Expand all'}
+                    {expandAll ? t('Collapse') : t('Expand all')}
                   </button>
                 </div>
                 <LearnTree
