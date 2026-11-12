@@ -21,6 +21,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
@@ -54,7 +55,9 @@ class MainActivity : Activity() {
                 loaded -> handler.postDelayed(this, WATCH_MS)
                 app.backend.ready -> {
                     loaded = true
-                    web.loadUrl(Backend.URL)
+                    // the backend refuses requests without the app's key (AccessKey); the WebView sends it with each one
+                    val cookie = "${AccessKey.COOKIE}=${AccessKey.get(this@MainActivity)}; Path=/; HttpOnly; SameSite=Strict"
+                    CookieManager.getInstance().setCookie(Backend.URL, cookie) { web.loadUrl(Backend.URL) }
                     handler.postDelayed(this, WATCH_MS)
                 }
                 else -> {

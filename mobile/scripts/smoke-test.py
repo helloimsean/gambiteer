@@ -4,11 +4,14 @@
     adb forward tcp:18000 tcp:8000
     python scripts/smoke-test.py
 
-Needs the app open. Exits non-zero if anything fails.
+Needs the app open. Exits non-zero if anything fails. The app's backend wants its access key
+(AccessKey.kt), which a debug build lets adb read with run-as.
 """
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 import time
 import urllib.error
@@ -24,11 +27,15 @@ HORDE = "rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 
 RACING = "8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1"
 
 failures: list[str] = []
+ADB = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk", "platform-tools", "adb.exe")
+KEY = subprocess.run(
+    [ADB, "shell", "run-as", "com.gambiteer.mobile", "cat", "files/access-key"], capture_output=True, text=True, check=True
+).stdout.strip()
 
 
 def call(path: str, body: object | None = None, timeout: float = 120.0) -> dict:
     data = None if body is None else json.dumps(body).encode()
-    request = urllib.request.Request(BASE + path, data=data, headers={"Content-Type": "application/json"})
+    request = urllib.request.Request(BASE + path, data=data, headers={"Content-Type": "application/json", "X-Gambiteer-Key": KEY})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.load(response)
 

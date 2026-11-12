@@ -24,6 +24,7 @@ class GambiteerApp : Application(), ServiceConnection {
     override fun onCreate() {
         super.onCreate()
         if (getProcessName() != packageName) return // the coach's own process runs only CoachService
+        AccessKey.get(this) // made before the coach process starts, which reads it
         models = CoachModels(this, ::releaseCoach)
         backend = Backend(this)
         bindCoach()

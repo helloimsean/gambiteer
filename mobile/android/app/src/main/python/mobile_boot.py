@@ -20,7 +20,7 @@ PHONE_SETTINGS = {
 }
 
 
-def configure_environment(native_dir: str, payload_dir: str, coach_port: int) -> None:
+def configure_environment(native_dir: str, payload_dir: str, coach_port: int, access_key: str) -> None:
     native = Path(native_dir)
     payload = Path(payload_dir)
     os.environ.update(
@@ -33,6 +33,8 @@ def configure_environment(native_dir: str, payload_dir: str, coach_port: int) ->
             "FRONTEND_DIST": str(payload / "web"),
             "OLLAMA_URL": f"http://127.0.0.1:{coach_port}",
             "OLLAMA_MODEL": "gemma4:e4b",
+            # every request must carry it, so other apps on the phone cannot use the backend or coach
+            "GAMBITEER_ACCESS_KEY": access_key,
         }
     )
 
@@ -59,6 +61,6 @@ def create_server(port: int):
     return uvicorn.Server(config)
 
 
-def run(native_dir: str, payload_dir: str, port: int, coach_port: int) -> None:
-    configure_environment(native_dir, payload_dir, coach_port)
+def run(native_dir: str, payload_dir: str, port: int, coach_port: int, access_key: str) -> None:
+    configure_environment(native_dir, payload_dir, coach_port, access_key)
     create_server(port).run()

@@ -87,6 +87,13 @@ class CoachServer(private val context: Context) {
             val requestLine = head.lineSequence().first().split(" ")
             if (requestLine.size < 2) return
             val path = requestLine[1].substringBefore('?')
+            // Other apps on the phone can reach this port too; only the app's backend has the key.
+            val auth = head.lineSequence().drop(1).firstOrNull { it.startsWith("authorization:", ignoreCase = true) }
+            if (!AccessKey.matches(context, auth?.substringAfter(':')?.trim()?.removePrefix("Bearer ")?.trim())) {
+                json(output, 401, JSONObject().put("error", "missing or wrong access key"))
+                output.flush()
+                return
+            }
             when ("${requestLine[0]} $path") {
                 "GET /api/tags" -> tags(output)
                 "POST /api/chat" -> chat(readBody(input, head), output)

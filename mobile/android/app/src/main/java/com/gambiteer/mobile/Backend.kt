@@ -41,6 +41,7 @@ class Backend(private val context: Context) {
                     payload.path,
                     PORT,
                     CoachServer.PORT,
+                    AccessKey.get(context),
                 )
                 failure = context.getString(R.string.engine_stopped)
             } catch (t: Throwable) {

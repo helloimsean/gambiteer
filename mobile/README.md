@@ -48,6 +48,11 @@ Android app (Kotlin, one Activity)
   uses the GPU and falls back to the CPU, and it unloads after five idle minutes to free memory. It runs
   in its own Android process (`:coach`), so a native crash costs one explanation, not the app; if the
   GPU crashes it, the coach stays on the CPU until the next app update.
+* **Only the app can use its servers.** Every app on a phone can reach 127.0.0.1, so both servers want
+  a key that is made once per install and kept in the app's private files (`AccessKey.kt`). The
+  WebView sends it as a cookie, and the backend sends it to the coach as a bearer token. Anything
+  without it gets 403 (backend) or 401 (coach). A debug build lets `adb shell run-as` read it, which is
+  how `scripts/smoke-test.py` gets in.
 
 ## Layout of this folder
 
