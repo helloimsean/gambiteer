@@ -25,6 +25,7 @@ from .ollama_client import OllamaClient, OllamaError
 from .openings import OpeningStore
 from .review import ReviewService
 from .routers import analysis, bot, coach, explain, openings, pgn, review, system
+from .security import LocalGuard
 from .variants import create_manager as create_fairy_manager
 
 log = logging.getLogger("app")
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.ollama_model,
             timeout_s=settings.ollama_timeout_s,
             health_timeout_s=settings.ollama_health_timeout_s,
+            api_key=settings.access_key,
         )
         reviews = ReviewService(engines, store, max_jobs=settings.max_review_jobs, book_max_ply=settings.book_max_ply)
         app.state.services = Services(settings, store, engines, ollama, reviews, maia, fairy)
@@ -88,6 +90,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # added last, so it runs first: other sites, DNS rebinding, framing, other apps (see security.py)
+    app.add_middleware(LocalGuard, allowed_hosts=settings.allowed_hosts, access_key=settings.access_key)
 
     @app.exception_handler(EngineUnavailable)
     async def _engine_unavailable(_: Request, exc: EngineUnavailable) -> JSONResponse:

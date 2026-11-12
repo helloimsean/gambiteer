@@ -345,7 +345,11 @@ python-chess, but any model can still get a detail wrong. The badges and evaluat
 from Stockfish.
 
 Other backend settings (environment variables): `STOCKFISH_PATH`, `LC0_PATH`, `MAIA_WEIGHTS_DIR`,
-`DATA_DIR`, `FRONTEND_DIST`.
+`DATA_DIR`, `FRONTEND_DIST`, and `ALLOWED_HOSTS` (extra host names to answer to, comma-separated).
+
+The backend only answers on `127.0.0.1`, and it refuses requests made out to other host names (DNS
+rebinding), WebSockets opened by other websites, and being shown inside another site's frame (see
+`backend/app/security.py`). So a website open in your browser cannot use your engine or AI model.
 Threads, hash sizes and depths are in `backend/app/config.py` (see `backend/README.md`).
 
 ## Troubleshooting

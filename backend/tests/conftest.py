@@ -24,6 +24,7 @@ def test_settings(**overrides: object) -> Settings:
         bot_threads=1,
         bot_hash_mb=16,
         warm_up_engines=False,
+        allowed_hosts=(*SETTINGS.allowed_hosts, "testserver"),  # Starlette's TestClient
     )
     return base.with_overrides(**overrides) if overrides else base
 
