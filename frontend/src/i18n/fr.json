@@ -733,5 +733,19 @@
   "Take back the last move": "Reprendre le dernier coup",
   "Turn the board after every move": "Retourner l'échiquier après chaque coup",
   "White player name": "Nom des Blancs",
-  "Who resigns?": "Qui abandonne ?"
+  "Who resigns?": "Qui abandonne ?",
+  "Advanced Stockfish settings": "Réglages avancés de Stockfish",
+  "CPU threads": "Threads du processeur",
+  "Hash memory": "Mémoire de hachage",
+  "Time limit per move": "Limite de temps par coup",
+  "{n} threads": {
+    "one": "{n} thread",
+    "other": "{n} threads"
+  },
+  "{n} MB": "{n} Mo",
+  "{n} GB": "{n} Go",
+  "{n} s": "{n} s",
+  "No limit": "Sans limite",
+  "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "Avec plus de threads et de mémoire, chaque position est analysée plus vite. La limite de temps passe à la suivante quand une position mettrait plus longtemps à atteindre la profondeur.",
+  "Reset to defaults": "Rétablir les valeurs par défaut"
 }

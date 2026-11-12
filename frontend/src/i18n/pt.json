@@ -733,5 +733,19 @@
   "Take back the last move": "Desfazer o último lance",
   "Turn the board after every move": "Girar o tabuleiro após cada lance",
   "White player name": "Nome do jogador das Brancas",
-  "Who resigns?": "Quem desiste?"
+  "Who resigns?": "Quem desiste?",
+  "Advanced Stockfish settings": "Configurações avançadas do Stockfish",
+  "CPU threads": "Threads da CPU",
+  "Hash memory": "Memória hash",
+  "Time limit per move": "Limite de tempo por lance",
+  "{n} threads": {
+    "one": "{n} thread",
+    "other": "{n} threads"
+  },
+  "{n} MB": "{n} MB",
+  "{n} GB": "{n} GB",
+  "{n} s": "{n} s",
+  "No limit": "Sem limite",
+  "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "Com mais threads e memória, cada posição é analisada mais rápido. O limite de tempo passa para a próxima quando uma posição levaria mais tempo para atingir a profundidade.",
+  "Reset to defaults": "Restaurar padrões"
 }

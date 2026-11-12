@@ -62,7 +62,9 @@ model turns the engine's facts into plain-language explanations.
     variant games still appear in History.
 * **Review**: chess.com-style game review (brilliant to blunder, accuracy, eval graph), with an AI
   explanation of why each move was good or bad. Press **Play best move**, or play any legal move on
-  the board, and Stockfish grades it in a side line under that move.
+  the board, and Stockfish grades it in a side line under that move. *Advanced Stockfish settings*
+  on the setup card (click it to fold it open) set the CPU threads, the hash memory and a time limit
+  per move for the review; the choices go up to what your computer has.
 * **History** (under **More** in the sidebar): every game you finish against a bot, with its Elo, the
   result and, once you have reviewed the game, both players' accuracy. It is saved in your browser.
 * **PGN import and export**: paste a PGN or open a `.pgn` file in Analyze and Review, and copy or
