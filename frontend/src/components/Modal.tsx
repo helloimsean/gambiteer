@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type JSX, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { t } from '../lib/i18n'
 import { Icon } from './Icon'
 import './Modal.css'
 
@@ -64,7 +65,7 @@ export function Modal({ open, onClose, title, children, footer, width, dismissib
           <div className="ui-modal-header">
             <h2>{title}</h2>
             {dismissible ? (
-              <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={onClose} aria-label="Close">
+              <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={onClose} aria-label={t('Close')}>
                 <Icon name="close" size={18} />
               </button>
             ) : null}

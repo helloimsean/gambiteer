@@ -8,6 +8,7 @@ import { CLASSIFICATION_COLORS, CLASSIFICATION_LABELS, ClassificationBadge } fro
 import { Icon } from '../../components/Icon'
 import { moveNumberPrefix } from '../../lib/chess'
 import { formatScore } from '../../lib/eval'
+import { t } from '../../lib/i18n'
 import { REVIEW_TABLE_ORDER, formatAccuracy, isKeyMoment, reviewPlyOffset, sideName } from './reviewUtils'
 
 // ---------------------------------------------------------------- accuracy header
@@ -26,18 +27,18 @@ export function ReviewAccuracyHeader({ result, players, gameResult, onNew, actio
     <div className="panel review-header" data-testid="review-header">
       <div className="panel-header">
         <Icon name="review" size={18} />
-        <span className="panel-title">Game Review</span>
-        <span className="small dim" title="Engine and depth used for this review">
-          {result.engine} · depth {result.depth}
+        <span className="panel-title">{t('Game Review')}</span>
+        <span className="small dim" title={t('Engine and depth used for this review')}>
+          {result.engine} · {t('depth {depth}', { depth: result.depth })}
         </span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onNew} title="Review another game" data-testid="review-new">
-          <Icon name="plus" size={14} /> New
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onNew} title={t('Review another game')} data-testid="review-new">
+          <Icon name="plus" size={14} /> {t('New')}
         </button>
       </div>
       <div className="review-players">
         <PlayerAccuracy side="white" name={sideName(players, 'white')} accuracy={result.accuracy.white} />
         <div className="review-players-mid">
-          <span className="review-acc-caption">Accuracy</span>
+          <span className="review-acc-caption">{t('Accuracy')}</span>
           {gameResult && gameResult !== '*' ? <span className="review-game-result">{gameResult}</span> : null}
         </div>
         <PlayerAccuracy side="black" name={sideName(players, 'black')} accuracy={result.accuracy.black} />
@@ -121,7 +122,7 @@ export function ReviewSummary({ result, players, onJump, ply }: ReviewSummaryPro
                     style={{ color: w > 0 ? color : undefined }}
                     disabled={w === 0}
                     onClick={() => jumpTo('white', cls)}
-                    title={w > 0 ? `Show White's ${CLASSIFICATION_LABELS[cls].toLowerCase()} moves` : undefined}
+                    title={w > 0 ? t("Show White's {label} moves", { label: CLASSIFICATION_LABELS[cls].toLowerCase() }) : undefined}
                   >
                     {w}
                   </button>
@@ -136,7 +137,7 @@ export function ReviewSummary({ result, players, onJump, ply }: ReviewSummaryPro
                     style={{ color: b > 0 ? color : undefined }}
                     disabled={b === 0}
                     onClick={() => jumpTo('black', cls)}
-                    title={b > 0 ? `Show Black's ${CLASSIFICATION_LABELS[cls].toLowerCase()} moves` : undefined}
+                    title={b > 0 ? t("Show Black's {label} moves", { label: CLASSIFICATION_LABELS[cls].toLowerCase() }) : undefined}
                   >
                     {b}
                   </button>
@@ -153,17 +154,18 @@ export function ReviewSummary({ result, players, onJump, ply }: ReviewSummaryPro
           <div>
             <div className="bold">{result.opening.name}</div>
             <div className="small muted">
-              In your repertoire until {moveNumberPrefix(offset + result.opening.lastBookPly)}
-              {result.moves[result.opening.lastBookPly - 1]?.san ?? ''}
+              {t('In your repertoire until {move}', {
+                move: `${moveNumberPrefix(offset + result.opening.lastBookPly)}${result.moves[result.opening.lastBookPly - 1]?.san ?? ''}`,
+              })}
             </div>
           </div>
         </div>
       ) : null}
 
       <div className="review-moments">
-        <h4>Key moments</h4>
+        <h4>{t('Key moments')}</h4>
         {keyMoments.length === 0 ? (
-          <div className="small muted">No inaccuracies, mistakes, blunders or standout moves in this game.</div>
+          <div className="small muted">{t('No inaccuracies, mistakes, blunders or standout moves in this game.')}</div>
         ) : (
           <div className="review-moment-list">
             {keyMoments.map((m) => (

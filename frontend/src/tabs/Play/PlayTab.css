@@ -415,6 +415,23 @@
   width: 24px;
   height: 24px;
 }
+/* over the board: the two players' names */
+.play-otb-names {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.play-otb-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.play-otb-name input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .play-color-random {
   width: 24px;
   height: 24px;

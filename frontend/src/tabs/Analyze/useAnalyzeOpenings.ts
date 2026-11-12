@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/client'
 import type { OpeningFull, OpeningNode, OpeningSummary } from '../../api/types'
 import { deepestNodeOnPath } from '../../lib/tree'
+import { t } from '../../lib/i18n'
 
 const treeCache = new Map<string, Promise<OpeningFull>>()
 
@@ -93,7 +94,7 @@ export function useAnalyzeOpenings(sans: readonly string[] | null): AnalyzeOpeni
       if (cancelled) return
       const ok = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
       const failed = results.length - ok.length
-      if (failed > 0 && ok.length === 0) setError('Could not load the opening trees')
+      if (failed > 0 && ok.length === 0) setError(t('Could not load the opening trees'))
       setTrees(ok)
     })
     return () => {

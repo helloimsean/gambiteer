@@ -1,4 +1,5 @@
 import { useEffect, useRef, type JSX, type ReactNode } from 'react'
+import { t } from '../lib/i18n'
 import { Icon, type IconName } from './Icon'
 import './controls.css'
 
@@ -102,10 +103,10 @@ export function MoveNav({ ply, maxPly, onChange, minPly = 0, keyboard = false, c
   const atEnd = ply >= maxPly
   return (
     <Toolbar className={className}>
-      <ToolbarButton icon="first" title="First move (Home)" onClick={() => onChange(minPly)} disabled={atStart} />
-      <ToolbarButton icon="prev" title="Previous move (Left arrow)" onClick={() => onChange(Math.max(minPly, ply - 1))} disabled={atStart} />
-      <ToolbarButton icon="next" title="Next move (Right arrow)" onClick={() => onChange(Math.min(maxPly, ply + 1))} disabled={atEnd} />
-      <ToolbarButton icon="last" title="Last move (End)" onClick={() => onChange(maxPly)} disabled={atEnd} />
+      <ToolbarButton icon="first" title={t('First move (Home)')} onClick={() => onChange(minPly)} disabled={atStart} />
+      <ToolbarButton icon="prev" title={t('Previous move (Left arrow)')} onClick={() => onChange(Math.max(minPly, ply - 1))} disabled={atStart} />
+      <ToolbarButton icon="next" title={t('Next move (Right arrow)')} onClick={() => onChange(Math.min(maxPly, ply + 1))} disabled={atEnd} />
+      <ToolbarButton icon="last" title={t('Last move (End)')} onClick={() => onChange(maxPly)} disabled={atEnd} />
       {children}
     </Toolbar>
   )

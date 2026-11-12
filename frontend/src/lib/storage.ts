@@ -8,6 +8,7 @@
  *   last-game-v1    LastGame (shell, so Review survives a reload)
  *   game-history-v1 HistoryGame[] (lib/gameHistory.ts)
  *   nav-more-open-v1 boolean (sidebar More / Less)
+ *   review-advanced-open-v1 boolean (Review: the advanced Stockfish settings folded open)
  */
 
 export function loadJson<T>(key: string, fallback: T): T {

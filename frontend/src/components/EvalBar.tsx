@@ -1,6 +1,7 @@
 import type { CSSProperties, JSX } from 'react'
 import type { Score, Side } from '../api/types'
 import { evalBarWhiteShare, formatScore, mateWinner } from '../lib/eval'
+import { t } from '../lib/i18n'
 import './EvalBar.css'
 
 export interface EvalBarProps {
@@ -34,7 +35,7 @@ export function EvalBar({ score, orientation = 'white', fen, showLabel = true, c
     <div
       className={`eval-bar ${whiteAtBottom ? 'white-bottom' : 'white-top'}${className ? ` ${className}` : ''}`}
       style={style}
-      title={score ? `Evaluation ${label} (White's point of view)` : 'No evaluation'}
+      title={score ? t("Evaluation {score} (White's point of view)", { score: label }) : t('No evaluation')}
       data-score={label}
     >
       <div className="eval-bar-white" style={{ height: `${(whiteShare * 100).toFixed(2)}%` }} />

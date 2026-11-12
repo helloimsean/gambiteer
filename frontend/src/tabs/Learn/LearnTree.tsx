@@ -7,10 +7,12 @@
  *  - the active line's path is highlighted, and variations holding it open automatically;
  *  - main-line moves are bold and bright, the top-level main line slightly larger.
  */
+import { LINE_CATEGORY_LABELS } from '../../api/types'
 import { useEffect, useRef, useState, type JSX, type ReactNode, type RefObject } from 'react'
 import type { LineMeta, OpeningNode } from '../../api/types'
 import { Icon } from '../../components/Icon'
 import { scrollIntoViewWithin } from '../../lib/dom'
+import { t } from '../../lib/i18n'
 import { learnLinesThroughSorted, learnNagClass, learnSubtreeHas } from './learnUtils'
 
 export interface LearnTreeProps {
@@ -70,7 +72,7 @@ function MoveToken({ node, ctx, forceNumber, showChips = true }: { node: Opening
           key={l.id}
           type="button"
           className={`learn-chip cat-${l.category}${l.id === ctx.activeLineId ? ' active' : ''}`}
-          title={`${l.name} (${l.category}): click to follow this line`}
+          title={t('{name} ({category}): click to follow this line', { name: l.name, category: LINE_CATEGORY_LABELS[l.category] ?? l.category })}
           data-line-id={l.id}
           onClick={() => ctx.onSelectLine(l, node)}
         >
@@ -137,7 +139,7 @@ function Variation({ node, depth, ctx }: { node: OpeningNode; depth: number; ctx
     collapsedLabel = (
       <>
         {first ? <span className={`learn-chip static cat-${first.category}`}>{first.name}</span> : null}
-        {through.length > 1 ? <span className="learn-tree-hint">+{through.length - 1} more</span> : null}
+        {through.length > 1 ? <span className="learn-tree-hint">{t('+{n} more', { n: through.length - 1 })}</span> : null}
       </>
     )
   }
@@ -148,7 +150,7 @@ function Variation({ node, depth, ctx }: { node: OpeningNode; depth: number; ctx
         type="button"
         className={`learn-tree-toggle${collapsed ? ' collapsed' : ''}`}
         onClick={() => setCollapsed((c) => !c)}
-        aria-label={collapsed ? 'Expand variation' : 'Collapse variation'}
+        aria-label={collapsed ? t('Expand variation') : t('Collapse variation')}
         aria-expanded={!collapsed}
       >
         <Icon name="chevronDown" size={12} />
@@ -200,7 +202,7 @@ export function LearnTree({
   }, [selectedId])
 
   if (root.children.length === 0) {
-    return <div className="learn-tree learn-empty-note">This opening has no moves.</div>
+    return <div className="learn-tree learn-empty-note">{t('This opening has no moves.')}</div>
   }
   return (
     <div className="learn-tree" ref={containerRef}>

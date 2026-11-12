@@ -5,6 +5,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { Icon, type IconName } from '../../components/Icon'
 import { loadHistory, type HistoryGame } from '../../lib/gameHistory'
 import { variantInfo } from '../../lib/variants'
+import { t } from '../../lib/i18n'
 import { useApp } from '../../state/AppContext'
 import { botName } from '../Play/PlayGame'
 import { formatAccuracy } from '../Review/reviewUtils'
@@ -19,14 +20,14 @@ const SCORES: Record<string, readonly [string, string]> = {
 }
 
 const OUTCOMES = {
-  win: { mark: '+', label: 'You won' },
-  loss: { mark: '−', label: 'You lost' },
-  draw: { mark: '=', label: 'Draw' },
+  win: { mark: '+', label: t('You won') },
+  loss: { mark: '−', label: t('You lost') },
+  draw: { mark: '=', label: t('Draw') },
 } as const
 
 function outcomeOf(game: HistoryGame): keyof typeof OUTCOMES | null {
   if (game.result === '1/2-1/2') return 'draw'
-  if (game.result !== '1-0' && game.result !== '0-1') return null
+  if (game.otb || (game.result !== '1-0' && game.result !== '0-1')) return null // over the board nobody is "you"
   return (game.result === '1-0') === (game.studentColor === 'white') ? 'win' : 'loss'
 }
 
@@ -35,11 +36,19 @@ function formatDate(timestamp: number): string {
 }
 
 function Player({ game, side }: { game: HistoryGame; side: Side }): JSX.Element {
+  if (game.otb) {
+    return (
+      <div className="history-player">
+        <span className={`history-side ${side}`} />
+        <span className="history-name">{game.players[side]}</span>
+      </div>
+    )
+  }
   const isStudent = side === game.studentColor
   return (
     <div className="history-player">
       <span className={`history-side ${side}`} />
-      <span className="history-name">{isStudent ? 'You' : botName(game.bot, game.variant)}</span>
+      <span className="history-name">{isStudent ? t('You') : botName(game.bot, game.variant)}</span>
       {isStudent ? null : <span className="history-elo">({game.elo})</span>}
     </div>
   )
@@ -65,10 +74,10 @@ function HistoryRow({ game, onOpen, onAnalyze }: HistoryRowProps): JSX.Element {
   const outcome = outcomeOf(game)
   return (
     // Review and Analyze only understand standard chess, so a variant game has nowhere to open
-    <tr className={`history-row${game.variant ? ' static' : ''}`} onClick={game.variant ? undefined : onOpen} data-testid="history-row" data-bot={game.bot} data-variant={game.variant ?? 'standard'}>
+    <tr className={`history-row${game.variant ? ' static' : ''}`} onClick={game.variant ? undefined : onOpen} data-testid="history-row" data-bot={game.otb ? 'otb' : game.bot} data-variant={game.variant ?? 'standard'}>
       <td className="history-bot">
-        <Icon name={BOT_ICONS[game.bot]} size={24} />
-        <span>{botName(game.bot, game.variant).replace(' 19', '')}</span>
+        <Icon name={game.otb ? 'people' : BOT_ICONS[game.bot]} size={24} />
+        <span>{game.otb ? t('Over the board') : botName(game.bot, game.variant).replace(' 19', '')}</span>
         {game.variant ? <span className="history-variant">{variantInfo(game.variant).name}</span> : null}
       </td>
       <td>
@@ -90,12 +99,12 @@ function HistoryRow({ game, onOpen, onAnalyze }: HistoryRowProps): JSX.Element {
         {game.variant ? (
           <span className="muted">–</span>
         ) : game.accuracy ? (
-          <button type="button" className="history-accuracy" title="Open in Review" data-testid="history-accuracy">
+          <button type="button" className="history-accuracy" title={t('Open in Review')} data-testid="history-accuracy">
             <Stacked top={formatAccuracy(game.accuracy.white)} bottom={formatAccuracy(game.accuracy.black)} />
           </button>
         ) : (
           <button type="button" className="btn btn-sm" data-testid="history-review">
-            Review
+            {t('Review')}
           </button>
         )}
       </td>
@@ -106,8 +115,8 @@ function HistoryRow({ game, onOpen, onAnalyze }: HistoryRowProps): JSX.Element {
           <button
             type="button"
             className="btn btn-ghost btn-icon btn-sm"
-            title="Open in Analyze"
-            aria-label="Open in Analyze"
+            title={t('Open in Analyze')}
+            aria-label={t('Open in Analyze')}
             onClick={(e) => {
               e.stopPropagation()
               onAnalyze()
@@ -130,16 +139,16 @@ export function HistoryTab(): JSX.Element {
     <div className="history-tab" data-testid="history-tab">
       <div className="panel history-panel">
         <div className="panel-header history-header">
-          Game History <span className="history-count">({games.length})</span>
+          {t('Game History')} <span className="history-count">({games.length})</span>
         </div>
         {games.length === 0 ? (
           <EmptyState
             icon="history"
-            title="No games yet"
-            description="Finish a game in Play and it will show up here with the bot, its Elo and your accuracy."
+            title={t('No games yet')}
+            description={t('Finish a game in Play and it will show up here with the bot, its Elo and your accuracy.')}
             action={
               <button type="button" className="btn btn-primary" onClick={() => navigate('play')}>
-                Play a game
+                {t('Play a game')}
               </button>
             }
           />
@@ -148,13 +157,13 @@ export function HistoryTab(): JSX.Element {
             <table className="history-table">
               <thead>
                 <tr>
-                  <th aria-label="Bot" />
-                  <th className="history-left">Players</th>
-                  <th>Result</th>
-                  <th>Accuracy</th>
-                  <th className="history-moves">Moves</th>
-                  <th className="history-date">Date</th>
-                  <th aria-label="Actions" />
+                  <th aria-label={t('Bot')} />
+                  <th className="history-left">{t('Players')}</th>
+                  <th>{t('Result')}</th>
+                  <th>{t('Accuracy')}</th>
+                  <th className="history-moves">{t('Moves')}</th>
+                  <th className="history-date">{t('Date')}</th>
+                  <th aria-label={t('Actions')} />
                 </tr>
               </thead>
               <tbody>

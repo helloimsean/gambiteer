@@ -41,6 +41,7 @@ import {
 import { copyText, downloadPgn, pgnDate, pgnFileName } from '../../lib/pgnTransfer'
 import { playSound } from '../../lib/sounds'
 import { loadJson, saveJson } from '../../lib/storage'
+import { t } from '../../lib/i18n'
 import { useAnalyzeEngine } from './useAnalyzeEngine'
 import { useAnalyzeOpenings } from './useAnalyzeOpenings'
 import { AnalyzeOpeningLabel } from './AnalyzeOpeningLabel'
@@ -75,14 +76,14 @@ const INITIAL_LINE: LineState = { startFen: START_FEN, sans: [], ply: 0 }
 function lineFromRequest(req: AnalyzeRequestPayload): { line: LineState } | { error: string } {
   if (req.fen) {
     const res = normalizeFen(req.fen)
-    if ('error' in res) return { error: `Could not open that position: ${res.error}` }
+    if ('error' in res) return { error: t('Could not open that position: {error}', { error: res.error }) }
     return { line: { startFen: res.fen, sans: [], ply: 0 } }
   }
   if (req.sans) {
     let startFen = START_FEN
     if (req.startFen) {
       const res = normalizeFen(req.startFen)
-      if ('error' in res) return { error: `Could not open that position: ${res.error}` }
+      if ('error' in res) return { error: t('Could not open that position: {error}', { error: res.error }) }
       startFen = res.fen
     }
     try {
@@ -90,10 +91,10 @@ function lineFromRequest(req: AnalyzeRequestPayload): { line: LineState } | { er
       buildLine({ startFen, sans })
       return { line: { startFen, sans, ply: sans.length } }
     } catch (err) {
-      return { error: `Could not open those moves: ${err instanceof Error ? err.message : String(err)}` }
+      return { error: t('Could not open those moves: {error}', { error: err instanceof Error ? err.message : String(err) }) }
     }
   }
-  return { error: 'Nothing to analyse in that request.' }
+  return { error: t('Nothing to analyse in that request.') }
 }
 
 function loadSaved(): SavedState {
@@ -119,17 +120,17 @@ function statusText(over: ReturnType<typeof gameStatus>): string | null {
   if (!over.over) return null
   switch (over.reason) {
     case 'checkmate':
-      return `Checkmate, ${over.result === '1-0' ? 'White' : 'Black'} wins`
+      return t('Checkmate, {winner} wins', { winner: over.result === '1-0' ? t('White') : t('Black') })
     case 'stalemate':
-      return 'Stalemate (draw)'
+      return t('Stalemate (draw)')
     case 'insufficient':
-      return 'Draw by insufficient material'
+      return t('Draw by insufficient material')
     case 'threefold':
-      return 'Draw by threefold repetition'
+      return t('Draw by threefold repetition')
     case 'fifty-move':
-      return 'Draw by the fifty-move rule'
+      return t('Draw by the fifty-move rule')
     default:
-      return 'Draw'
+      return t('Draw')
   }
 }
 
@@ -343,18 +344,18 @@ export function AnalyzeTab(): JSX.Element {
   const dot = engine.status === 'open' ? 'ok' : engine.status === 'reconnecting' ? 'bad' : 'unknown'
   const dotTitle =
     engine.status === 'open'
-      ? 'Connected to the analysis engine'
+      ? t('Connected to the analysis engine')
       : engine.status === 'reconnecting'
-        ? 'Engine connection lost, reconnecting…'
-        : 'Connecting to the analysis engine…'
+        ? t('Engine connection lost, reconnecting…')
+        : t('Connecting to the analysis engine…')
   const waiting = engineOn && !engine.info
   const emptyText = !engineOn
-    ? 'Engine is off'
+    ? t('Engine is off')
     : engine.status === 'reconnecting'
-      ? 'Engine connection lost, reconnecting…'
+      ? t('Engine connection lost, reconnecting…')
       : engine.status === 'connecting'
-        ? 'Connecting to the engine…'
-        : 'Analysing…'
+        ? t('Connecting to the engine…')
+        : t('Analysing…')
   const over = statusText(status)
   const startPly = plyOffsetFromFen(line.startFen)
 
@@ -377,18 +378,18 @@ export function AnalyzeTab(): JSX.Element {
           <span className="analyze-toolbar-sep" />
           <ToolbarButton
             icon="flip"
-            title="Flip board"
+            title={t('Flip board')}
             onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
             active={orientation === 'black'}
           />
-          <ToolbarButton icon="undo" title="Take back the current move" onClick={takeBack} disabled={line.ply === 0} />
+          <ToolbarButton icon="undo" title={t('Take back the current move')} onClick={takeBack} disabled={line.ply === 0} />
           <ToolbarButton
             icon="trash"
-            title="Undo to here (delete the moves after the current one)"
+            title={t('Undo to here (delete the moves after the current one)')}
             onClick={undoToHere}
             disabled={line.ply >= line.sans.length}
           />
-          <ToolbarButton icon="refresh" title="New analysis from the initial position" onClick={() => loadFen(START_FEN)} />
+          <ToolbarButton icon="refresh" title={t('New analysis from the initial position')} onClick={() => loadFen(START_FEN)} />
         </MoveNav>
       </div>
 
@@ -397,7 +398,7 @@ export function AnalyzeTab(): JSX.Element {
           <div className="analyze-banner" role="alert">
             <Icon name="warning" size={16} />
             <span className="grow">{banner}</span>
-            <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Dismiss" onClick={() => setBanner(null)}>
+            <button type="button" className="btn btn-ghost btn-icon btn-sm" title={t('Dismiss')} onClick={() => setBanner(null)}>
               <Icon name="close" size={14} />
             </button>
           </div>
@@ -412,14 +413,14 @@ export function AnalyzeTab(): JSX.Element {
             </span>
             <Select
               inline
-              label="Lines"
+              label={t('Lines')}
               value={String(multipv)}
               options={MULTIPV_OPTIONS}
               onChange={(v) => setMultipv(Number(v))}
               className="analyze-multipv"
-              title="Number of engine lines (MultiPV)"
+              title={t('Number of engine lines (MultiPV)')}
             />
-            <Toggle checked={engineOn} onChange={setEngineOn} label="Engine" title="Engine on/off" className="analyze-engine-toggle" />
+            <Toggle checked={engineOn} onChange={setEngineOn} label={t('Engine')} title={t('Engine on/off')} className="analyze-engine-toggle" />
           </div>
           {over ? (
             <div className="analyze-gameover" data-testid="analyze-gameover">
@@ -450,9 +451,9 @@ export function AnalyzeTab(): JSX.Element {
           <div className="panel-tabs" role="tablist">
             {(
               [
-                ['moves', 'Moves'],
-                ['import', 'Import PGN'],
-                ['setup', 'Set up position'],
+                ['moves', t('Moves')],
+                ['import', t('Import PGN')],
+                ['setup', t('Set up position')],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -476,7 +477,7 @@ export function AnalyzeTab(): JSX.Element {
                 currentPly={line.ply}
                 onSelect={setPly}
                 startPly={startPly}
-                emptyText="Make a move on the board, or load a FEN / PGN."
+                emptyText={t('Make a move on the board, or load a FEN / PGN.')}
               />
             ) : sideTab === 'import' ? (
               <AnalyzeImport
@@ -491,24 +492,24 @@ export function AnalyzeTab(): JSX.Element {
           </div>
           <div className="panel-footer analyze-footer">
             <button type="button" className="btn btn-sm" onClick={() => void copy('fen')} data-testid="analyze-copy-fen">
-              <Icon name="copy" size={15} /> Copy FEN
+              <Icon name="copy" size={15} /> {t('Copy FEN')}
             </button>
             <button type="button" className="btn btn-sm" onClick={() => void copy('pgn')} data-testid="analyze-copy-pgn">
-              <Icon name="copy" size={15} /> Copy PGN
+              <Icon name="copy" size={15} /> {t('Copy PGN')}
             </button>
             <button
               type="button"
               className="btn btn-sm"
-              title="Download this game as a .pgn file"
+              title={t('Download this game as a .pgn file')}
               onClick={() => downloadPgn(buildPgn(), pgnFileName(`analysis ${pgnDate()}`))}
               data-testid="analyze-download-pgn"
             >
-              <Icon name="download" size={15} /> Download
+              <Icon name="download" size={15} /> {t('Download')}
             </button>
             <span className="spacer" />
             {copied ? (
               <span className={`analyze-copied ${copied === 'failed' ? 'failed' : ''}`} data-testid="analyze-copied">
-                {copied === 'failed' ? 'Copy failed' : copied === 'fen' ? 'FEN copied' : 'PGN copied'}
+                {copied === 'failed' ? t('Copy failed') : copied === 'fen' ? t('FEN copied') : t('PGN copied')}
               </span>
             ) : (
               <span className="dim small">

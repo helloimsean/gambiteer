@@ -21,6 +21,7 @@ import {
 import { getHealth } from '../api/client'
 import type { Health, Players, Side } from '../api/types'
 import type { IconName } from '../components/Icon'
+import { t } from '../lib/i18n'
 import { setMuted } from '../lib/sounds'
 import { loadJson, saveJson } from '../lib/storage'
 
@@ -38,12 +39,12 @@ export interface TabInfo {
 }
 
 export const TABS: readonly TabInfo[] = [
-  { id: 'learn', label: 'Learn', icon: 'learn', description: 'Browse your opening repertoire move by move, with the reason behind every move.' },
-  { id: 'quiz', label: 'Quiz', icon: 'quiz', description: 'Drill lines, guess positions and spot traps. Weak spots come back more often.' },
-  { id: 'analyze', label: 'Analyze', icon: 'analyze', description: 'Free analysis board with live Stockfish 19 lines and an eval bar.' },
-  { id: 'play', label: 'Play', icon: 'play', description: 'Play against Stockfish 19 or the human-like Maia at a chosen Elo, optionally starting from an opening line.' },
-  { id: 'review', label: 'Review', icon: 'review', description: 'Game review with move classifications, accuracy and LLM explanations.' },
-  { id: 'history', label: 'History', icon: 'history', description: 'Every game you finished against the bots, with the Elo and your accuracy.', more: true },
+  { id: 'learn', label: t('Learn'), icon: 'learn', description: t('Browse your opening repertoire move by move, with the reason behind every move.') },
+  { id: 'quiz', label: t('Quiz'), icon: 'quiz', description: t('Drill lines, guess positions and spot traps. Weak spots come back more often.') },
+  { id: 'analyze', label: t('Analyze'), icon: 'analyze', description: t('Free analysis board with live Stockfish 19 lines and an eval bar.') },
+  { id: 'play', label: t('Play'), icon: 'play', description: t('Play against Stockfish 19 or the human-like Maia at a chosen Elo, optionally starting from an opening line.') },
+  { id: 'review', label: t('Review'), icon: 'review', description: t('Game review with move classifications, accuracy and LLM explanations.') },
+  { id: 'history', label: t('History'), icon: 'history', description: t('Every game you finished against the bots, with the Elo and your accuracy.'), more: true },
 ]
 
 // ---------------------------------------------------------------- cross-tab requests
@@ -98,6 +99,16 @@ export interface AppSettings {
   ollamaModel: string
   /** Default review depth (12 fast / 16 default / 20 deep). */
   defaultDepth: number
+  /** Game Review's advanced Stockfish settings. */
+  reviewEngine: ReviewEngineChoice
+}
+
+/** Each null means the backend's own setting (the phone's differ from the PC's). */
+export interface ReviewEngineChoice {
+  threads: number | null
+  hashMb: number | null
+  /** null: no time limit per move. */
+  moveTimeMs: number | null
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -105,6 +116,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   coordinates: true,
   ollamaModel: '',
   defaultDepth: 16,
+  reviewEngine: { threads: null, hashMb: null, moveTimeMs: null },
 }
 
 export const SETTINGS_KEY = 'settings-v1'
@@ -174,6 +186,11 @@ function loadSettings(): AppSettings {
   if (typeof stored.ollamaModel === 'string') out.ollamaModel = stored.ollamaModel
   if (typeof stored.defaultDepth === 'number' && stored.defaultDepth >= 12 && stored.defaultDepth <= 24) {
     out.defaultDepth = stored.defaultDepth
+  }
+  if (stored.reviewEngine && typeof stored.reviewEngine === 'object') {
+    const engine = stored.reviewEngine as Record<string, unknown>
+    const whole = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : null)
+    out.reviewEngine = { threads: whole(engine.threads), hashMb: whole(engine.hashMb), moveTimeMs: whole(engine.moveTimeMs) }
   }
   return out
 }

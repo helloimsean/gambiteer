@@ -1,7 +1,8 @@
 import type { JSX } from 'react'
 import { Icon } from '../../components/Icon'
 import { Modal } from '../../components/Modal'
-import { botName, botTitle, currentElo, outcomeFor, reasonText, type PlayGame } from './PlayGame'
+import { t, tn } from '../../lib/i18n'
+import { botName, botTitle, currentElo, otbName, outcomeFor, reasonText, winnerOf, type PlayGame } from './PlayGame'
 
 export interface PlayGameOverModalProps {
   open: boolean
@@ -16,27 +17,36 @@ export interface PlayGameOverModalProps {
 export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, onNewGame }: PlayGameOverModalProps): JSX.Element | null {
   if (!game || !game.result) return null
   const outcome = outcomeFor(game)
-  const title = outcome === 'win' ? 'You won!' : outcome === 'loss' ? `${botName(game.bot, game.variant)} won` : 'Draw'
+  const winner = winnerOf(game)
+  const title = game.otb
+    ? winner
+      ? t('{name} wins!', { name: otbName(game.otb, winner) })
+      : t('Draw')
+    : outcome === 'win'
+      ? t('You won!')
+      : outcome === 'loss'
+        ? t('{bot} won', { bot: botName(game.bot, game.variant) })
+        : t('Draw')
   const moves = Math.ceil(game.sans.length / 2)
   const o = game.opening
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Game over"
+      title={t('Game over')}
       width={500}
       className="play-over-modal"
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onNewGame} data-testid="play-over-new">
-            <Icon name="plus" size={16} /> New game
+            <Icon name="plus" size={16} /> {t('New game')}
           </button>
           <button type="button" className="btn" onClick={onRematch} data-testid="play-over-rematch">
-            <Icon name="refresh" size={16} /> Rematch
+            <Icon name="refresh" size={16} /> {t('Rematch')}
           </button>
           {game.variant === 'standard' ? (
             <button type="button" className="btn btn-primary" onClick={onReview} data-testid="play-over-review">
-              <Icon name="review" size={16} /> Review this game
+              <Icon name="review" size={16} /> {t('Review this game')}
             </button>
           ) : null}
         </>
@@ -51,15 +61,17 @@ export function PlayGameOverModal({ open, game, onClose, onReview, onRematch, on
         <div className="play-over-score mono">{game.result.result}</div>
         <div className="play-over-meta">
           <span>
-            You played {game.studentColor} vs {botTitle(game.bot, currentElo(game), game.variant)}
+            {game.otb
+              ? t('{white} vs {black}', { white: otbName(game.otb, 'white'), black: otbName(game.otb, 'black') })
+              : t('You played {color} vs {bot}', { color: game.studentColor === 'white' ? t('white') : t('black'), bot: botTitle(game.bot, currentElo(game), game.variant) })}
           </span>
-          <span>
-            {moves} move{moves === 1 ? '' : 's'}
-          </span>
+          <span>{tn(moves, '{n} move', '{n} moves')}</span>
           {o ? (
             <span>
               {o.name}: {o.lineName}
-              {o.mode === 'hints' ? ` (book moves ${game.bookStats.correct} correct, ${game.bookStats.missed} missed)` : ''}
+              {o.mode === 'hints'
+                ? ` ${t('(book moves {correct} correct, {missed} missed)', { correct: game.bookStats.correct, missed: game.bookStats.missed })}`
+                : ''}
             </span>
           ) : null}
         </div>

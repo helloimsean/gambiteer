@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { LineMeta, OpeningFull, OpeningNode } from '../../api/types'
 import { tryMove, type PromotionPiece, type Square } from '../../lib/chess'
+import { t } from '../../lib/i18n'
 import { loadJson, loadSessionJson, saveJson, saveSessionJson } from '../../lib/storage'
 import { learnBookChildren, learnOffBookId, learnPositionIndex, type LearnOffBookMove } from './learnCoach'
 import {
@@ -178,7 +179,7 @@ export function useLearnPractice({ opening, nav, setNav, stopAutoplay }: LearnPr
       setComplete({
         nodeId,
         lineId: next.lineId,
-        lineName: line?.name ?? 'this line',
+        lineName: line?.name ?? t('this line'),
         evaluation: line?.evaluation ?? '',
         moves: runRef.current.moves,
         offBook: runRef.current.offBook,

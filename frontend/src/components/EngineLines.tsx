@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import type { EngineLine } from '../api/types'
 import { plyOffsetFromFen } from '../lib/chess'
 import { formatScore, scoreToCp } from '../lib/eval'
+import { t } from '../lib/i18n'
 import { Spinner } from './Spinner'
 import './EngineLines.css'
 
@@ -47,7 +48,7 @@ export function EngineLines({
   engineName,
   thinking,
   maxPvMoves = 12,
-  emptyText = 'Engine is off',
+  emptyText = t('Engine is off'),
   className,
 }: EngineLinesProps): JSX.Element {
   const startPly = plyOffsetFromFen(fen)
@@ -60,9 +61,9 @@ export function EngineLines({
         <div className="engine-head">
           {thinking ? <Spinner size={12} /> : null}
           {engineName ? <span className="bold">{engineName}</span> : null}
-          {depth !== undefined ? <span className="mono">depth {depth}</span> : null}
-          {nodes !== undefined ? <span className="mono">{fmtBig(nodes)} nodes</span> : null}
-          {nps !== undefined ? <span className="mono">{fmtBig(nps)} n/s</span> : null}
+          {depth !== undefined ? <span className="mono">{t('depth {depth}', { depth })}</span> : null}
+          {nodes !== undefined ? <span className="mono">{t('{count} nodes', { count: fmtBig(nodes) })}</span> : null}
+          {nps !== undefined ? <span className="mono">{t('{speed} n/s', { speed: fmtBig(nps) })}</span> : null}
         </div>
       ) : null}
       {sorted.length === 0 ? <div className="engine-empty">{emptyText}</div> : null}
@@ -71,8 +72,8 @@ export function EngineLines({
         return (
           <div className={`engine-line${thinking ? ' loading' : ''}`} key={line.multipv}>
             <span className={`engine-score${cp < 0 ? ' black' : ''}`}>{formatScore(line.score, 'white')}</span>
-            <span className="engine-depth" title="Depth">
-              d{line.depth}
+            <span className="engine-depth" title={t('Depth')}>
+              {t('d{depth}', { depth: line.depth })}
             </span>
             <span className="engine-pv">
               {line.pv.slice(0, maxPvMoves).map((san, i) => {

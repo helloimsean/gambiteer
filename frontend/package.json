@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check:board": "node scripts/check-board.mjs",
+    "check:i18n": "node scripts/i18n.mjs",
     "e2e": "node e2e/journey.e2e.mjs"
   },
   "dependencies": {

@@ -3,15 +3,16 @@ import { useState, type JSX, type ReactNode } from 'react'
 import { Icon } from '../../components/Icon'
 import { PgnFileButton } from '../../components/PgnFileButton'
 import { Spinner } from '../../components/Spinner'
+import { t, tn } from '../../lib/i18n'
 import type { LastGame } from '../../state/AppContext'
 import { sideName, timeAgo } from './reviewUtils'
 
 export type ReviewSource = 'last' | 'pgn'
 
 const REVIEW_DEPTHS: readonly { depth: number; label: string; hint: string }[] = [
-  { depth: 12, label: 'Fast', hint: 'depth 12' },
-  { depth: 16, label: 'Default', hint: 'depth 16' },
-  { depth: 20, label: 'Deep', hint: 'depth 20' },
+  { depth: 12, label: t('Fast'), hint: t('depth 12') },
+  { depth: 16, label: t('Default'), hint: t('depth 16') },
+  { depth: 20, label: t('Deep'), hint: t('depth 20') },
 ]
 
 export interface ReviewRunInfo {
@@ -31,6 +32,8 @@ export interface ReviewSetupProps {
   onPgnText: (t: string) => void
   depth: number
   onDepth: (d: number) => void
+  /** The advanced Stockfish settings (absent when the backend does not report them). */
+  engineSettings?: ReactNode
   /** The model picker (or the Ollama-down note). */
   modelPicker: ReactNode
   run: ReviewRunInfo | null
@@ -49,7 +52,8 @@ const SAMPLE_PGN = [
 ].join('\n')
 
 export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
-  const { source, onSource, selectedGame, selectedLabel, pgnText, onPgnText, depth, onDepth, modelPicker, run, error, canStart, onStart, onCancel } = props
+  const { source, onSource, selectedGame, selectedLabel, pgnText, onPgnText, depth, onDepth, engineSettings, modelPicker, run, error, canStart, onStart, onCancel } =
+    props
   const busy = run !== null
   const customDepth = !REVIEW_DEPTHS.some((d) => d.depth === depth)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -58,22 +62,23 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
     <div className="panel grow review-setup" data-testid="review-setup">
       <div className="panel-header">
         <Icon name="review" size={18} />
-        <span className="panel-title">Game Review</span>
+        <span className="panel-title">{t('Game Review')}</span>
       </div>
       <div className="panel-body scroll col gap-16">
         <p className="muted review-setup-intro">
-          Stockfish checks every move (brilliant to blunder) and scores both players' accuracy; a local Ollama model
-          explains the key moments.
+          {t(
+            "Stockfish checks every move (brilliant to blunder) and scores both players' accuracy; a local Ollama model explains the key moments.",
+          )}
         </p>
 
         <div className="col gap-4">
-          <span className="review-field-label">Game</span>
+          <span className="review-field-label">{t('Game')}</span>
           <div className="btn-group review-source">
             <button type="button" className={`btn btn-sm${source === 'last' ? ' active' : ''}`} onClick={() => onSource('last')} disabled={busy}>
               <Icon name="play" size={14} /> {selectedLabel}
             </button>
             <button type="button" className={`btn btn-sm${source === 'pgn' ? ' active' : ''}`} onClick={() => onSource('pgn')} disabled={busy}>
-              <Icon name="upload" size={14} /> Import PGN
+              <Icon name="upload" size={14} /> {t('Import PGN')}
             </button>
           </div>
           {source === 'last' ? (
@@ -81,18 +86,19 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
               <div className="review-lastgame card" data-testid="review-lastgame">
                 <div className="row">
                   <span className="badge badge-white">{sideName(selectedGame.players, 'white')}</span>
-                  <span className="muted small">vs</span>
+                  <span className="muted small">{t('vs')}</span>
                   <span className="badge badge-black">{sideName(selectedGame.players, 'black')}</span>
                   <span className="spacer" />
                   {selectedGame.result ? <span className="bold">{selectedGame.result}</span> : null}
                 </div>
                 <div className="small muted">
-                  {Math.ceil(selectedGame.sans.length / 2)} moves{selectedGame.reason ? ` · ${selectedGame.reason}` : ''} · {timeAgo(selectedGame.playedAt)}
+                  {tn(Math.ceil(selectedGame.sans.length / 2), '{n} move', '{n} moves')}
+                  {selectedGame.reason ? ` · ${selectedGame.reason}` : ''} · {timeAgo(selectedGame.playedAt)}
                 </div>
               </div>
             ) : (
               <div className="review-empty-note small muted">
-                No finished game yet. Play one in the <b>Play</b> tab (it shows up here), or import a PGN.
+                {t('No finished game yet. Play one in the')} <b>{t('Play')}</b> {t('tab (it shows up here), or import a PGN.')}
               </div>
             )
           ) : (
@@ -118,10 +124,12 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
                 />
                 <span className="spacer" />
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => onPgnText(SAMPLE_PGN)} disabled={busy}>
-                  Sample
+                  {t('Sample')}
                 </button>
               </div>
-              <span className="dim small">Paste a PGN or plain SAN moves, or open a file. Only the main line of the first game is reviewed.</span>
+              <span className="dim small">
+                {t('Paste a PGN or plain SAN moves, or open a file. Only the main line of the first game is reviewed.')}
+              </span>
               {fileError ? (
                 <div className="review-error" role="alert" data-testid="review-file-error">
                   <Icon name="warning" size={16} /> <span>{fileError}</span>
@@ -132,7 +140,7 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
         </div>
 
         <div className="col gap-4">
-          <span className="review-field-label">Engine depth</span>
+          <span className="review-field-label">{t('Engine depth')}</span>
           <div className="row wrap">
             <div className="btn-group review-depths">
               {REVIEW_DEPTHS.map((d) => (
@@ -148,8 +156,8 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
                 </button>
               ))}
             </div>
-            <label className={`review-depth-custom${customDepth ? ' active' : ''}`} title="Custom depth (4-30)">
-              <span className="small muted">Custom</span>
+            <label className={`review-depth-custom${customDepth ? ' active' : ''}`} title={t('Custom depth (4-30)')}>
+              <span className="small muted">{t('Custom')}</span>
               <input
                 type="number"
                 min={4}
@@ -170,8 +178,10 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
           </div>
         </div>
 
+        {engineSettings}
+
         <div className="col gap-4">
-          <span className="review-field-label">Explanation model</span>
+          <span className="review-field-label">{t('Explanation model')}</span>
           {modelPicker}
         </div>
 
@@ -196,16 +206,16 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
               <span style={{ width: `${Math.max(2, run.progress * 100).toFixed(1)}%` }} />
             </div>
             <div className="row small">
-              <span className="dim">{run.message ?? `Stockfish, depth ${depth}`}</span>
+              <span className="dim">{run.message ?? t('Stockfish, depth {depth}', { depth })}</span>
               <span className="spacer" />
               <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </div>
         ) : (
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onStart} disabled={!canStart} data-testid="review-start">
-            <Icon name="review" size={18} /> Game Review
+            <Icon name="review" size={18} /> {t('Game Review')}
           </button>
         )}
       </div>
@@ -214,8 +224,8 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
 }
 
 function progressLabel(run: ReviewRunInfo): string {
-  if (run.status === 'starting') return 'Starting review…'
-  if (run.status === 'queued') return 'Waiting for the engine…'
+  if (run.status === 'starting') return t('Starting review…')
+  if (run.status === 'queued') return t('Waiting for the engine…')
   const done = Math.min(run.totalPlies, Math.round(run.progress * run.totalPlies))
-  return `Analysing ply ${Math.max(1, done)} of ${run.totalPlies}`
+  return t('Analysing ply {ply} of {total}', { ply: Math.max(1, done), total: run.totalPlies })
 }

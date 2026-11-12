@@ -53,17 +53,25 @@ model turns the engine's facts into plain-language explanations.
     mistakes. See [How bot strength works](#how-bot-strength-works).
   * **Panicfish** is Stockfish 19 at full strength that loses 300 Elo every time you check it. After
     12 checks it has nothing left and plays random moves.
+  * **Over the board**: play a friend on the same computer or phone. The board turns to whoever is to
+    move, and the game goes to History and Review like any other. Works in every variant, with no
+    engine needed.
   * **Variants**: pick Crazyhouse, Chess960, King of the Hill, Three-Check, Antichess, Atomic, Horde
     or Racing Kings from the dropdown. Chess960 runs on Stockfish 19; the others need Fairy-Stockfish
     (optional, step 6 of the install). Hint, Review and Analyze are for standard chess only, and
     variant games still appear in History.
 * **Review**: chess.com-style game review (brilliant to blunder, accuracy, eval graph), with an AI
   explanation of why each move was good or bad. Press **Play best move**, or play any legal move on
-  the board, and Stockfish grades it in a side line under that move.
+  the board, and Stockfish grades it in a side line under that move. *Advanced Stockfish settings*
+  on the setup card (click it to fold it open) set the CPU threads, the hash memory and a time limit
+  per move for the review; the choices go up to what your computer has.
 * **History** (under **More** in the sidebar): every game you finish against a bot, with its Elo, the
   result and, once you have reviewed the game, both players' accuracy. It is saved in your browser.
 * **PGN import and export**: paste a PGN or open a `.pgn` file in Analyze and Review, and copy or
   download a game as PGN from either tab.
+* **Languages**: Settings > *Language* switches the app and the coach's explanations to English,
+  Russian, Spanish, German, French, Portuguese, Italian or Chinese. Opening names and repertoire
+  notes stay in English, and how well the coach writes in a language depends on the model.
 
 ### Openings included
 
@@ -260,6 +268,7 @@ Checks:
 ```powershell
 cd backend;  python -m pytest -q        # backend unit + API tests (no Ollama needed)
 cd frontend; npm run build              # type-check + production build (must be clean)
+cd frontend; npm run check:i18n         # every translation present, placeholders intact
 cd frontend; npx playwright install chromium   # once, for the browser checks below
 cd frontend; npm run e2e                # full Playwright journey against http://localhost:8000
 ```

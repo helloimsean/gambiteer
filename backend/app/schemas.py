@@ -226,6 +226,12 @@ class ReviewRequest(BaseModel):
     # The UI offers 12 / 16 / 20 (contract: 12-24); the API accepts 4-30 for quick tests.
     depth: int = Field(default=16, ge=4, le=30)
     players: Players | None = None
+    # Advanced engine settings; left out, the review engine keeps the backend's settings. Threads and
+    # hash above what this machine offers (HealthResponse.reviewEngine) are lowered to it.
+    threads: int | None = Field(default=None, ge=1, le=1024)
+    hashMb: int | None = Field(default=None, ge=1, le=1_048_576)
+    # stops each position's search early when the depth takes longer than this
+    moveTimeMs: int | None = Field(default=None, ge=100, le=600_000)
 
 
 class BestMove(BaseModel):
@@ -303,6 +309,7 @@ class ExplainRequest(BaseModel):
     jobId: str
     ply: int = Field(ge=1)
     model: str | None = None
+    language: str | None = Field(default=None, max_length=10)  # app language code: the answer's language
 
 
 class ExplainResponse(BaseModel):
@@ -338,6 +345,7 @@ class CoachRequest(BaseModel):
     model: str | None = None
     depth: int = Field(default=14, ge=8, le=22)
     context: CoachContext | None = None
+    language: str | None = Field(default=None, max_length=10)  # app language code: the answer's language
 
 
 class CoachMove(BaseModel):
@@ -397,6 +405,15 @@ class FairyHealth(BaseModel):
     path: str
 
 
+class ReviewEngineHealth(BaseModel):
+    """The review engine's settings, and the most this machine offers for the advanced settings."""
+
+    threads: int
+    hashMb: int
+    maxThreads: int  # the CPU's threads
+    maxHashMb: int  # a power of two up to a quarter of the memory
+
+
 class HealthResponse(BaseModel):
     ok: bool
     stockfish: StockfishHealth
@@ -404,3 +421,4 @@ class HealthResponse(BaseModel):
     openings: int
     maia: MaiaHealth
     fairy: FairyHealth
+    reviewEngine: ReviewEngineHealth

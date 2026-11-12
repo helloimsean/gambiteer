@@ -10,6 +10,7 @@ import { makeSan, makeSanAndPlay, parseSan } from 'chessops/san'
 import { setupPosition } from 'chessops/variant'
 import type { Side, VariantId } from '../api/types'
 import { START_FEN, type Dests, type PromotionPiece, type Square } from './chess'
+import { t } from './i18n'
 
 export type { VariantId }
 
@@ -28,15 +29,15 @@ export interface VariantInfo {
 }
 
 export const VARIANTS: readonly VariantInfo[] = [
-  { id: 'standard', name: 'Standard', rule: 'The normal rules of chess.', rules: 'chess', engine: 'stockfish', hasChecks: true, hasMaterial: true },
-  { id: 'crazyhouse', name: 'Crazyhouse', rule: 'Captured pieces can be dropped back on the board instead of moving a piece.', rules: 'crazyhouse', engine: 'fairy', hasChecks: true, hasMaterial: false },
-  { id: 'chess960', name: 'Chess960', rule: 'The starting position of the home rank pieces is randomized.', rules: 'chess', engine: 'stockfish', hasChecks: true, hasMaterial: true },
-  { id: 'kingofthehill', name: 'King of the Hill', rule: 'Bring your King to the center to win the game.', rules: 'kingofthehill', engine: 'fairy', hasChecks: true, hasMaterial: true },
-  { id: '3check', name: 'Three-Check', rule: 'Check your opponent 3 times to win the game.', rules: '3check', engine: 'fairy', hasChecks: true, hasMaterial: true },
-  { id: 'antichess', name: 'Antichess', rule: 'Lose all your pieces (or get stalemated) to win the game.', rules: 'antichess', engine: 'fairy', hasChecks: false, hasMaterial: false },
-  { id: 'atomic', name: 'Atomic', rule: "Nuke your opponent's king to win.", rules: 'atomic', engine: 'fairy', hasChecks: true, hasMaterial: true },
-  { id: 'horde', name: 'Horde', rule: 'One side has a large number of pawns, the other has a normal army.', rules: 'horde', engine: 'fairy', hasChecks: true, hasMaterial: false },
-  { id: 'racingkings', name: 'Racing Kings', rule: 'Get your king to the other side of the board to win.', rules: 'racingkings', engine: 'fairy', hasChecks: false, hasMaterial: false },
+  { id: 'standard', name: t('Standard'), rule: t('The normal rules of chess.'), rules: 'chess', engine: 'stockfish', hasChecks: true, hasMaterial: true },
+  { id: 'crazyhouse', name: t('Crazyhouse'), rule: t('Captured pieces can be dropped back on the board instead of moving a piece.'), rules: 'crazyhouse', engine: 'fairy', hasChecks: true, hasMaterial: false },
+  { id: 'chess960', name: 'Chess960', rule: t('The starting position of the home rank pieces is randomized.'), rules: 'chess', engine: 'stockfish', hasChecks: true, hasMaterial: true },
+  { id: 'kingofthehill', name: t('King of the Hill'), rule: t('Bring your King to the center to win the game.'), rules: 'kingofthehill', engine: 'fairy', hasChecks: true, hasMaterial: true },
+  { id: '3check', name: t('Three-Check'), rule: t('Check your opponent 3 times to win the game.'), rules: '3check', engine: 'fairy', hasChecks: true, hasMaterial: true },
+  { id: 'antichess', name: t('Antichess'), rule: t('Lose all your pieces (or get stalemated) to win the game.'), rules: 'antichess', engine: 'fairy', hasChecks: false, hasMaterial: false },
+  { id: 'atomic', name: t('Atomic'), rule: t("Nuke your opponent's king to win."), rules: 'atomic', engine: 'fairy', hasChecks: true, hasMaterial: true },
+  { id: 'horde', name: t('Horde'), rule: t('One side has a large number of pawns, the other has a normal army.'), rules: 'horde', engine: 'fairy', hasChecks: true, hasMaterial: false },
+  { id: 'racingkings', name: t('Racing Kings'), rule: t('Get your king to the other side of the board to win.'), rules: 'racingkings', engine: 'fairy', hasChecks: false, hasMaterial: false },
 ]
 
 export function variantInfo(id: VariantId): VariantInfo {
