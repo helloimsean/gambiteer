@@ -99,6 +99,16 @@ export interface AppSettings {
   ollamaModel: string
   /** Default review depth (12 fast / 16 default / 20 deep). */
   defaultDepth: number
+  /** Game Review's advanced Stockfish settings. */
+  reviewEngine: ReviewEngineChoice
+}
+
+/** Each null means the backend's own setting (the phone's differ from the PC's). */
+export interface ReviewEngineChoice {
+  threads: number | null
+  hashMb: number | null
+  /** null: no time limit per move. */
+  moveTimeMs: number | null
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -106,6 +116,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   coordinates: true,
   ollamaModel: '',
   defaultDepth: 16,
+  reviewEngine: { threads: null, hashMb: null, moveTimeMs: null },
 }
 
 export const SETTINGS_KEY = 'settings-v1'
@@ -175,6 +186,11 @@ function loadSettings(): AppSettings {
   if (typeof stored.ollamaModel === 'string') out.ollamaModel = stored.ollamaModel
   if (typeof stored.defaultDepth === 'number' && stored.defaultDepth >= 12 && stored.defaultDepth <= 24) {
     out.defaultDepth = stored.defaultDepth
+  }
+  if (stored.reviewEngine && typeof stored.reviewEngine === 'object') {
+    const engine = stored.reviewEngine as Record<string, unknown>
+    const whole = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : null)
+    out.reviewEngine = { threads: whole(engine.threads), hashMb: whole(engine.hashMb), moveTimeMs: whole(engine.moveTimeMs) }
   }
   return out
 }

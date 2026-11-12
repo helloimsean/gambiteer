@@ -767,5 +767,21 @@
   "Take back the last move": "Отменить последний ход",
   "Turn the board after every move": "Поворачивать доску после каждого хода",
   "White player name": "Имя игрока за белых",
-  "Who resigns?": "Кто сдаётся?"
+  "Who resigns?": "Кто сдаётся?",
+  "Advanced Stockfish settings": "Расширенные настройки Stockfish",
+  "CPU threads": "Потоки процессора",
+  "Hash memory": "Память хеш-таблицы",
+  "Time limit per move": "Лимит времени на ход",
+  "{n} threads": {
+    "one": "{n} поток",
+    "few": "{n} потока",
+    "many": "{n} потоков",
+    "other": "{n} потока"
+  },
+  "{n} MB": "{n} МБ",
+  "{n} GB": "{n} ГБ",
+  "{n} s": "{n} с",
+  "No limit": "Без лимита",
+  "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "Больше потоков и памяти — быстрее анализ каждой позиции. Лимит времени переходит к следующей позиции, если на нужную глубину ушло бы больше времени.",
+  "Reset to defaults": "Вернуть настройки по умолчанию"
 }

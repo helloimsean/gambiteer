@@ -298,6 +298,11 @@ export interface ReviewRequest {
   /** 12-24, default 16. */
   depth?: number
   players?: Players
+  /** Advanced engine settings; left out, the backend's own. Lowered to Health.reviewEngine's maxima. */
+  threads?: number
+  hashMb?: number
+  /** Ends a position's search early when reaching the depth takes longer (100-600000). */
+  moveTimeMs?: number
 }
 
 export interface ReviewMove {
@@ -481,4 +486,15 @@ export interface Health {
   maia?: { available: boolean; ratings: number[]; path: string }
   /** Fairy-Stockfish, which plays the variants Stockfish 19 cannot. Only looks at the file. */
   fairy?: { available: boolean; path: string }
+  /** Game Review's engine settings and this machine's limits. Absent from an older backend. */
+  reviewEngine?: ReviewEngineInfo
+}
+
+export interface ReviewEngineInfo {
+  threads: number
+  hashMb: number
+  /** The CPU's threads. */
+  maxThreads: number
+  /** A power of two up to a quarter of the memory. */
+  maxHashMb: number
 }

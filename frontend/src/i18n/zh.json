@@ -716,5 +716,18 @@
   "Take back the last move": "悔上一步棋",
   "Turn the board after every move": "每走一步后转动棋盘",
   "White player name": "白方玩家名称",
-  "Who resigns?": "谁认输？"
+  "Who resigns?": "谁认输？",
+  "Advanced Stockfish settings": "Stockfish 高级设置",
+  "CPU threads": "CPU 线程",
+  "Hash memory": "哈希内存",
+  "Time limit per move": "每步时间上限",
+  "{n} threads": {
+    "other": "{n} 个线程"
+  },
+  "{n} MB": "{n} MB",
+  "{n} GB": "{n} GB",
+  "{n} s": "{n} 秒",
+  "No limit": "不限时",
+  "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "线程和内存越多，每个局面分析得越快。若某个局面需要更久才能达到该深度，时间上限会让分析转到下一个局面。",
+  "Reset to defaults": "恢复默认设置"
 }
