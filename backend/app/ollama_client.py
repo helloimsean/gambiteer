@@ -90,12 +90,22 @@ def resolve_model(requested: str | None, installed: Sequence[str], preferred: st
 
 
 class OllamaClient:
-    def __init__(self, base_url: str, preferred_model: str, *, timeout_s: float = 180.0, health_timeout_s: float = 2.5) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        preferred_model: str,
+        *,
+        timeout_s: float = 180.0,
+        health_timeout_s: float = 2.5,
+        api_key: str | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.preferred_model = preferred_model
         self._timeout = httpx.Timeout(connect=5.0, read=timeout_s, write=10.0, pool=5.0)
         self._health_timeout = health_timeout_s
-        self._client = httpx.AsyncClient(base_url=self.base_url, timeout=self._timeout)
+        # the phone's coach server wants the app's access key; Ollama ignores the header
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+        self._client = httpx.AsyncClient(base_url=self.base_url, timeout=self._timeout, headers=headers)
 
     async def aclose(self) -> None:
         await self._client.aclose()

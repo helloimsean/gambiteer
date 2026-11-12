@@ -9,6 +9,10 @@ OLLAMA_MODEL    preferred explanation model (default gpt-oss:20b; falls back to 
                 first installed model when it is not available)
 DATA_DIR        folder with the opening JSON files (default data/openings)
 FRONTEND_DIST   built frontend to serve at / (default frontend/dist)
+ALLOWED_HOSTS   more host names the server answers to, comma-separated (always: localhost,
+                127.0.0.1, ::1). Requests for any other host are refused (DNS rebinding).
+GAMBITEER_ACCESS_KEY  when set, every request must carry this key (the phone app sets one, so
+                other apps on the phone cannot use the backend); also sent to the coach server
 """
 from __future__ import annotations
 
@@ -31,6 +35,8 @@ class Settings:
     data_dir: Path = ROOT_DIR / "data" / "openings"
     frontend_dist: Path = ROOT_DIR / "frontend" / "dist"
     cors_origins: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
+    allowed_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "::1")
+    access_key: str | None = None
 
     # engine pool
     analysis_threads: int = 4
@@ -73,6 +79,9 @@ class Settings:
             ollama_model=env.get("OLLAMA_MODEL") or defaults.ollama_model,
             data_dir=Path(env.get("DATA_DIR") or defaults.data_dir),
             frontend_dist=Path(env.get("FRONTEND_DIST") or defaults.frontend_dist),
+            allowed_hosts=defaults.allowed_hosts
+            + tuple(h.strip() for h in (env.get("ALLOWED_HOSTS") or "").split(",") if h.strip()),
+            access_key=env.get("GAMBITEER_ACCESS_KEY") or None,
         )
 
     def with_overrides(self, **changes: object) -> "Settings":
