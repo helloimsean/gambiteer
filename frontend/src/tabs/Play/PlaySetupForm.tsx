@@ -20,6 +20,7 @@ import {
   MOVETIME_OPTIONS,
   PANICFISH_ELO_PER_CHECK,
   PANICFISH_START_ELO,
+  PITYFISH_ELO_PER_WORST,
   RANDOM_LINE,
   UCI_ELO_MIN,
   colorIsLocked,
@@ -69,6 +70,11 @@ const PANICFISH_BLURB = t('I am Stockfish 19 that loses {per} Elo every time you
   start: PANICFISH_START_ELO,
 })
 const PANICFISH_CHECKS_TO_ZERO = PANICFISH_START_ELO / PANICFISH_ELO_PER_CHECK
+const PITYFISH_BLURB = t('I am Stockfish 19 at full {start} strength, but I feel sorry for you. Every time you play the worst move on the board, I lose {per} Elo.', {
+  start: PANICFISH_START_ELO,
+  per: PITYFISH_ELO_PER_WORST,
+})
+const PITYFISH_WORSTS_TO_ZERO = PANICFISH_START_ELO / PITYFISH_ELO_PER_WORST
 const FAIRY_NOTE = t('Stockfish 19 only plays standard chess and Chess960, so Fairy-Stockfish plays this variant. Elo is only a rough guide here.')
 const ELO_EXPLAINER = t('Elo is a chess rating: higher means stronger. Beginners are around 800, club players around 1500, masters 2200 and up. Lichess ratings run higher than chess.com ones.')
 const MAIA_RATING_COUNT = (MAIA_ELO_MAX - MAIA_ELO_MIN) / MAIA_ELO_STEP + 1
@@ -105,6 +111,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
   const isOtb = setup.mode === 'otb'
   const isMaia = !isOtb && setup.bot === 'maia'
   const isPanicfish = !isOtb && setup.bot === 'panicfish'
+  const isPityfish = !isOtb && setup.bot === 'pityfish'
   const isStockfish = !isOtb && setup.bot === 'stockfish'
   const variant = variantInfo(setup.variant)
   const isStandard = setup.variant === 'standard'
@@ -277,6 +284,21 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           <button
             type="button"
             role="radio"
+            aria-checked={isPityfish}
+            tabIndex={isPityfish ? 0 : -1}
+            className={`play-mode${isPityfish ? ' active' : ''}`}
+            data-bot="pityfish"
+            onClick={() => onChange({ mode: 'bot', bot: 'pityfish' })}
+          >
+            <span className="play-mode-radio" />
+            <span className="play-mode-text">
+              <strong>PityFish</strong>
+              <span>{PITYFISH_BLURB}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="radio"
             aria-checked={isOtb}
             tabIndex={isOtb ? 0 : -1}
             className={`play-mode${isOtb ? ' active' : ''}`}
@@ -314,14 +336,20 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           <Toggle checked={setup.autoFlip} onChange={(v) => onChange({ autoFlip: v })} label={t('Turn the board after every move')} />
           <p className="play-setup-note">{OTB_NOTE}</p>
         </section>
-      ) : isPanicfish ? (
+      ) : isPanicfish || isPityfish ? (
         <section className="play-setup-section">
           <div className="play-setup-label">{t('Bot strength (Elo)')}</div>
-          <p className="play-setup-note" data-testid="play-panicfish-note">
-            {t('Starts at {start} with no limit on its strength. After {checks} checks it reaches 0 Elo and plays random moves.', {
-              start: PANICFISH_START_ELO,
-              checks: PANICFISH_CHECKS_TO_ZERO,
-            })}
+          <p className="play-setup-note" data-testid={isPityfish ? 'play-pityfish-note' : 'play-panicfish-note'}>
+            {isPityfish
+              ? t('Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.', {
+                  start: PANICFISH_START_ELO,
+                  per: PITYFISH_ELO_PER_WORST,
+                  count: PITYFISH_WORSTS_TO_ZERO,
+                })
+              : t('Starts at {start} with no limit on its strength. After {checks} checks it reaches 0 Elo and plays random moves.', {
+                  start: PANICFISH_START_ELO,
+                  checks: PANICFISH_CHECKS_TO_ZERO,
+                })}
             {usesFairy ? ` ${FAIRY_NOTE}` : ''}
           </p>
         </section>

@@ -747,5 +747,10 @@
   "{n} s": "{n} s",
   "No limit": "Sem limite",
   "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "Com mais threads e memória, cada posição é analisada mais rápido. O limite de tempo passa para a próxima quando uma posição levaria mais tempo para atingir a profundidade.",
-  "Reset to defaults": "Restaurar padrões"
+  "Reset to defaults": "Restaurar padrões",
+  "I am Stockfish 19 at full {start} strength, but I feel sorry for you. Every time you play the worst move on the board, I lose {per} Elo.": "Sou o Stockfish 19 com força total, {start} de Elo, mas tenho pena de você. Toda vez que você joga o pior lance do tabuleiro, perco {per} de Elo.",
+  "Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.": "Começa em {start} sem limite de força. Toda vez que o seu lance é o pior possível, ele perde {per} de Elo, e depois de {count} deles joga aleatoriamente.",
+  "Full strength. Every time you play the worst move it loses {per} Elo.": "Força total. Toda vez que você joga o pior lance, ele perde {per} de Elo.",
+  "Down to {elo} Elo and feeling sorry for you.": "Caiu para {elo} de Elo e está com pena de você.",
+  "Worst move! {bot} loses {per} Elo.": "O pior lance! {bot} perde {per} de Elo."
 }

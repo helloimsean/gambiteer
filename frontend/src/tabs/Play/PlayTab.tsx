@@ -44,6 +44,7 @@ import {
   HINT_DEPTH,
   HINT_DURATION_MS,
   OTB_FLIP_DELAY_MS,
+  PITYFISH_ELO_PER_WORST,
   RANDOM_LINE,
   agreeDraw,
   alternativeBookLine,
@@ -63,6 +64,7 @@ import {
   moverOfPly,
   otbName,
   outcomeFor,
+  pityfishElo,
   playableSetup,
   rematchSetup,
   replayGame,
@@ -259,18 +261,32 @@ export function PlayTab(): JSX.Element {
           fen: fenNow,
           elo: botElo,
           movetime_ms: game.movetimeMs,
-          ...(game.bot === 'panicfish' ? { bot: game.bot } : {}),
+          ...(game.bot !== 'stockfish' ? { bot: game.bot } : {}),
           ...(game.variant !== 'standard' ? { variant: game.variant } : {}),
         }
+    // PityFish first rates the student's move: the worst one available costs it Elo (and a takeback gives it back)
+    const judge = game.bot === 'pityfish' && replay && ply > game.basePly && !game.marks[ply] && !game.worst?.includes(ply)
+    let elo = botElo
     const sentAt = performance.now()
     let replyDelay: ReturnType<typeof setTimeout> | undefined
     const ctrl = new AbortController()
-    api
-      .botMove(req, ctrl.signal)
+    const ask = async (): Promise<BotMoveResponse | null> => {
+      if (judge) {
+        const move = { fen: replay.fens[ply - 1], move: game.sans[ply - 1], ...(game.variant !== 'standard' ? { variant: game.variant } : {}) }
+        const { worst } = await api.botWorst(move, ctrl.signal)
+        if (ctrl.signal.aborted) return null
+        if (worst) {
+          elo = pityfishElo((game.worst?.length ?? 0) + 1)
+          setGame((prev) => (prev && prev.id === id && prev.sans.length === ply ? { ...prev, worst: [...(prev.worst ?? []), ply] } : prev))
+        }
+      }
+      return api.botMove({ ...req, elo }, ctrl.signal)
+    }
+    ask()
       .then((res) => {
-        if (ctrl.signal.aborted) return
-        // Maia and a broken Panicfish answer at once, so their move time is a wait counted from the request
-        const wait = isMaia || (game.bot === 'panicfish' && botElo === 0) ? game.movetimeMs - (performance.now() - sentAt) : 0
+        if (!res || ctrl.signal.aborted) return
+        // Maia and a broken Panicfish or PityFish answer at once, so their move time is a wait counted from the request
+        const wait = isMaia || ((game.bot === 'panicfish' || game.bot === 'pityfish') && elo === 0) ? game.movetimeMs - (performance.now() - sentAt) : 0
         if (wait > 0) replyDelay = setTimeout(() => landReply(res), wait)
         else landReply(res)
       })
@@ -888,6 +904,16 @@ export function PlayTab(): JSX.Element {
               onSelect={(p) => setViewPly(p >= total ? null : p)}
               emptyText={isStudentTurn ? t('Make your first move') : t('Waiting for the first move')}
               renderBadge={(p) => {
+                if (game.worst?.includes(p)) {
+                  return (
+                    <ClassificationBadge
+                      classification="blunder"
+                      size={16}
+                      className="play-mark"
+                      title={t('Worst move! {bot} loses {per} Elo.', { bot: botLabel, per: PITYFISH_ELO_PER_WORST })}
+                    />
+                  )
+                }
                 const mark = game.marks[p]
                 if (!mark) return null
                 if (mark === 'book') return <ClassificationBadge classification="book" size={16} className="play-mark book" title={t('Book move')} />

@@ -3,7 +3,8 @@
  *
  * A game is stored as a SAN list from `startFen`. Everything else (fens, last move, status, and
  * Panicfish's remaining Elo) is derived by replaying the list: with chess.js for standard chess,
- * with chessops for the variants (see lib/variants.ts).
+ * with chessops for the variants (see lib/variants.ts). PityFish's Elo needs an engine to judge
+ * each move, so the plies it judged worst are stored (`PlayGame.worst`).
  */
 import { Chess } from 'chess.js'
 import type { BotKind, BotStrength, Health, LineMeta, OpeningFull, Players, Side, VariantId } from '../../api/types'
@@ -43,6 +44,8 @@ export const MAIA_ELO_STEP = 100
 export const MAIA_ELO_PRESETS = [1100, 1300, 1500, 1700, 1900] as const
 export const PANICFISH_START_ELO = 3600
 export const PANICFISH_ELO_PER_CHECK = 300
+/** PityFish starts as strong as Panicfish and loses this much for each worst move the student plays. */
+export const PITYFISH_ELO_PER_WORST = 300
 export const MOVETIME_OPTIONS = [300, 800, 2000] as const
 /** Delay before the bot plays a book move from the line (feels less robotic than instant). */
 export const BOOK_MOVE_DELAY_MS = 450
@@ -161,6 +164,8 @@ export interface PlayGame {
   basePly: number
   /** Per-move marks for the move list, keyed by ply (1-based, relative to startFen). */
   marks: Record<number, MoveMark>
+  /** PityFish: the plies where the student played the worst move available (each cost it Elo). */
+  worst?: number[]
   opening?: PlayOpening
   /** Set for an over-the-board game: no bot moves, either side is played here. */
   otb?: OtbPlayers
@@ -248,7 +253,8 @@ export function truncateGame(game: PlayGame, plies: number): PlayGame {
   for (const [k, v] of Object.entries(game.marks)) {
     if (Number(k) <= plies) marks[Number(k)] = v
   }
-  return { ...game, sans: game.sans.slice(0, plies), marks, result: undefined, endedAt: undefined }
+  const worst = game.worst?.filter((ply) => ply <= plies) // a takeback gives PityFish its Elo back
+  return { ...game, sans: game.sans.slice(0, plies), marks, ...(worst ? { worst } : {}), result: undefined, endedAt: undefined }
 }
 
 /** `side` resigns: the student against a bot, either player over the board. */
@@ -328,6 +334,7 @@ export function alternativeBookLine(full: OpeningFull | null | undefined, sans: 
 export function botName(bot: BotKind, variant: VariantId = 'standard'): string {
   if (bot === 'maia') return 'Maia'
   if (bot === 'panicfish') return 'Panicfish'
+  if (bot === 'pityfish') return 'PityFish'
   return variantInfo(variant).engine === 'fairy' ? 'Fairy-Stockfish' : 'Stockfish 19'
 }
 
@@ -350,8 +357,14 @@ export function panicfishElo(checks: number): number {
   return Math.max(0, PANICFISH_START_ELO - PANICFISH_ELO_PER_CHECK * checks)
 }
 
-/** The strength the bot has right now. Only Panicfish's changes during a game. */
+/** PityFish loses Elo for every worst move the student has played. */
+export function pityfishElo(worstMoves: number): number {
+  return Math.max(0, PANICFISH_START_ELO - PITYFISH_ELO_PER_WORST * worstMoves)
+}
+
+/** The strength the bot has right now. Only Panicfish's and PityFish's change during a game. */
 export function botEloNow(game: PlayGame, moves: readonly PlayedMove[]): number {
+  if (game.bot === 'pityfish') return pityfishElo(game.worst?.length ?? 0)
   if (game.bot !== 'panicfish') return game.elo
   return panicfishElo(moves.filter((m, i) => m.check && moverOfPly(game.startFen, i + 1) === game.studentColor).length)
 }
@@ -363,6 +376,11 @@ export function currentElo(game: PlayGame): number {
 export function panicfishMood(elo: number): string {
   if (elo >= PANICFISH_START_ELO) return t('Full strength. Every check costs it {per} Elo.', { per: PANICFISH_ELO_PER_CHECK })
   return elo > 0 ? t('Down to {elo} Elo and losing its nerve.', { elo }) : t('Out of Elo. It now plays random moves.')
+}
+
+export function pityfishMood(elo: number): string {
+  if (elo >= PANICFISH_START_ELO) return t('Full strength. Every time you play the worst move it loses {per} Elo.', { per: PITYFISH_ELO_PER_WORST })
+  return elo > 0 ? t('Down to {elo} Elo and feeling sorry for you.', { elo }) : t('Out of Elo. It now plays random moves.')
 }
 
 /** Rough human description of an Elo. */
@@ -382,6 +400,7 @@ export function eloLevel(elo: number): string {
 export function strengthDetail(bot: BotKind, s: BotStrength | null, elo: number): string {
   if (bot === 'maia') return strengthCaption(bot, s?.elo ?? elo)
   if (bot === 'panicfish') return panicfishMood(elo)
+  if (bot === 'pityfish') return pityfishMood(elo)
   const shown = s?.elo ?? elo
   const exact = s ? s.mode === 'uci_elo' : elo >= UCI_ELO_MIN
   return exact ? t('Limited to {elo} Elo', { elo: shown }) : t('About {elo} Elo (approximate)', { elo: shown })
@@ -607,7 +626,7 @@ export function clampMaiaElo(elo: number): number {
 
 /** The strength a new game from this setup is played at. */
 export function setupElo(setup: PlaySetup): number {
-  if (setup.bot === 'panicfish') return PANICFISH_START_ELO
+  if (setup.bot === 'panicfish' || setup.bot === 'pityfish') return PANICFISH_START_ELO
   return setup.bot === 'maia' ? clampMaiaElo(setup.maiaElo) : clampElo(setup.elo)
 }
 
@@ -693,7 +712,7 @@ export function loadSetup(): PlaySetup {
   if (typeof s.autoFlip === 'boolean') out.autoFlip = s.autoFlip
   if (isVariantId(s.variant)) out.variant = s.variant
   if (s.color === 'white' || s.color === 'black' || s.color === 'random') out.color = s.color
-  if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish') out.bot = s.bot
+  if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish' || s.bot === 'pityfish') out.bot = s.bot
   if (typeof s.elo === 'number') out.elo = clampElo(s.elo)
   if (typeof s.maiaElo === 'number') out.maiaElo = clampMaiaElo(s.maiaElo)
   if (typeof s.movetimeMs === 'number' && (MOVETIME_OPTIONS as readonly number[]).includes(s.movetimeMs)) out.movetimeMs = s.movetimeMs
@@ -737,6 +756,9 @@ export function loadSavedGame(): PlayGame | null {
       if ((v === 'check' || v === 'book') && ply >= 1 && ply <= sans.length) marks[ply] = v
     }
   }
+  const worst: number[] = Array.isArray(g.worst)
+    ? [...new Set<number>(g.worst.filter((p: unknown): p is number => Number.isInteger(p) && (p as number) >= 1 && (p as number) <= sans.length))]
+    : []
   let opening: PlayOpening | undefined
   const o = g.opening
   if (o && typeof o === 'object' && typeof o.id === 'string' && Array.isArray(o.lineSans)) {
@@ -751,7 +773,7 @@ export function loadSavedGame(): PlayGame | null {
       mode: o.mode === 'end' ? 'end' : 'hints',
     }
   }
-  const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
+  const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' || g.bot === 'pityfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
   const savedOtb = g.otb
   const otb: OtbPlayers | undefined =
     savedOtb && typeof savedOtb === 'object'
@@ -768,12 +790,13 @@ export function loadSavedGame(): PlayGame | null {
     variant,
     studentColor: g.studentColor,
     bot,
-    elo: bot === 'maia' ? clampMaiaElo(savedElo) : bot === 'panicfish' ? PANICFISH_START_ELO : clampElo(savedElo),
+    elo: bot === 'maia' ? clampMaiaElo(savedElo) : bot === 'panicfish' || bot === 'pityfish' ? PANICFISH_START_ELO : clampElo(savedElo),
     movetimeMs: typeof g.movetimeMs === 'number' && g.movetimeMs > 0 ? g.movetimeMs : DEFAULT_SETUP.movetimeMs,
     startFen,
     sans,
     basePly: typeof g.basePly === 'number' ? Math.min(Math.max(0, g.basePly), sans.length) : 0,
     marks,
+    ...(bot === 'pityfish' ? { worst } : {}),
     opening,
     ...(otb ? { otb } : {}),
     bookStats: {

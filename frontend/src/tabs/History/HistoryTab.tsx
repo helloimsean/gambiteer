@@ -11,7 +11,7 @@ import { botName } from '../Play/PlayGame'
 import { formatAccuracy } from '../Review/reviewUtils'
 import './HistoryTab.css'
 
-const BOT_ICONS: Record<BotKind, IconName> = { stockfish: 'engine', maia: 'brain', panicfish: 'fish' }
+const BOT_ICONS: Record<BotKind, IconName> = { stockfish: 'engine', maia: 'brain', panicfish: 'fish', pityfish: 'fish' }
 
 const SCORES: Record<string, readonly [string, string]> = {
   '1-0': ['1', '0'],

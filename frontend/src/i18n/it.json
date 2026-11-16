@@ -747,5 +747,10 @@
   "{n} s": "{n} s",
   "No limit": "Nessun limite",
   "More threads and memory search each position faster. The time limit moves on when a position would take longer to reach the depth.": "Con più thread e memoria ogni posizione viene analizzata più in fretta. Il limite di tempo passa alla successiva quando una posizione richiederebbe più tempo per raggiungere la profondità.",
-  "Reset to defaults": "Ripristina predefiniti"
+  "Reset to defaults": "Ripristina predefiniti",
+  "I am Stockfish 19 at full {start} strength, but I feel sorry for you. Every time you play the worst move on the board, I lose {per} Elo.": "Sono Stockfish 19 a piena forza, {start} di Elo, ma mi fai pena. Ogni volta che giochi la peggiore mossa della scacchiera, perdo {per} di Elo.",
+  "Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.": "Parte da {start} senza limiti di forza. Ogni volta che la tua mossa è la peggiore possibile, perde {per} di Elo, e dopo {count} di queste gioca a caso.",
+  "Full strength. Every time you play the worst move it loses {per} Elo.": "Piena forza. Ogni volta che giochi la peggiore mossa, perde {per} di Elo.",
+  "Down to {elo} Elo and feeling sorry for you.": "Sceso a {elo} di Elo e ti compatisce.",
+  "Worst move! {bot} loses {per} Elo.": "La peggiore mossa! {bot} perde {per} di Elo."
 }
