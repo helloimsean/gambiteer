@@ -49,6 +49,7 @@ from .chessutil import (
     terminal_lines,
 )
 from .engine import EngineManager, EngineProxy, EngineUnavailable
+from .hardware import cpu_threads, max_hash_mb, total_memory_mb
 from .schemas import (
     CLASSIFICATIONS,
     Accuracy,
@@ -58,6 +59,7 @@ from .schemas import (
     ReviewJob,
     ReviewMove,
     ReviewOpening,
+    ReviewEngineHealth,
     ReviewRequest,
     ReviewResult,
 )
@@ -338,12 +340,17 @@ def build_review_result(
 # ============================================================================ engine I/O
 
 
-async def evaluate_position(engine: EngineProxy, board: chess.Board, depth: int, multipv: int = 2) -> list[EngineLine]:
-    """Engine lines (best first) for one position; positions without legal moves skip the engine."""
+async def evaluate_position(
+    engine: EngineProxy, board: chess.Board, depth: int, multipv: int = 2, *, max_seconds: float | None = None
+) -> list[EngineLine]:
+    """Engine lines (best first) for one position; positions without legal moves skip the engine.
+
+    ``max_seconds`` ends the search early when reaching ``depth`` takes longer.
+    """
     terminal = terminal_lines(board)
     if terminal is not None:
         return terminal
-    infos = await engine.analyse(board, chess.engine.Limit(depth=depth), multipv=multipv)
+    infos = await engine.analyse(board, chess.engine.Limit(depth=depth, time=max_seconds), multipv=multipv)
     lines = infos_to_lines(board, infos)
     if not lines:  # extremely shallow search without a PV: fall back to a 1-line search
         info = await engine.analyse(board, chess.engine.Limit(depth=max(depth, 4)))
@@ -395,6 +402,9 @@ class _Job:
     moves: list[chess.Move]
     depth: int
     players: dict[str, str]
+    # Threads and Hash for the review engine, and the time limit per position
+    options: dict[str, int] = field(default_factory=dict)
+    max_seconds: float | None = None
     status: str = "queued"
     progress: float = 0.0
     message: str | None = None
@@ -432,6 +442,18 @@ class ReviewService:
 
     # ---------------------------------------------------------------- public API
 
+    def engine_settings(self) -> ReviewEngineHealth:
+        """The review engine's own settings, and the most the advanced settings may ask for."""
+        defaults = self._engines.options("review")
+        threads = int(defaults.get("Threads", 1))
+        hash_mb = int(defaults.get("Hash", 16))
+        return ReviewEngineHealth(
+            threads=threads,
+            hashMb=hash_mb,
+            maxThreads=max(threads, cpu_threads()),
+            maxHashMb=max(hash_mb, max_hash_mb(total_memory_mb())),
+        )
+
     def create(self, req: ReviewRequest) -> str:
         """Validate the request and start the job. Raises ValueError on a bad FEN or move."""
         start = parse_fen(req.startFen) if req.startFen else chess.Board()
@@ -445,7 +467,20 @@ class ReviewService:
             moves.append(move)
             board.push(move)
         players = req.players.model_dump() if req.players else {}
-        job = _Job(id=uuid.uuid4().hex[:12], start=start, moves=moves, depth=req.depth, players=players)
+        limits = self.engine_settings()
+        options = {
+            "Threads": min(req.threads or limits.threads, limits.maxThreads),
+            "Hash": min(req.hashMb or limits.hashMb, limits.maxHashMb),
+        }
+        job = _Job(
+            id=uuid.uuid4().hex[:12],
+            start=start,
+            moves=moves,
+            depth=req.depth,
+            players=players,
+            options=options,
+            max_seconds=req.moveTimeMs / 1000 if req.moveTimeMs else None,
+        )
         self._jobs[job.id] = job
         self._evict()
         job.task = asyncio.create_task(self._run(job), name=f"review-{job.id}")
@@ -492,6 +527,17 @@ class ReviewService:
         for queue in list(job.subscribers):
             queue.put_nowait(snap)
 
+    async def _restore_engine(self, job: _Job) -> None:
+        """Give the review engine its own settings back: the single-move coach shares it."""
+        defaults = self._engines.options("review")
+        if all(defaults.get(name) == value for name, value in job.options.items()):
+            return
+        try:
+            async with self._engines.use("review") as engine:
+                await engine.configure(defaults)
+        except EngineUnavailable:
+            pass  # shutting down, or the engine is gone: a fresh one starts with its own settings
+
     def _book_hits(self, job: _Job) -> list[BookHit | None]:
         store = self._openings
         if store is None:
@@ -517,13 +563,19 @@ class ReviewService:
                 total = len(positions)
                 evals: list[list[EngineLine]] = []
                 engine_name = self._engines.engine_name or "Stockfish"
-                for i, pos in enumerate(positions):
-                    async with self._engines.use("review") as engine:
-                        evals.append(await evaluate_position(engine, pos, job.depth))
-                        engine_name = engine.name
-                    job.progress = min(0.99, (i + 1) / total)
-                    job.message = f"Analysed {i + 1}/{total} positions"
-                    self._publish(job)
+                try:
+                    for i, pos in enumerate(positions):
+                        async with self._engines.use("review") as engine:
+                            # sends only what changed, so after the first position this costs nothing
+                            # (and it covers an engine restarted after a crash)
+                            await engine.configure(job.options)
+                            evals.append(await evaluate_position(engine, pos, job.depth, max_seconds=job.max_seconds))
+                            engine_name = engine.name
+                        job.progress = min(0.99, (i + 1) / total)
+                        job.message = f"Analysed {i + 1}/{total} positions"
+                        self._publish(job)
+                finally:
+                    await self._restore_engine(job)
             job.result = build_review_result(
                 job.start,
                 job.moves,

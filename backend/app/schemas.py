@@ -149,7 +149,7 @@ class WsAnalyzeInfo(BaseModel):
 
 
 _STOCKFISH_ELO = (400, 3190)
-_PANICFISH_ELO = (0, 3600)  # it starts at 3600 and loses 300 per check
+_PANICFISH_ELO = (0, 3600)  # Panicfish and PityFish start at 3600 and lose 300 at a time
 _MOVETIME_MS = (50, 60_000)
 
 Variant = Literal["standard", "chess960", "crazyhouse", "kingofthehill", "3check", "antichess", "atomic", "horde", "racingkings"]
@@ -158,7 +158,7 @@ Variant = Literal["standard", "chess960", "crazyhouse", "kingofthehill", "3check
 class BotMoveRequest(BaseModel):
     fen: str
     variant: Variant = "standard"
-    bot: Literal["stockfish", "maia", "panicfish"] = "stockfish"  # before elo: its validator reads this field
+    bot: Literal["stockfish", "maia", "panicfish", "pityfish"] = "stockfish"  # before elo: its validator reads this field
     elo: int
     movetime_ms: int = 800  # the search time; ignored for Maia, which does not search
     moves: list[str] | None = None  # Maia only: UCI moves from start_fen, oldest first
@@ -171,12 +171,22 @@ class BotMoveRequest(BaseModel):
         bot = info.data.get("bot")
         if bot == "maia":
             return value
-        low, high = _MOVETIME_MS if info.field_name == "movetime_ms" else _PANICFISH_ELO if bot == "panicfish" else _STOCKFISH_ELO
+        low, high = _MOVETIME_MS if info.field_name == "movetime_ms" else _PANICFISH_ELO if bot in ("panicfish", "pityfish") else _STOCKFISH_ELO
         if value < low:
             raise PydanticCustomError("greater_than_equal", "Input should be greater than or equal to {ge}", {"ge": low})
         if value > high:
             raise PydanticCustomError("less_than_equal", "Input should be less than or equal to {le}", {"le": high})
         return value
+
+
+class WorstMoveRequest(BaseModel):
+    fen: str  # the position before the move
+    variant: Variant = "standard"
+    move: str  # the move played, in SAN (or UCI)
+
+
+class WorstMoveResponse(BaseModel):
+    worst: bool  # the move rates lowest of all the legal moves
 
 
 class BotStrength(BaseModel):
@@ -226,6 +236,12 @@ class ReviewRequest(BaseModel):
     # The UI offers 12 / 16 / 20 (contract: 12-24); the API accepts 4-30 for quick tests.
     depth: int = Field(default=16, ge=4, le=30)
     players: Players | None = None
+    # Advanced engine settings; left out, the review engine keeps the backend's settings. Threads and
+    # hash above what this machine offers (HealthResponse.reviewEngine) are lowered to it.
+    threads: int | None = Field(default=None, ge=1, le=1024)
+    hashMb: int | None = Field(default=None, ge=1, le=1_048_576)
+    # stops each position's search early when the depth takes longer than this
+    moveTimeMs: int | None = Field(default=None, ge=100, le=600_000)
 
 
 class BestMove(BaseModel):
@@ -399,6 +415,15 @@ class FairyHealth(BaseModel):
     path: str
 
 
+class ReviewEngineHealth(BaseModel):
+    """The review engine's settings, and the most this machine offers for the advanced settings."""
+
+    threads: int
+    hashMb: int
+    maxThreads: int  # the CPU's threads
+    maxHashMb: int  # a power of two up to a quarter of the memory
+
+
 class HealthResponse(BaseModel):
     ok: bool
     stockfish: StockfishHealth
@@ -406,3 +431,4 @@ class HealthResponse(BaseModel):
     openings: int
     maia: MaiaHealth
     fairy: FairyHealth
+    reviewEngine: ReviewEngineHealth

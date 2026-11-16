@@ -152,6 +152,36 @@
   text-align: center;
 }
 .review-depth-custom.active input { border-color: var(--accent); }
+.review-advanced { display: flex; flex-direction: column; gap: 10px; }
+.review-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.review-advanced-toggle:hover .review-field-label,
+.review-advanced-toggle:hover .review-advanced-chevron { color: var(--text); }
+.review-advanced-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.review-advanced-chevron { flex: 0 0 auto; color: var(--text-muted); }
+.review-advanced-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* nested under its heading on the card's own background: a guide line, not a separate box */
+.review-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+.review-advanced-note { margin: 0; }
+.review-advanced-reset { align-self: flex-start; }
 .review-model-select { width: 100%; }
 .review-model-select.compact { width: auto; max-width: 190px; }
 .review-model-select.compact select { min-height: 26px; padding: 2px 26px 2px 8px; font-size: 12px; }

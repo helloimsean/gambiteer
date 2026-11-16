@@ -162,6 +162,10 @@ class EngineManager:
         """True when engines live on the fallback thread instead of the app loop."""
         return self._thread is not None
 
+    def options(self, name: str) -> dict[str, Any]:
+        """The UCI options the named engine starts with (from the settings)."""
+        return dict(self._slots[name].options)
+
     @property
     def engine_name(self) -> str:
         """Engine id name (e.g. 'Stockfish 19') once any engine has started, else ''."""

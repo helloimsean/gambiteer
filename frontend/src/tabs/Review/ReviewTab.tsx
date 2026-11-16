@@ -26,15 +26,17 @@ import { pgnDate } from '../../lib/pgnTransfer'
 import { playSound } from '../../lib/sounds'
 import { t } from '../../lib/i18n'
 import { loadJson, removeKey, saveJson } from '../../lib/storage'
-import { useApp, type LastGame, type ReviewRequestPayload } from '../../state/AppContext'
+import { useApp, type LastGame, type ReviewEngineChoice, type ReviewRequestPayload } from '../../state/AppContext'
 import { ReviewBoardOverlay } from './ReviewBoardOverlay'
 import { ReviewDetails } from './ReviewDetails'
+import { ReviewEngineSettings } from './ReviewEngineSettings'
 import { ReviewEvalGraph } from './ReviewEvalGraph'
 import { ReviewModelPicker } from './ReviewModelPicker'
 import { ReviewAccuracyHeader, ReviewSummary } from './ReviewReport'
 import { ReviewSetup, type ReviewRunInfo, type ReviewSource } from './ReviewSetup'
 import {
   REVIEW_STATE_KEY,
+  engineRequestFields,
   keyMomentPlies,
   playersFromHeaders,
   positionAt,
@@ -95,7 +97,7 @@ function safeFens(sans: readonly string[], startFen?: string): string[] {
 }
 
 export function ReviewTab(): JSX.Element {
-  const { lastGame, reviewRequest, clearRequest, settings, setSettings, navigate } = useApp()
+  const { lastGame, reviewRequest, clearRequest, settings, setSettings, navigate, health } = useApp()
 
   // the game another tab sent here; without one, the setup card offers the last game played
   const [handedGame] = useState<LastGame | null>(() => (reviewRequest && reviewRequest.sans.length > 0 ? reviewRequest : null))
@@ -167,7 +169,7 @@ export function ReviewTab(): JSX.Element {
 
   // ---------------------------------------------------------------- starting a review
 
-  const runReview = useCallback(async (g: ReviewGame, d: number) => {
+  const runReview = useCallback(async (g: ReviewGame, d: number, engine: ReviewEngineChoice) => {
     const token = ++startTokenRef.current
     setError(null)
     setStarting(true)
@@ -176,7 +178,7 @@ export function ReviewTab(): JSX.Element {
     setPly(0)
     setOrientation(orientationFor(g))
     try {
-      const req: ReviewRequest = { moves: g.sans, depth: Math.max(4, Math.min(30, Math.round(d))) }
+      const req: ReviewRequest = { moves: g.sans, depth: Math.max(4, Math.min(30, Math.round(d))), ...engineRequestFields(engine) }
       if (g.startFen && g.startFen !== START_FEN) req.startFen = g.startFen
       if (g.players) req.players = g.players
       const { jobId: id } = await startReview(req)
@@ -205,6 +207,7 @@ export function ReviewTab(): JSX.Element {
           source: 'last',
         },
         depth,
+        settings.reviewEngine,
       )
       return
     }
@@ -231,13 +234,14 @@ export function ReviewTab(): JSX.Element {
           source: 'pgn',
         },
         depth,
+        settings.reviewEngine,
       )
     } catch (err) {
       if (startTokenRef.current !== token) return
       setError(t('Could not read the PGN: {error}', { error: errorText(err) }))
       setStarting(false)
     }
-  }, [source, selectedGame, pgnText, depth, runReview])
+  }, [source, selectedGame, pgnText, depth, settings.reviewEngine, runReview])
 
   // A game sent from another tab waits on the setup card until Game Review is pressed, to allow
   // picking a depth first. Reopening the game that was just reviewed shows its report instead.
@@ -590,6 +594,16 @@ export function ReviewTab(): JSX.Element {
             onPgnText={setPgnText}
             depth={depth}
             onDepth={setDepth}
+            engineSettings={
+              health?.reviewEngine ? (
+                <ReviewEngineSettings
+                  choice={settings.reviewEngine}
+                  info={health.reviewEngine}
+                  onChange={(choice) => setSettings({ reviewEngine: choice })}
+                  disabled={run !== null}
+                />
+              ) : null
+            }
             modelPicker={modelPicker}
             run={run}
             error={error}

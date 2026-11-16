@@ -32,6 +32,8 @@ export interface ReviewSetupProps {
   onPgnText: (t: string) => void
   depth: number
   onDepth: (d: number) => void
+  /** The advanced Stockfish settings (absent when the backend does not report them). */
+  engineSettings?: ReactNode
   /** The model picker (or the Ollama-down note). */
   modelPicker: ReactNode
   run: ReviewRunInfo | null
@@ -50,7 +52,8 @@ const SAMPLE_PGN = [
 ].join('\n')
 
 export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
-  const { source, onSource, selectedGame, selectedLabel, pgnText, onPgnText, depth, onDepth, modelPicker, run, error, canStart, onStart, onCancel } = props
+  const { source, onSource, selectedGame, selectedLabel, pgnText, onPgnText, depth, onDepth, engineSettings, modelPicker, run, error, canStart, onStart, onCancel } =
+    props
   const busy = run !== null
   const customDepth = !REVIEW_DEPTHS.some((d) => d.depth === depth)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -174,6 +177,8 @@ export function ReviewSetup(props: ReviewSetupProps): JSX.Element {
             </label>
           </div>
         </div>
+
+        {engineSettings}
 
         <div className="col gap-4">
           <span className="review-field-label">{t('Explanation model')}</span>

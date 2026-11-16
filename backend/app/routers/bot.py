@@ -1,4 +1,5 @@
-"""POST /api/bot/move: Stockfish (strength-limited), Maia (human-like, runs on lc0) or Panicfish.
+"""POST /api/bot/move: Stockfish (strength-limited), Maia (human-like, runs on lc0), Panicfish or PityFish.
+POST /api/bot/worst: whether a move was the worst available (PityFish's rule).
 
 Standard chess and Chess960 run on Stockfish 19, the other variants on Fairy-Stockfish.
 """
@@ -12,7 +13,7 @@ import chess
 import chess.engine
 from fastapi import APIRouter, HTTPException, Request
 
-from ..bot import FAIRY_ELO_RANGE, STOCKFISH_ELO_RANGE, BotChoice, choose_bot_move, choose_panicfish_move
+from ..bot import FAIRY_ELO_RANGE, STOCKFISH_ELO_RANGE, BotChoice, choose_bot_move, choose_panicfish_move, is_worst_move
 from ..deps import Services, services
 from ..engine import EngineUnavailable
 from ..maia import (
@@ -26,7 +27,7 @@ from ..maia import (
     net_is_intact,
     weight_path,
 )
-from ..schemas import BotMoveRequest, BotMoveResponse
+from ..schemas import BotMoveRequest, BotMoveResponse, WorstMoveRequest, WorstMoveResponse
 from ..variants import FAIRY_INSTALL_HINT, FAIRY_SLOT, needs_fairy, parse_variant_fen
 
 log = logging.getLogger(__name__)
@@ -68,19 +69,44 @@ async def _maia_choice(svc: Services, board: chess.Board, req: BotMoveRequest) -
         raise _maia_stopped() from exc
 
 
+def _variant_engine(svc: Services, variant: str) -> tuple[Any, str, tuple[int, int]]:
+    """The engine manager, its slot and its Elo range for a variant (Fairy-Stockfish plays most of them)."""
+    if needs_fairy(variant):
+        if not svc.fairy.available:
+            raise EngineUnavailable(f"Fairy-Stockfish plays this variant and it is not installed. {FAIRY_INSTALL_HINT}")
+        return svc.fairy, FAIRY_SLOT, FAIRY_ELO_RANGE
+    return svc.engines, "bot", STOCKFISH_ELO_RANGE
+
+
 async def _engine_choice(svc: Services, board: chess.Board, req: BotMoveRequest) -> BotChoice:
-    uses_fairy = needs_fairy(req.variant)
-    if uses_fairy and not svc.fairy.available:
-        raise EngineUnavailable(f"Fairy-Stockfish plays this variant and it is not installed. {FAIRY_INSTALL_HINT}")
-    manager, slot, elo_range = (
-        (svc.fairy, FAIRY_SLOT, FAIRY_ELO_RANGE) if uses_fairy else (svc.engines, "bot", STOCKFISH_ELO_RANGE)
-    )
-    choose = choose_panicfish_move if req.bot == "panicfish" else choose_bot_move
+    manager, slot, elo_range = _variant_engine(svc, req.variant)
+    # PityFish plays like Panicfish: its Elo is whatever the frontend says it has left
+    choose = choose_panicfish_move if req.bot in ("panicfish", "pityfish") else choose_bot_move
     try:
         async with manager.use(slot) as engine:
             return await choose(engine, board, req.elo, req.movetime_ms, uci_elo_range=elo_range)
     except chess.engine.EngineError as exc:
         log.warning("%s failed during a move: %s", manager.label, exc)
+        raise EngineUnavailable(f"{manager.label} stopped unexpectedly. {RETRY_HINT}") from exc
+
+
+@router.post("/worst", response_model=WorstMoveResponse)
+async def worst_move(req: WorstMoveRequest, request: Request) -> WorstMoveResponse:
+    """Is the move just played the worst one available? PityFish loses Elo for each."""
+    try:
+        board = parse_variant_fen(req.variant, req.fen)
+        try:
+            move = board.parse_san(req.move)
+        except ValueError:
+            move = board.parse_uci(req.move)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    manager, slot, _ = _variant_engine(services(request), req.variant)
+    try:
+        async with manager.use(slot) as engine:
+            return WorstMoveResponse(worst=await is_worst_move(engine, board, move))
+    except chess.engine.EngineError as exc:
+        log.warning("%s failed rating a move: %s", manager.label, exc)
         raise EngineUnavailable(f"{manager.label} stopped unexpectedly. {RETRY_HINT}") from exc
 
 

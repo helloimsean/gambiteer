@@ -106,7 +106,7 @@ const {
   lastGame, setLastGame,               // last finished game (Play writes it, Review reads it); persisted
   analyzeRequest, reviewRequest, quizRequest, learnRequest, playRequest,
   clearRequest,                        // clearRequest() clears the active tab's request
-  settings, setSettings,               // { sound, coordinates, ollamaModel, defaultDepth }; persisted
+  settings, setSettings,               // { sound, coordinates, ollamaModel, defaultDepth, reviewEngine }; persisted
   health, healthError, refreshHealth,  // GET /api/health (null until the first answer)
 } = useApp()
 ```
@@ -147,6 +147,8 @@ Settings:
 * `settings.sound`: already applied as a global mute (the Board and `playSound` obey it).
 * `settings.ollamaModel`: `""` means "backend default", so omit `model` from the request.
 * `settings.defaultDepth`: 12, 16 or 20, used by Review.
+* `settings.reviewEngine`: Review's advanced Stockfish settings `{ threads, hashMb, moveTimeMs }`;
+  each `null` means the backend's own (`health.reviewEngine` has those and the machine's limits).
 
 Lift to `AppContext` only what must survive a tab switch (`lastGame` is already there). Everything
 else is local state, or `localStorage` through `src/lib/storage.ts` (e.g. `quiz-stats-v1`).

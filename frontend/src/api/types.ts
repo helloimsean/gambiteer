@@ -206,13 +206,13 @@ export type AnalysisCommand = { fen: string; multipv: number } | { stop: true }
 
 // ---------------------------------------------------------------- bot
 
-export type BotKind = 'stockfish' | 'maia' | 'panicfish'
+export type BotKind = 'stockfish' | 'maia' | 'panicfish' | 'pityfish'
 
 export type VariantId = 'standard' | 'chess960' | 'crazyhouse' | 'kingofthehill' | '3check' | 'antichess' | 'atomic' | 'horde' | 'racingkings'
 
 export interface BotMoveRequest {
   fen: string
-  /** Stockfish: 400-3190. Maia: 1100, 1200, ..., 1900. Panicfish: what it has left, 3600 down to 0. */
+  /** Stockfish: 400-3190. Maia: 1100, 1200, ..., 1900. Panicfish and PityFish: what they have left, 3600 down to 0. */
   elo: number
   /** Default 800. Maia ignores it. */
   movetime_ms?: number
@@ -224,6 +224,14 @@ export interface BotMoveRequest {
   moves?: string[]
   /** Maia: root FEN of `moves` (default: the standard start). */
   start_fen?: string
+}
+
+/** POST /api/bot/worst: was `move` (SAN) the worst of all the legal moves in `fen`? */
+export interface BotWorstRequest {
+  fen: string
+  move: string
+  /** Default "standard". */
+  variant?: VariantId
 }
 
 export interface BotStrength {
@@ -298,6 +306,11 @@ export interface ReviewRequest {
   /** 12-24, default 16. */
   depth?: number
   players?: Players
+  /** Advanced engine settings; left out, the backend's own. Lowered to Health.reviewEngine's maxima. */
+  threads?: number
+  hashMb?: number
+  /** Ends a position's search early when reaching the depth takes longer (100-600000). */
+  moveTimeMs?: number
 }
 
 export interface ReviewMove {
@@ -481,4 +494,15 @@ export interface Health {
   maia?: { available: boolean; ratings: number[]; path: string }
   /** Fairy-Stockfish, which plays the variants Stockfish 19 cannot. Only looks at the file. */
   fairy?: { available: boolean; path: string }
+  /** Game Review's engine settings and this machine's limits. Absent from an older backend. */
+  reviewEngine?: ReviewEngineInfo
+}
+
+export interface ReviewEngineInfo {
+  threads: number
+  hashMb: number
+  /** The CPU's threads. */
+  maxThreads: number
+  /** A power of two up to a quarter of the memory. */
+  maxHashMb: number
 }

@@ -1,12 +1,13 @@
 /**
  * Pure helpers for the Review tab: phrasing, graph scaling, positions per ply, persistence shape.
  */
-import type { Classification, Players, ReviewMove, ReviewResult, Score, Side } from '../../api/types'
+import type { Classification, Players, ReviewMove, ReviewRequest, ReviewResult, Score, Side } from '../../api/types'
 import { START_FEN, plyOffsetFromFen, sansToPgn } from '../../lib/chess'
 import { mateWinner } from '../../lib/eval'
 import { t } from '../../lib/i18n'
 import { pgnFileName } from '../../lib/pgnTransfer'
 import type { SoundName } from '../../lib/sounds'
+import type { ReviewEngineChoice } from '../../state/AppContext'
 
 /** Levy Rozman's line for a brilliant or great queen or rook sacrifice, if `move` is one. */
 export function sacrificeSound(move: ReviewMove | undefined): SoundName | null {
@@ -217,4 +218,13 @@ export function friendlyExplainError(message: string): { kind: 'ollama' | 'gone'
     return { kind: 'ollama', text: message }
   }
   return { kind: 'other', text: message }
+}
+
+/** The request fields for a choice; settings left at the backend's own are left out. */
+export function engineRequestFields(choice: ReviewEngineChoice): Pick<ReviewRequest, 'threads' | 'hashMb' | 'moveTimeMs'> {
+  const out: Pick<ReviewRequest, 'threads' | 'hashMb' | 'moveTimeMs'> = {}
+  if (choice.threads) out.threads = choice.threads
+  if (choice.hashMb) out.hashMb = choice.hashMb
+  if (choice.moveTimeMs) out.moveTimeMs = choice.moveTimeMs
+  return out
 }

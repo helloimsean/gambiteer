@@ -9,7 +9,8 @@
   are excluded unless elo < 700. **This sub-1320 strength is approximate**: it has not been
   calibrated against rated play.
 
-Panicfish loses 300 Elo per check, and the frontend sends what it has left. 3600 means no limit at
+Panicfish loses 300 Elo per check, and PityFish 300 each time the player plays the worst move
+(``is_worst_move``). Either way the frontend sends what the bot has left. 3600 means no limit at
 all. Anything from there down is the ladder above, and 0 is a uniformly random legal move.
 
 The analysis engine is a separate process, so these strength options never affect analysis.
@@ -33,6 +34,9 @@ STOCKFISH_ELO_RANGE = (UCI_ELO_MIN, UCI_ELO_MAX)
 FAIRY_ELO_RANGE = (500, 2850)
 PANICFISH_FULL_ELO = 3600
 MIX_MULTIPV = 5
+WORST_DEPTH = 10
+WORST_SECONDS = 3.0
+MAX_MULTIPV = 256  # Stockfish's limit; a standard position has at most 218 legal moves
 CP_LOSS_CAP = 500
 CAP_EXEMPT_BELOW = 700
 MATE_CP = 100_000
@@ -104,6 +108,38 @@ async def _timed_move(engine: BotEngine, board: chess.Board, movetime_ms: int) -
         raise RuntimeError("engine returned no move")
     score = result.info.get("score") if result.info else None
     return result.move, score_to_dict(score) if score is not None else None
+
+
+async def is_worst_move(engine: BotEngine, board: chess.Board, move: chess.Move) -> bool:
+    """True when ``move`` rates lowest of all the legal moves (a tie for the lowest counts).
+
+    Every legal move is searched (MultiPV) at full strength, so this costs a fraction of a second.
+    A position where all moves rate the same has no worst move.
+
+    shortcut: more legal moves than MultiPV can list (a Crazyhouse pocket full of pieces) is never
+    judged, because the lowest-rated moves would be cut off; raise it if that ever matters.
+    """
+    legal = board.legal_moves.count()
+    if legal < 2 or legal > MAX_MULTIPV:
+        return False
+    await engine.configure({"UCI_LimitStrength": False, "Skill Level": 20})
+    infos = await engine.analyse(
+        board,
+        chess.engine.Limit(depth=WORST_DEPTH, time=WORST_SECONDS),
+        multipv=min(legal, MAX_MULTIPV),
+        info=chess.engine.INFO_SCORE | chess.engine.INFO_PV,
+    )
+    if isinstance(infos, dict):
+        infos = [infos]
+    rated: dict[chess.Move, int] = {}
+    for info in infos:
+        pv, score = info.get("pv"), info.get("score")
+        if pv and score is not None:
+            cp = score.pov(board.turn).score(mate_score=MATE_CP)
+            rated[pv[0]] = int(cp if cp is not None else 0)
+    if move not in rated or min(rated.values()) == max(rated.values()):
+        return False
+    return rated[move] == min(rated.values())
 
 
 async def choose_panicfish_move(

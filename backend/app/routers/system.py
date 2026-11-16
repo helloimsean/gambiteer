@@ -44,6 +44,7 @@ async def health(request: Request) -> HealthResponse:
             path=str(svc.maia.path),
         ),
         fairy=FairyHealth(available=svc.fairy.available, path=str(svc.fairy.path)),
+        reviewEngine=svc.reviews.engine_settings(),
     )
 
 
