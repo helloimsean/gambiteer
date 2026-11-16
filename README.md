@@ -53,6 +53,9 @@ model turns the engine's facts into plain-language explanations.
     mistakes. See [How bot strength works](#how-bot-strength-works).
   * **Panicfish** is Stockfish 19 at full strength that loses 300 Elo every time you check it. After
     12 checks it has nothing left and plays random moves.
+  * **PityFish** is Stockfish 19 at full strength that feels sorry for you: every time you play the
+    worst move on the board (the one Stockfish rates lowest of all the legal moves) it loses 300 Elo.
+    The move gets a red mark in the move list, and a takeback gives the Elo back.
   * **Over the board**: play a friend on the same computer or phone. The board turns to whoever is to
     move, and the game goes to History and Review like any other. Works in every variant, with no
     engine needed.
@@ -238,6 +241,11 @@ waits before answering.
 Below 1320 it uses the same move mixing as the Stockfish bot, and at 0 it picks any legal move at
 random. A takeback gives the Elo back. Antichess and Racing Kings have no checks, so Panicfish is not
 offered there, and in Horde you play the pawns because only Black has a king to check.
+
+**PityFish** has the same ladder, from 3600 down to 0, but loses 300 for each worst move you play
+instead of for each check, so it works in every variant. After each of your moves the app asks the
+backend (`POST /api/bot/worst`) whether that move rates lowest of all the legal moves at depth 10;
+a tie for the lowest counts, and a position where every move rates the same has no worst move.
 
 Elo means less in the **variants**: Fairy-Stockfish's limiter was not built with them in mind, so
 treat the number as a rough guide.

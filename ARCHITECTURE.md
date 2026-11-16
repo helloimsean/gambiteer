@@ -87,7 +87,8 @@ interface LineMeta { id, name, category, description, evaluation, sans: string[]
 | GET | `/api/openings/{id}/quiz?mode=positions|traps&limit=50` | | `QuizItem[]` (see Quiz) |
 | POST | `/api/analyze` | `{ fen, multipv?: 1-5 (default 3), depth?: number (default 18), movetime_ms?: number }` | `{ fen, depth, lines: EngineLine[] }` one-shot analysis |
 | WS | `/ws/analyze` | client sends `{ fen, multipv }` any time; server streams `{ type:"info", fen, depth, seldepth, nodes, nps, lines: EngineLine[] }` ~5-10/s (at most 10/s; `fen` echoed exactly as sent) until a new fen arrives or client sends `{ stop: true }`; bad input gets `{ type:"error", message }` | |
-| POST | `/api/bot/move` | `{ fen, elo, movetime_ms?: number (default 800), bot?: "stockfish"\|"maia"\|"panicfish" (default "stockfish"), variant?: "standard"\|"chess960"\|"crazyhouse"\|"kingofthehill"\|"3check"\|"antichess"\|"atomic"\|"horde"\|"racingkings" (default "standard"), moves?: string[] (UCI moves from the start, oldest first), start_fen?: string (root of those moves; default the standard start) }`. `elo`: 400-3190 for Stockfish and 0-3600 for Panicfish (else 422); one of 1100, 1200, ..., 1900 for Maia (else 400, as is Maia with any other variant). Stockfish ignores `moves` and `start_fen`; Maia ignores `movetime_ms`. See Maia | `{ uci, san, fen_after, eval: Score|null, strength: { mode: "uci_elo"\|"skill"\|"maia"\|"full"\|"random", skill?: number, elo } }` (503 naming `tools/install_maia.py` when Maia is not installed or lc0 failed, or `tools/install_fairy.py` when a variant needs Fairy-Stockfish and it is missing) |
+| POST | `/api/bot/move` | `{ fen, elo, movetime_ms?: number (default 800), bot?: "stockfish"\|"maia"\|"panicfish"\|"pityfish" (default "stockfish"), variant?: "standard"\|"chess960"\|"crazyhouse"\|"kingofthehill"\|"3check"\|"antichess"\|"atomic"\|"horde"\|"racingkings" (default "standard"), moves?: string[] (UCI moves from the start, oldest first), start_fen?: string (root of those moves; default the standard start) }`. `elo`: 400-3190 for Stockfish and 0-3600 for Panicfish and PityFish (else 422); one of 1100, 1200, ..., 1900 for Maia (else 400, as is Maia with any other variant). Stockfish ignores `moves` and `start_fen`; Maia ignores `movetime_ms`. See Maia | `{ uci, san, fen_after, eval: Score|null, strength: { mode: "uci_elo"\|"skill"\|"maia"\|"full"\|"random", skill?: number, elo } }` (503 naming `tools/install_maia.py` when Maia is not installed or lc0 failed, or `tools/install_fairy.py` when a variant needs Fairy-Stockfish and it is missing) |
+| POST | `/api/bot/worst` | `{ fen, move: string (SAN, else UCI), variant?: as above }` | `{ worst: boolean }`: the move rates lowest of all the legal moves (PityFish's rule; see Variants, Panicfish and PityFish). 400 for an illegal move; false when the position has more than 256 legal moves |
 | POST | `/api/pgn/parse` | `{ pgn }` | `{ headers: Record<string,string>, moves: { san, uci, fen }[] , startFen }` (400 on bad PGN) |
 | POST | `/api/review` | `{ moves: string[] (UCI or SAN from the initial position), startFen?, depth?: 12-24 (default 16; the API also accepts 4-30), players?: { white, black } }` | `{ jobId }` (400 on an illegal move) |
 | GET | `/api/review/{jobId}` | | `ReviewJob` (status: queued|running|done|error; progress 0..1; result when done) |
@@ -257,7 +258,7 @@ interface CoachMove {
   cpLoss at 500 unless elo < 700. Document that sub-1320 strength is approximate.
 * Never let UCI_LimitStrength leak into the analysis engine: separate processes.
 
-### Variants and Panicfish (`variants.py`, `bot.py`)
+### Variants, Panicfish and PityFish (`variants.py`, `bot.py`)
 
 * **Engines.** Standard chess and Chess960 run on Stockfish 19. The other seven run on Fairy-Stockfish
   (`fairy_path`, env `FAIRY_PATH`, default `engines/fairy/fairy-stockfish.exe`), a separate
@@ -268,6 +269,13 @@ interface CoachMove {
 * **Panicfish.** The frontend sends the Elo it has left, derived by replaying the moves, so a takeback
   restores it and the backend keeps no state. 3600 = no limit (`mode: "full"`); anything lower goes
   through `choose_bot_move`; 0 = a uniformly random legal move with no engine (`mode: "random"`).
+* **PityFish** plays the same ladder as Panicfish but loses 300 Elo for each *worst move* the student
+  plays. Judging a move needs the engine, so `POST /api/bot/worst` `{ fen, move (SAN, else UCI),
+  variant? }` -> `{ worst }` runs `is_worst_move`: full strength, MultiPV over every legal move, depth 10
+  (3 s cap); the move is worst when it rates lowest (ties count) and the moves do not all rate alike.
+  The frontend calls it before asking for the bot's move and stores the plies judged worst in
+  `PlayGame.worst`, which `botEloNow` counts and `truncateGame` trims (so a takeback restores the Elo).
+  It works in every variant: Fairy-Stockfish rates the ones it plays.
 * **Tests** use `backend/tests/fixtures/fake_fairy.py`. `tools/check_fairy.py` is what exercises the
   real engine, and it is run by hand.
 
@@ -423,8 +431,8 @@ Tabs:
   FEN/PGN import box, flip, "Engine on" toggle, MultiPV 1-5, live lines from `/ws/analyze`, eval bar,
   best-move arrow (and second best fainter), depth/nodes display, copy FEN/PGN, "Set up position"
   (edit FEN text), and an "Opening" label when the current SAN path matches our data (show the `why`).
-* **Play**: new-game dialog: colour (white/black/random), opponent (two cards: Stockfish, or Maia with
-  a "More human-like" pill), a one-line plain explanation of Elo, Elo slider 400-3190 for Stockfish
+* **Play**: new-game dialog: colour (white/black/random), opponent (cards for Stockfish, Maia with
+  a "More human-like" pill, Panicfish, PityFish and over the board), a one-line plain explanation of Elo, Elo slider 400-3190 for Stockfish
   (caption "Stockfish 19, limited to this Elo" from 1320 up and "Stockfish 19, roughly this Elo" below)
   or 1100-1900 in steps of 100 for Maia (caption "Maia <elo>, trained on Lichess players rated about
   <elo>"), bot move time (0.3/0.8/2 s),
@@ -464,7 +472,8 @@ Tabs:
   Review and Analyze are standard-only, so a variant game is recorded in History (`variant`) but not
   handed to them. Availability comes from `health.fairy`; Start is disabled and the form gives the
   install command when the chosen variant needs it. **Panicfish**: `botEloNow` counts the student's
-  checks in the replay, so nothing about its strength is stored.
+  checks in the replay, so nothing about its strength is stored. **PityFish** needs the engine to judge
+  each move, so `PlayTab` asks `/api/bot/worst` first and keeps the result in `PlayGame.worst`.
 * **Review**: input = last played game or pasted PGN (`/api/pgn/parse`); settings = depth (12 fast /
   16 default / 20 deep) and Ollama model (from `/api/ollama/models`). Run: progress bar fed by
   `/ws/review/{jobId}`. Result: header with accuracy per side (big numbers like chess.com), count table

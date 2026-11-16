@@ -12,6 +12,7 @@ import type {
   AnalyzeResponse,
   BotMoveRequest,
   BotMoveResponse,
+  BotWorstRequest,
   CoachEvent,
   CoachMove,
   CoachRequest,
@@ -122,6 +123,10 @@ export function analyzeOnce(req: AnalyzeRequest, signal?: AbortSignal): Promise<
 
 export function botMove(req: BotMoveRequest, signal?: AbortSignal): Promise<BotMoveResponse> {
   return post<BotMoveResponse>('/bot/move', req, signal)
+}
+
+export function botWorst(req: BotWorstRequest, signal?: AbortSignal): Promise<{ worst: boolean }> {
+  return post<{ worst: boolean }>('/bot/worst', req, signal)
 }
 
 export function parsePgn(pgn: string, signal?: AbortSignal): Promise<PgnParseResponse> {
