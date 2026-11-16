@@ -88,6 +88,12 @@ def main() -> int:
     bot("bot: Stockfish 600 (move mixing)", bot="stockfish", elo=600)
     bot("bot: Panicfish full strength", bot="panicfish", elo=3600)
     bot("bot: Panicfish random", bot="panicfish", elo=0)
+    bot("bot: PityFish full strength", bot="pityfish", elo=3600)
+    bot("bot: PityFish at 3300", bot="pityfish", elo=3300)
+    check("PityFish rates g4 the worst opening move", lambda: call("/bot/worst", {"fen": START, "move": "g4"})["worst"] is True or 1 / 0)
+    check("PityFish does not rate e4 the worst", lambda: call("/bot/worst", {"fen": START, "move": "e4"})["worst"] is False or 1 / 0)
+    check("PityFish rates a Fairy variant (Atomic)", lambda: call("/bot/worst", {"fen": START, "move": "e4", "variant": "atomic"}))
+    check("review engine limits", lambda: call("/health")["reviewEngine"])
     for rating in (1100, 1500, 1900):
         bot(f"bot: Maia {rating}", bot="maia", elo=rating, fen=AFTER_E4, moves=["e2e4"])
     bot("variant: Chess960 (Stockfish)", variant="chess960", fen=CHESS960)
