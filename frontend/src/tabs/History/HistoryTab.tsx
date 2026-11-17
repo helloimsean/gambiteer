@@ -11,7 +11,7 @@ import { botName } from '../Play/PlayGame'
 import { formatAccuracy } from '../Review/reviewUtils'
 import './HistoryTab.css'
 
-const BOT_ICONS: Record<BotKind, IconName> = { stockfish: 'engine', maia: 'brain', panicfish: 'fish', pityfish: 'fish' }
+const BOT_ICONS: Record<BotKind, IconName> = { stockfish: 'engine', maia: 'brain', panicfish: 'fish', pityfish: 'fish', worstfish: 'fish' }
 
 const SCORES: Record<string, readonly [string, string]> = {
   '1-0': ['1', '0'],
@@ -49,7 +49,7 @@ function Player({ game, side }: { game: HistoryGame; side: Side }): JSX.Element 
     <div className="history-player">
       <span className={`history-side ${side}`} />
       <span className="history-name">{isStudent ? t('You') : botName(game.bot, game.variant)}</span>
-      {isStudent ? null : <span className="history-elo">({game.elo})</span>}
+      {isStudent || game.bot === 'worstfish' ? null : <span className="history-elo">({game.elo})</span>}
     </div>
   )
 }

@@ -9,8 +9,9 @@
   are excluded unless elo < 700. **This sub-1320 strength is approximate**: it has not been
   calibrated against rated play.
 
-Panicfish loses 300 Elo per check, and PityFish 300 each time the player plays the worst move
-(``is_worst_move``). Either way the frontend sends what the bot has left. 3600 means no limit at
+Worstfish plays the worst legal move it can find (``choose_worstfish_move``), after Visible Reality's
+Lichess bot of that name. Panicfish loses 300 Elo per check, and PityFish 300 each time the player
+plays the worst move (``is_worst_move``). Either way the frontend sends what the bot has left. 3600 means no limit at
 all. Anything from there down is the ladder above, and 0 is a uniformly random legal move.
 
 The analysis engine is a separate process, so these strength options never affect analysis.
@@ -94,7 +95,7 @@ def pick_mixed(cp_losses: Sequence[float], elo: int, rng: random.Random) -> int:
 class BotChoice:
     move: chess.Move
     score: ScoreDict | None
-    mode: str  # "uci_elo" | "skill" | "full" | "random"
+    mode: str  # "uci_elo" | "skill" | "full" | "random" | "worst"
     elo: int
     skill: int | None = None
     candidates: int = 1
@@ -110,36 +111,71 @@ async def _timed_move(engine: BotEngine, board: chess.Board, movetime_ms: int) -
     return result.move, score_to_dict(score) if score is not None else None
 
 
-async def is_worst_move(engine: BotEngine, board: chess.Board, move: chess.Move) -> bool:
-    """True when ``move`` rates lowest of all the legal moves (a tie for the lowest counts).
+async def rate_legal_moves(engine: BotEngine, board: chess.Board, seconds: float = WORST_SECONDS) -> dict[chess.Move, Any] | None:
+    """Every legal move's score for the side to move (full strength, MultiPV), or None when they cannot all be listed.
 
-    Every legal move is searched (MultiPV) at full strength, so this costs a fraction of a second.
-    A position where all moves rate the same has no worst move.
-
-    shortcut: more legal moves than MultiPV can list (a Crazyhouse pocket full of pieces) is never
-    judged, because the lowest-rated moves would be cut off; raise it if that ever matters.
+    shortcut: more legal moves than MultiPV can list (a Crazyhouse pocket full of pieces) are not rated,
+    because the lowest-rated moves would be cut off; raise MAX_MULTIPV if that ever matters.
     """
     legal = board.legal_moves.count()
-    if legal < 2 or legal > MAX_MULTIPV:
-        return False
+    if legal > MAX_MULTIPV:
+        return None
     await engine.configure({"UCI_LimitStrength": False, "Skill Level": 20})
     infos = await engine.analyse(
         board,
-        chess.engine.Limit(depth=WORST_DEPTH, time=WORST_SECONDS),
-        multipv=min(legal, MAX_MULTIPV),
+        chess.engine.Limit(depth=WORST_DEPTH, time=seconds),
+        multipv=legal,
         info=chess.engine.INFO_SCORE | chess.engine.INFO_PV,
     )
     if isinstance(infos, dict):
         infos = [infos]
-    rated: dict[chess.Move, int] = {}
-    for info in infos:
-        pv, score = info.get("pv"), info.get("score")
-        if pv and score is not None:
-            cp = score.pov(board.turn).score(mate_score=MATE_CP)
-            rated[pv[0]] = int(cp if cp is not None else 0)
-    if move not in rated or min(rated.values()) == max(rated.values()):
+    return {info["pv"][0]: info["score"] for info in infos if info.get("pv") and info.get("score") is not None}
+
+
+def _centipawns(score: Any, board: chess.Board) -> int:
+    cp = score.pov(board.turn).score(mate_score=MATE_CP)
+    return int(cp if cp is not None else 0)
+
+
+async def is_worst_move(engine: BotEngine, board: chess.Board, move: chess.Move) -> bool:
+    """True when ``move`` rates lowest of all the legal moves (a tie for the lowest counts).
+
+    Every legal move is searched, so this costs a fraction of a second.
+    A position where all moves rate the same has no worst move, and neither does one with a single move.
+    """
+    if board.legal_moves.count() < 2:
         return False
-    return rated[move] == min(rated.values())
+    scores = await rate_legal_moves(engine, board)
+    if not scores or move not in scores:
+        return False
+    rated = {m: _centipawns(s, board) for m, s in scores.items()}
+    return min(rated.values()) < max(rated.values()) and rated[move] == min(rated.values())
+
+
+async def choose_worstfish_move(
+    engine: BotEngine,
+    board: chess.Board,
+    elo: int = 0,
+    movetime_ms: int = 800,
+    rng: random.Random | None = None,
+    uci_elo_range: tuple[int, int] = STOCKFISH_ELO_RANGE,
+) -> BotChoice:
+    """The lowest-rated legal move. Among equals it prefers a quiet move, then a check, then a capture
+    (the order Visible Reality's bot uses), picking at random inside that group. ``elo`` is not used.
+    """
+    if not any(board.legal_moves):
+        raise ValueError("the game is over: no legal moves")
+    rng = rng or random.Random()
+    scores = await rate_legal_moves(engine, board, max(0.05, movetime_ms / 1000))
+    if not scores:  # too many moves to rate (see rate_legal_moves)
+        return BotChoice(move=rng.choice(list(board.legal_moves)), score=None, mode="worst", elo=0)
+    rated = {m: _centipawns(s, board) for m, s in scores.items()}
+    lowest = min(rated.values())
+    worst = [m for m, cp in rated.items() if cp == lowest]
+    quiet = [m for m in worst if not board.is_capture(m) and not board.gives_check(m)]
+    checks = [m for m in worst if board.gives_check(m) and not board.is_capture(m)]
+    move = rng.choice(quiet or checks or worst)
+    return BotChoice(move=move, score=score_to_dict(scores[move]), mode="worst", elo=0)
 
 
 async def choose_panicfish_move(

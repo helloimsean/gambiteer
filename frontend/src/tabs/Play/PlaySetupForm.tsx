@@ -75,6 +75,8 @@ const PITYFISH_BLURB = t('I am Stockfish 19 at full {start} strength, but I feel
   per: PITYFISH_ELO_PER_WORST,
 })
 const PITYFISH_WORSTS_TO_ZERO = PANICFISH_START_ELO / PITYFISH_ELO_PER_WORST
+const WORSTFISH_BLURB = t('I am Stockfish 19 trying my hardest to lose. On every turn I search all my moves and play the worst one I can find.')
+const WORSTFISH_NOTE = t('Worstfish has no Elo. It rates every legal move and plays the lowest, preferring a quiet move to a check and a check to a capture. The bot move time is how long it spends rating them.')
 const FAIRY_NOTE = t('Stockfish 19 only plays standard chess and Chess960, so Fairy-Stockfish plays this variant. Elo is only a rough guide here.')
 const ELO_EXPLAINER = t('Elo is a chess rating: higher means stronger. Beginners are around 800, club players around 1500, masters 2200 and up. Lichess ratings run higher than chess.com ones.')
 const MAIA_RATING_COUNT = (MAIA_ELO_MAX - MAIA_ELO_MIN) / MAIA_ELO_STEP + 1
@@ -112,6 +114,7 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
   const isMaia = !isOtb && setup.bot === 'maia'
   const isPanicfish = !isOtb && setup.bot === 'panicfish'
   const isPityfish = !isOtb && setup.bot === 'pityfish'
+  const isWorstfish = !isOtb && setup.bot === 'worstfish'
   const isStockfish = !isOtb && setup.bot === 'stockfish'
   const variant = variantInfo(setup.variant)
   const isStandard = setup.variant === 'standard'
@@ -299,6 +302,21 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           <button
             type="button"
             role="radio"
+            aria-checked={isWorstfish}
+            tabIndex={isWorstfish ? 0 : -1}
+            className={`play-mode${isWorstfish ? ' active' : ''}`}
+            data-bot="worstfish"
+            onClick={() => onChange({ mode: 'bot', bot: 'worstfish' })}
+          >
+            <span className="play-mode-radio" />
+            <span className="play-mode-text">
+              <strong>Worstfish</strong>
+              <span>{WORSTFISH_BLURB}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="radio"
             aria-checked={isOtb}
             tabIndex={isOtb ? 0 : -1}
             className={`play-mode${isOtb ? ' active' : ''}`}
@@ -335,6 +353,14 @@ export function PlaySetupForm({ setup, maiaStatus, maiaRatings, fairyStatus, onC
           </div>
           <Toggle checked={setup.autoFlip} onChange={(v) => onChange({ autoFlip: v })} label={t('Turn the board after every move')} />
           <p className="play-setup-note">{OTB_NOTE}</p>
+        </section>
+      ) : isWorstfish ? (
+        <section className="play-setup-section">
+          <div className="play-setup-label">{t('Bot strength')}</div>
+          <p className="play-setup-note" data-testid="play-worstfish-note">
+            {WORSTFISH_NOTE}
+            {usesFairy ? ` ${FAIRY_NOTE}` : ''}
+          </p>
         </section>
       ) : isPanicfish || isPityfish ? (
         <section className="play-setup-section">

@@ -1,4 +1,4 @@
-"""POST /api/bot/move: Stockfish (strength-limited), Maia (human-like, runs on lc0), Panicfish or PityFish.
+"""POST /api/bot/move: Stockfish (strength-limited), Maia (human-like, runs on lc0), Panicfish, PityFish or Worstfish.
 POST /api/bot/worst: whether a move was the worst available (PityFish's rule).
 
 Standard chess and Chess960 run on Stockfish 19, the other variants on Fairy-Stockfish.
@@ -13,7 +13,7 @@ import chess
 import chess.engine
 from fastapi import APIRouter, HTTPException, Request
 
-from ..bot import FAIRY_ELO_RANGE, STOCKFISH_ELO_RANGE, BotChoice, choose_bot_move, choose_panicfish_move, is_worst_move
+from ..bot import FAIRY_ELO_RANGE, STOCKFISH_ELO_RANGE, BotChoice, choose_bot_move, choose_panicfish_move, choose_worstfish_move, is_worst_move
 from ..deps import Services, services
 from ..engine import EngineUnavailable
 from ..maia import (
@@ -81,7 +81,7 @@ def _variant_engine(svc: Services, variant: str) -> tuple[Any, str, tuple[int, i
 async def _engine_choice(svc: Services, board: chess.Board, req: BotMoveRequest) -> BotChoice:
     manager, slot, elo_range = _variant_engine(svc, req.variant)
     # PityFish plays like Panicfish: its Elo is whatever the frontend says it has left
-    choose = choose_panicfish_move if req.bot in ("panicfish", "pityfish") else choose_bot_move
+    choose = {"panicfish": choose_panicfish_move, "pityfish": choose_panicfish_move, "worstfish": choose_worstfish_move}.get(req.bot, choose_bot_move)
     try:
         async with manager.use(slot) as engine:
             return await choose(engine, board, req.elo, req.movetime_ms, uci_elo_range=elo_range)
