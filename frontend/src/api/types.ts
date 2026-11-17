@@ -206,13 +206,13 @@ export type AnalysisCommand = { fen: string; multipv: number } | { stop: true }
 
 // ---------------------------------------------------------------- bot
 
-export type BotKind = 'stockfish' | 'maia' | 'panicfish' | 'pityfish'
+export type BotKind = 'stockfish' | 'maia' | 'panicfish' | 'pityfish' | 'worstfish'
 
 export type VariantId = 'standard' | 'chess960' | 'crazyhouse' | 'kingofthehill' | '3check' | 'antichess' | 'atomic' | 'horde' | 'racingkings'
 
 export interface BotMoveRequest {
   fen: string
-  /** Stockfish: 400-3190. Maia: 1100, 1200, ..., 1900. Panicfish and PityFish: what they have left, 3600 down to 0. */
+  /** Stockfish: 400-3190. Maia: 1100, 1200, ..., 1900. Panicfish and PityFish: what they have left, 3600 down to 0. Worstfish: ignored (send 3600). */
   elo: number
   /** Default 800. Maia ignores it. */
   movetime_ms?: number
@@ -235,7 +235,7 @@ export interface BotWorstRequest {
 }
 
 export interface BotStrength {
-  mode: 'uci_elo' | 'skill' | 'maia' | 'full' | 'random'
+  mode: 'uci_elo' | 'skill' | 'maia' | 'full' | 'random' | 'worst'
   skill?: number
   elo: number
 }

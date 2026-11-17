@@ -752,5 +752,9 @@
   "Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.": "Parte da {start} senza limiti di forza. Ogni volta che la tua mossa è la peggiore possibile, perde {per} di Elo, e dopo {count} di queste gioca a caso.",
   "Full strength. Every time you play the worst move it loses {per} Elo.": "Piena forza. Ogni volta che giochi la peggiore mossa, perde {per} di Elo.",
   "Down to {elo} Elo and feeling sorry for you.": "Sceso a {elo} di Elo e ti compatisce.",
-  "Worst move! {bot} loses {per} Elo.": "La peggiore mossa! {bot} perde {per} di Elo."
+  "Worst move! {bot} loses {per} Elo.": "La peggiore mossa! {bot} perde {per} di Elo.",
+  "Always plays the worst move it can find.": "Gioca sempre la peggiore mossa che riesce a trovare.",
+  "I am Stockfish 19 trying my hardest to lose. On every turn I search all my moves and play the worst one I can find.": "Sono Stockfish 19 e faccio del mio meglio per perdere. A ogni turno esamino tutte le mie mosse e gioco la peggiore che trovo.",
+  "Worstfish has no Elo. It rates every legal move and plays the lowest, preferring a quiet move to a check and a check to a capture. The bot move time is how long it spends rating them.": "Worstfish non ha Elo. Valuta ogni mossa legale e gioca la più bassa; a parità preferisce una mossa tranquilla a uno scacco e uno scacco a una cattura. Il tempo di mossa del bot è il tempo che impiega a valutarle.",
+  "Bot strength": "Forza del bot"
 }

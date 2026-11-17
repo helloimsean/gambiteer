@@ -788,5 +788,9 @@
   "Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.": "Начинает с {start} без ограничения силы. Каждый раз, когда ваш ход — худший из возможных, он теряет {per} Elo, а после {count} таких ходов играет случайно.",
   "Full strength. Every time you play the worst move it loses {per} Elo.": "Полная сила. Каждый ваш худший ход стоит ему {per} Elo.",
   "Down to {elo} Elo and feeling sorry for you.": "Упал до {elo} Elo и жалеет вас.",
-  "Worst move! {bot} loses {per} Elo.": "Худший ход! {bot} теряет {per} Elo."
+  "Worst move! {bot} loses {per} Elo.": "Худший ход! {bot} теряет {per} Elo.",
+  "Always plays the worst move it can find.": "Всегда играет худший ход, какой только найдёт.",
+  "I am Stockfish 19 trying my hardest to lose. On every turn I search all my moves and play the worst one I can find.": "Я Stockfish 19, который изо всех сил старается проиграть. На каждом ходу я перебираю все свои ходы и играю самый плохой из найденных.",
+  "Worstfish has no Elo. It rates every legal move and plays the lowest, preferring a quiet move to a check and a check to a capture. The bot move time is how long it spends rating them.": "У Worstfish нет Elo. Он оценивает все допустимые ходы и играет самый слабый; из равных предпочитает тихий ход шаху, а шах — взятию. Время хода бота — это время, которое он тратит на оценку.",
+  "Bot strength": "Сила бота"
 }

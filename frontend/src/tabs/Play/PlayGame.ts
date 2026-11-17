@@ -335,12 +335,18 @@ export function botName(bot: BotKind, variant: VariantId = 'standard'): string {
   if (bot === 'maia') return 'Maia'
   if (bot === 'panicfish') return 'Panicfish'
   if (bot === 'pityfish') return 'PityFish'
+  if (bot === 'worstfish') return 'Worstfish'
   return variantInfo(variant).engine === 'fairy' ? 'Fairy-Stockfish' : 'Stockfish 19'
+}
+
+/** Worstfish always plays the worst move it finds, so it has no strength to show. */
+export function hasElo(bot: BotKind): boolean {
+  return bot !== 'worstfish'
 }
 
 /** "Stockfish 19 (1200)", "Maia (1500)". */
 export function botTitle(bot: BotKind, elo: number, variant: VariantId = 'standard'): string {
-  return `${botName(bot, variant)} (${elo})`
+  return hasElo(bot) ? `${botName(bot, variant)} (${elo})` : botName(bot, variant)
 }
 
 /** Caption under the Elo slider (contract wording from ARCHITECTURE.md). */
@@ -383,6 +389,10 @@ export function pityfishMood(elo: number): string {
   return elo > 0 ? t('Down to {elo} Elo and feeling sorry for you.', { elo }) : t('Out of Elo. It now plays random moves.')
 }
 
+export function worstfishMood(): string {
+  return t('Always plays the worst move it can find.')
+}
+
 /** Rough human description of an Elo. */
 export function eloLevel(elo: number): string {
   if (elo < 800) return t('Beginner')
@@ -401,6 +411,7 @@ export function strengthDetail(bot: BotKind, s: BotStrength | null, elo: number)
   if (bot === 'maia') return strengthCaption(bot, s?.elo ?? elo)
   if (bot === 'panicfish') return panicfishMood(elo)
   if (bot === 'pityfish') return pityfishMood(elo)
+  if (bot === 'worstfish') return worstfishMood()
   const shown = s?.elo ?? elo
   const exact = s ? s.mode === 'uci_elo' : elo >= UCI_ELO_MIN
   return exact ? t('Limited to {elo} Elo', { elo: shown }) : t('About {elo} Elo (approximate)', { elo: shown })
@@ -626,7 +637,7 @@ export function clampMaiaElo(elo: number): number {
 
 /** The strength a new game from this setup is played at. */
 export function setupElo(setup: PlaySetup): number {
-  if (setup.bot === 'panicfish' || setup.bot === 'pityfish') return PANICFISH_START_ELO
+  if (setup.bot === 'panicfish' || setup.bot === 'pityfish' || setup.bot === 'worstfish') return PANICFISH_START_ELO
   return setup.bot === 'maia' ? clampMaiaElo(setup.maiaElo) : clampElo(setup.elo)
 }
 
@@ -712,7 +723,7 @@ export function loadSetup(): PlaySetup {
   if (typeof s.autoFlip === 'boolean') out.autoFlip = s.autoFlip
   if (isVariantId(s.variant)) out.variant = s.variant
   if (s.color === 'white' || s.color === 'black' || s.color === 'random') out.color = s.color
-  if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish' || s.bot === 'pityfish') out.bot = s.bot
+  if (s.bot === 'stockfish' || s.bot === 'maia' || s.bot === 'panicfish' || s.bot === 'pityfish' || s.bot === 'worstfish') out.bot = s.bot
   if (typeof s.elo === 'number') out.elo = clampElo(s.elo)
   if (typeof s.maiaElo === 'number') out.maiaElo = clampMaiaElo(s.maiaElo)
   if (typeof s.movetimeMs === 'number' && (MOVETIME_OPTIONS as readonly number[]).includes(s.movetimeMs)) out.movetimeMs = s.movetimeMs
@@ -773,7 +784,7 @@ export function loadSavedGame(): PlayGame | null {
       mode: o.mode === 'end' ? 'end' : 'hints',
     }
   }
-  const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' || g.bot === 'pityfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
+  const bot: BotKind = g.bot === 'maia' || g.bot === 'panicfish' || g.bot === 'pityfish' || g.bot === 'worstfish' ? g.bot : 'stockfish' // games saved before Maia have no `bot`
   const savedOtb = g.otb
   const otb: OtbPlayers | undefined =
     savedOtb && typeof savedOtb === 'object'
@@ -790,7 +801,7 @@ export function loadSavedGame(): PlayGame | null {
     variant,
     studentColor: g.studentColor,
     bot,
-    elo: bot === 'maia' ? clampMaiaElo(savedElo) : bot === 'panicfish' || bot === 'pityfish' ? PANICFISH_START_ELO : clampElo(savedElo),
+    elo: bot === 'maia' ? clampMaiaElo(savedElo) : bot === 'panicfish' || bot === 'pityfish' || bot === 'worstfish' ? PANICFISH_START_ELO : clampElo(savedElo),
     movetimeMs: typeof g.movetimeMs === 'number' && g.movetimeMs > 0 ? g.movetimeMs : DEFAULT_SETUP.movetimeMs,
     startFen,
     sans,
