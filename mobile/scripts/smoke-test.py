@@ -90,6 +90,8 @@ def main() -> int:
     bot("bot: Panicfish random", bot="panicfish", elo=0)
     bot("bot: PityFish full strength", bot="pityfish", elo=3600)
     bot("bot: PityFish at 3300", bot="pityfish", elo=3300)
+    check("bot: Worstfish opens with the worst move", lambda: call("/bot/move", {"fen": START, "bot": "worstfish", "elo": 3600, "movetime_ms": 300})["san"] == "g4" or 1 / 0)
+    check("bot: Worstfish plays a Fairy variant (Atomic)", lambda: call("/bot/move", {"fen": START, "bot": "worstfish", "elo": 3600, "movetime_ms": 300, "variant": "atomic"})["uci"])
     check("PityFish rates g4 the worst opening move", lambda: call("/bot/worst", {"fen": START, "move": "g4"})["worst"] is True or 1 / 0)
     check("PityFish does not rate e4 the worst", lambda: call("/bot/worst", {"fen": START, "move": "e4"})["worst"] is False or 1 / 0)
     check("PityFish rates a Fairy variant (Atomic)", lambda: call("/bot/worst", {"fen": START, "move": "e4", "variant": "atomic"}))
