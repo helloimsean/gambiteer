@@ -734,5 +734,9 @@
   "Starts at {start} with no limit on its strength. Each time your move is the worst one available it loses {per} Elo, and after {count} of them it plays random moves.": "起始 {start}，棋力不受限制。你每走一步最差的棋，它就掉 {per} Elo，掉 {count} 次后就乱走。",
   "Full strength. Every time you play the worst move it loses {per} Elo.": "满血状态。你每走一步最差的棋，它就掉 {per} Elo。",
   "Down to {elo} Elo and feeling sorry for you.": "已降到 {elo} Elo，开始同情你了。",
-  "Worst move! {bot} loses {per} Elo.": "最差的一步！{bot} 掉 {per} Elo。"
+  "Worst move! {bot} loses {per} Elo.": "最差的一步！{bot} 掉 {per} Elo。",
+  "Always plays the worst move it can find.": "总是走它能找到的最差的一步。",
+  "I am Stockfish 19 trying my hardest to lose. On every turn I search all my moves and play the worst one I can find.": "我是拼命想输的 Stockfish 19。每一回合我都搜索自己所有的走法，走我能找到的最差的一步。",
+  "Worstfish has no Elo. It rates every legal move and plays the lowest, preferring a quiet move to a check and a check to a capture. The bot move time is how long it spends rating them.": "Worstfish 没有 Elo。它给每个合法走法打分并走最低的一步；分数相同时，优先安静的走法，其次是将军，最后是吃子。机器人思考时间就是它评估这些走法所花的时间。",
+  "Bot strength": "机器人棋力"
 }

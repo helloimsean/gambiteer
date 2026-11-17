@@ -56,6 +56,8 @@ model turns the engine's facts into plain-language explanations.
   * **PityFish** is Stockfish 19 at full strength that feels sorry for you: every time you play the
     worst move on the board (the one Stockfish rates lowest of all the legal moves) it loses 300 Elo.
     The move gets a red mark in the move list, and a takeback gives the Elo back.
+  * **Worstfish** tries to lose: it rates every legal move and plays the lowest. It has no Elo. The idea
+    is from [Worstfish on Lichess](https://github.com/VisibleReality/lichess-worstfish).
   * **Over the board**: play a friend on the same computer or phone. The board turns to whoever is to
     move, and the game goes to History and Review like any other. Works in every variant, with no
     engine needed.
@@ -247,6 +249,12 @@ instead of for each check, so it works in every variant. After each of your move
 backend (`POST /api/bot/worst`) whether that move rates lowest of all the legal moves at depth 10;
 a tie for the lowest counts, and a position where every move rates the same has no worst move.
 
+**Worstfish** rates all the legal moves the same way and plays the lowest, searching for the bot move
+time. Equally bad moves are chosen quiet moves first, then checks, then captures, as the original does.
+Its ratings are only a few centipawns apart near the bottom, so it plays one of the worst few moves, not
+always the same one. A position with more than 256 legal moves (Crazyhouse with a full pocket) is too
+many to rate, and it plays a random move.
+
 Elo means less in the **variants**: Fairy-Stockfish's limiter was not built with them in mind, so
 treat the number as a rough guide.
 
@@ -434,6 +442,9 @@ Gambiteer uses [Stockfish](https://stockfishchess.org) (GPLv3, downloaded separa
 
 The variants other than Chess960 run on [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)
 (GPL-3.0), downloaded separately by `tools/install_fairy.py`.
+
+Worstfish is modelled on [lichess-worstfish](https://github.com/VisibleReality/lichess-worstfish) by
+Visible Reality (AGPL-3.0); no code is copied.
 
 The queen and rook sacrifice voice lines in **Review** are by Levy Rozman
 ([GothamChess](https://www.youtube.com/@GothamChess)).

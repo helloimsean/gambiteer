@@ -55,6 +55,7 @@ import {
   botTitle,
   createGame,
   fairyStatusOf,
+  hasElo,
   formatMovetime,
   legalMove,
   loadSavedGame,
@@ -601,7 +602,7 @@ export function PlayTab(): JSX.Element {
     return (
       <PlayPlayerBar
         name={isStudent ? t('You') : botLabel}
-        detail={isStudent ? (game ? (side === 'white' ? t('white') : t('black')) : undefined) : String(botElo)}
+        detail={isStudent ? (game ? (side === 'white' ? t('white') : t('black')) : undefined) : hasElo(game?.bot ?? setup.bot) ? String(botElo) : undefined}
         icon={isStudent ? 'knight' : 'robot'}
         color={side}
         captured={showMaterial ? material.captured[side] : []}
@@ -861,9 +862,11 @@ export function PlayTab(): JSX.Element {
               ) : null}
               {otb ? null : (
                 <>
-                  <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
-                    {botElo}
-                  </span>
+                  {hasElo(game.bot) ? (
+                    <span className="badge badge-green" title={strengthDetail(game.bot, strength, botElo)} data-testid="play-elo-badge">
+                      {botElo}
+                    </span>
+                  ) : null}
                   <span className="badge" title={t('Bot move time')}>
                     {formatMovetime(game.movetimeMs)}
                   </span>
